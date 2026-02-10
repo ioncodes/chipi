@@ -1,0 +1,13 @@
+[package]
+name = "chipi"
+version = "0.1.0"
+edition = "2024"
+description = "A declarative instruction set decoder generator"
+license = "MIT"
+authors = ["Luca Marcelli <contact@layle.dev>"]
+repository = "https://github.com/ioncodes/chipi"
+homepage = "https://github.com/ioncodes/chipi"
+documentation = "https://docs.rs/chipi"
+keywords = ["decoder", "instruction-set", "code-generation", "dsl"]
+categories = ["development-tools", "development-tools::build-utils"]
+readme = "README.md"
