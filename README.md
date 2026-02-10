@@ -1,6 +1,6 @@
 # chipi
 
-A declarative instruction decoder generator using a custom DSL. Define your CPUs instruction encoding in a `.chipi` file, and chipi generates a decoder for you. Seemless interaction between Rust types.
+A declarative instruction decoder generator using a custom DSL. Define your CPUs instruction encoding in a `.chipi` file, and chipi generates a decoder for you. Seemless interaction with Rust types.
 
 ## Usage
 
@@ -137,4 +137,5 @@ type addr = u32 { shift_left(2), zero_extend(32) }
 - `shift_left(n)`: Shifts the value left by n bits
 
 ## Syntax Highlighting
+
 [vscode](https://github.com/ioncodes/chipi-vscode)
