@@ -19,13 +19,9 @@ use std::path::PathBuf;
 
 fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let def_path = "ppc.chipi";
-    let out_path = out_dir.join("ppc.rs");
-
-    chipi::generate(def_path, out_path.to_str().unwrap())
-        .expect("failed to generate PPC decoder");
-
-    println!("cargo:rerun-if-changed={}", def_path);
+    chipi::generate("ppc.chipi", out_dir.join("ppc.rs").to_str().unwrap())
+        .expect("failed to generate decoder");
+    println!("cargo:rerun-if-changed=ppc.chipi");
 }
 ```
 
