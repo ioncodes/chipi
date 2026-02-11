@@ -272,7 +272,7 @@ fn apply_transforms(extract_expr: &str, resolved: &ResolvedFieldType) -> String 
                 let signed_type = signed_type_for(&resolved.base_type);
                 let bits = type_bits(&resolved.base_type);
                 expr = format!(
-                    "((({} as {}) << ({} - {})) >> ({} - {}))",
+                    "(((({}) as {}) << ({} - {})) >> ({} - {}))",
                     expr, signed_type, bits, n, bits, n
                 );
             }

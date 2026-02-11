@@ -88,7 +88,7 @@
 //!
 //! ```text
 //! type simm = i32 { sign_extend(16) }
-//! type reg = Register(u8)
+//! type reg = u8 as Register
 //! ```
 //!
 //! Available transformations:

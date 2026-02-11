@@ -84,7 +84,7 @@ decoder Ppc {
     bit_order = msb0
 }
 
-type reg = Register(u8)
+type reg = u8 as Register
 type simm16 = i32 { sign_extend(16) }
 
 # Arithmetic
@@ -115,7 +115,7 @@ type byte = u8
 type simm16 = i32 { sign_extend(16) }
 
 # With custom wrapper (must be imported)
-type reg = Register(u8)
+type reg = u8 as Register
 
 # Multiple transformations (comma-separated)
 type addr = u32 { shift_left(2), zero_extend(32) }
