@@ -4,7 +4,7 @@
 
 use crate::error::Span;
 
-/// A complete decoder definition from a `.def` file.
+/// A complete decoder definition from a `.chipi` file.
 #[derive(Debug, Clone)]
 pub struct DecoderDef {
     pub imports: Vec<Import>,
