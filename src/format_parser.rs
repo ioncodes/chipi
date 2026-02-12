@@ -155,13 +155,20 @@ fn parse_expression(input: &str, span: &Span) -> Result<FormatExpr, Error> {
         });
     }
 
-    // Next precedence: *
-    if let Some(op_pos) = find_top_level_op(input, &['*']) {
+    // Next precedence: *, /, %
+    if let Some(op_pos) = find_top_level_op(input, &['*', '/', '%']) {
         let left = input[..op_pos].trim();
+        let op_char = input.as_bytes()[op_pos] as char;
         let right = input[op_pos + 1..].trim();
+        let op = match op_char {
+            '*' => ArithOp::Mul,
+            '/' => ArithOp::Div,
+            '%' => ArithOp::Mod,
+            _ => unreachable!(),
+        };
         return Ok(FormatExpr::Arithmetic {
             left: Box::new(parse_expression(left, span)?),
-            op: ArithOp::Mul,
+            op,
             right: Box::new(parse_expression(right, span)?),
         });
     }

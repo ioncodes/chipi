@@ -159,6 +159,8 @@ pub enum ArithOp {
     Add,
     Sub,
     Mul,
+    Div,
+    Mod,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

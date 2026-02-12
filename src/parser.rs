@@ -546,7 +546,10 @@ impl<'a> Parser<'a> {
             })?;
 
             let keys_str = &line[..arrow_pos];
-            let output_str = line[arrow_pos + 2..].trim();
+            let output_raw = line[arrow_pos + 2..].trim();
+
+            // Strip surrounding quotes from map output if present
+            let output_str = extract_quoted_string(output_raw).unwrap_or(output_raw);
 
             let keys: Vec<MapKey> = keys_str
                 .split(',')

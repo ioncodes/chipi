@@ -543,6 +543,25 @@ fn infer_map_param_types(def: &ValidatedDef) -> HashMap<String, Vec<String>> {
     result
 }
 
+/// Infer the Rust type of a format expression given field type information.
+fn infer_expr_type(
+    expr: &FormatExpr,
+    field_types: &HashMap<&str, &ResolvedFieldType>,
+) -> Option<String> {
+    match expr {
+        FormatExpr::Field(name) => field_types.get(name.as_str()).map(|ft| {
+            if let Some(ref wrapper) = ft.wrapper_type {
+                wrapper.clone()
+            } else {
+                ft.base_type.clone()
+            }
+        }),
+        FormatExpr::Arithmetic { left, .. } => infer_expr_type(left, field_types),
+        FormatExpr::IntLiteral(_) => Some("i64".to_string()),
+        _ => None,
+    }
+}
+
 fn collect_map_call_types(
     expr: &FormatExpr,
     field_types: &HashMap<&str, &ResolvedFieldType>,
@@ -556,18 +575,15 @@ fn collect_map_call_types(
 
             for (i, arg) in args.iter().enumerate() {
                 if i < entry.len() {
-                    if let FormatExpr::Field(field_name) = arg {
-                        if let Some(ftype) = field_types.get(field_name.as_str()) {
-                            // Use the actual rust type (wrapper or base)
-                            let rust_type = if let Some(ref wrapper) = ftype.wrapper_type {
-                                wrapper.clone()
-                            } else {
-                                ftype.base_type.clone()
-                            };
-                            entry[i] = rust_type;
-                        }
+                    if let Some(rust_type) = infer_expr_type(arg, field_types) {
+                        entry[i] = rust_type;
                     }
                 }
+            }
+
+            // Also recurse into map call arguments to find nested map calls
+            for arg in args {
+                collect_map_call_types(arg, field_types, result);
             }
         }
         FormatExpr::Arithmetic { left, right, .. } => {
@@ -782,8 +798,10 @@ fn expr_to_rust(expr: &FormatExpr, fields: &[ResolvedField]) -> String {
                 ArithOp::Add => "+",
                 ArithOp::Sub => "-",
                 ArithOp::Mul => "*",
+                ArithOp::Div => "/",
+                ArithOp::Mod => "%",
             };
-            format!("({} {} {})", l, op_str, r)
+            format!("{} {} {}", l, op_str, r)
         }
         FormatExpr::IntLiteral(val) => format!("{}", val),
         FormatExpr::MapCall { map_name, args } => {

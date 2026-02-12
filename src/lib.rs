@@ -122,7 +122,7 @@
 //! Features:
 //! * `{field}` - insert field value, with optional format spec: `{field:#x}`
 //! * `{field ? text}` - emit `text` if nonzero, `{field ? yes : no}` for else
-//! * `{a + b * 4}` - inline arithmetic (`+`, `-`, `*`)
+//! * `{a + b * 4}` - inline arithmetic (`+`, `-`, `*`, `/`, `%`)
 //! * `{map_name(arg)}` - call a map lookup
 //! * `{rotate_right(val, amt)}` - builtin functions
 //! * Guards: `| ra == 0: "li {rd}, {simm}"` - conditional format selection
@@ -133,10 +133,10 @@
 //!
 //! ```text
 //! map spr_name(spr) {
-//!     1 => xer
-//!     8 => lr
-//!     9 => ctr
-//!     _ => ???
+//!     1 => "xer"
+//!     8 => "lr"
+//!     9 => "ctr"
+//!     _ => "???"
 //! }
 //! ```
 //!

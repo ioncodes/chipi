@@ -133,7 +133,7 @@ This produces `b 0x100`, `bl 0x100`, `ba 0x100`, or `bla 0x100` depending on the
 
 **Ternary expressions:** `{field ? text}` emits `text` if the field is nonzero, nothing otherwise. `{field ? yes : no}` provides an else branch.
 
-**Arithmetic:** `{a + b * 4}` evaluates inline arithmetic (`+`, `-`, `*`).
+**Arithmetic:** `{a + b * 4}` evaluates inline arithmetic (`+`, `-`, `*`, `/`, `%`).
 
 **Builtin functions:** `{rotate_right(val, amt)}` and `{rotate_left(val, amt)}`.
 
@@ -155,10 +155,10 @@ Maps define lookup tables for use in format strings:
 
 ```chipi
 map spr_name(spr) {
-    1 => xer
-    8 => lr
-    9 => ctr
-    _ => ???
+    1 => "xer"
+    8 => "lr"
+    9 => "ctr"
+    _ => "???"
 }
 
 mtspr  [0:5]=011111 rs:reg[6:10] spr:u16[11:20] [21:30]=0111010011 [31]=0
@@ -169,9 +169,9 @@ Map parameters can also use `{param}` interpolation in the output, in which case
 
 ```chipi
 map ea(mode, reg) {
-    0, _ => d{reg}
-    1, _ => a{reg}
-    _ => ???
+    0, _ => "d{reg}"
+    1, _ => "a{reg}"
+    _ => "???"
 }
 ```
 
