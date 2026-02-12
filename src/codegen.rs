@@ -836,11 +836,17 @@ fn generate_guard_code(guard: &Guard, fields: &[ResolvedField]) -> String {
             };
 
             if let Some(f) = left_field {
-                if f.resolved_type.wrapper_type.is_some() {
-                    return format!(
-                        "Into::<{}>::into(*{}) {} {}",
-                        f.resolved_type.base_type, left, op, right
-                    );
+                if let Some(ref wrapper) = f.resolved_type.wrapper_type {
+                    // Convert the literal to the wrapper type instead of unwrapping the field.
+                    // This only requires From<base> + PartialEq on the wrapper.
+                    if let GuardOperand::Literal(val) = &cond.right {
+                        return format!(
+                            "*{} {} {}::from({}{})",
+                            left, op, wrapper, val, f.resolved_type.base_type
+                        );
+                    }
+                    // field-to-field comparison with wrapper types
+                    return format!("*{} {} *{}", left, op, right);
                 } else if f.resolved_type.base_type == "bool" {
                     // For bool fields, generate simpler comparisons
                     if let GuardOperand::Literal(val) = &cond.right {
