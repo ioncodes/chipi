@@ -74,6 +74,28 @@ pub enum ErrorKind {
     },
     /// An import statement is unused
     UnusedImport(String),
+
+    // Format/map errors
+    /// Invalid format string syntax
+    InvalidFormatString(String),
+    /// Invalid guard condition syntax
+    InvalidGuard(String),
+    /// Format string references undefined field
+    UndefinedFieldInFormat { instruction: String, field: String },
+    /// Guard references undefined field
+    UndefinedFieldInGuard { instruction: String, field: String },
+    /// Map call references undefined map
+    UndefinedMap(String),
+    /// Map call has wrong number of arguments
+    MapArgCountMismatch { map: String, expected: usize, got: usize },
+    /// Duplicate entry in a map
+    DuplicateMapEntry { map: String },
+    /// Duplicate map name
+    DuplicateMapName(String),
+    /// Non-last format line without a guard condition
+    UnguardedNonLastFormatLine { instruction: String },
+    /// Unknown builtin function name
+    UnknownBuiltinFunction(String),
 }
 
 /// An error with location and optional help text.
@@ -148,6 +170,40 @@ impl fmt::Display for Error {
                 )
             }
             ErrorKind::UnusedImport(path) => format!("unused import '{}'", path),
+            ErrorKind::InvalidFormatString(msg) => format!("invalid format string: {}", msg),
+            ErrorKind::InvalidGuard(msg) => format!("invalid guard condition: {}", msg),
+            ErrorKind::UndefinedFieldInFormat { instruction, field } => {
+                format!(
+                    "format string in '{}' references undefined field '{}'",
+                    instruction, field
+                )
+            }
+            ErrorKind::UndefinedFieldInGuard { instruction, field } => {
+                format!(
+                    "guard in '{}' references undefined field '{}'",
+                    instruction, field
+                )
+            }
+            ErrorKind::UndefinedMap(name) => format!("undefined map '{}'", name),
+            ErrorKind::MapArgCountMismatch { map, expected, got } => {
+                format!(
+                    "map '{}' expects {} arguments but got {}",
+                    map, expected, got
+                )
+            }
+            ErrorKind::DuplicateMapEntry { map } => {
+                format!("duplicate entry in map '{}'", map)
+            }
+            ErrorKind::DuplicateMapName(name) => format!("duplicate map name '{}'", name),
+            ErrorKind::UnguardedNonLastFormatLine { instruction } => {
+                format!(
+                    "non-last format line in '{}' must have a guard condition",
+                    instruction
+                )
+            }
+            ErrorKind::UnknownBuiltinFunction(name) => {
+                format!("unknown builtin function '{}'", name)
+            }
         };
 
         write!(f, "error: {}", msg)?;

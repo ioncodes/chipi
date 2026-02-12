@@ -1,9 +1,9 @@
 //! # chipi
 //!
-//! Generate instruction decoders from `.chipi` files.
+//! Generate instruction decoders and disassemblers from `.chipi` files.
 //!
 //! Write your CPU instruction encoding in a simple DSL, and chipi generates
-//! the Rust decoder code for you.
+//! the Rust decoder and formatting code for you.
 //!
 //! ## Usage
 //!
@@ -35,8 +35,8 @@
 //!     include!(concat!(env!("OUT_DIR"), "/cpu.rs"));
 //! }
 //!
-//! match cpu::Instruction::decode(raw) {
-//!     Some(instr) => println!("{:?}", instr),
+//! match cpu::CpuInstruction::decode(raw) {
+//!     Some(instr) => println!("{}", instr),
 //!     None => println!("invalid instruction"),
 //! }
 //! ```
@@ -50,9 +50,14 @@
 //! }
 //!
 //! type simm16 = i32 { sign_extend(16) }
+//! type simm24 = i32 { sign_extend(24), shift_left(2) }
 //!
-//! add  [0:5]=011111 rd:u8[6:10] ra:u8[11:15] rb:u8[16:20] [21:30]=0100001010 oe:bool[31]
+//! bx   [0:5]=010010 li:simm24[6:29] aa:bool[30] lk:bool[31]
+//!      | "b{lk ? l}{aa ? a} {li:#x}"
+//!
 //! addi [0:5]=001110 rd:u8[6:10] ra:u8[11:15] simm:simm16[16:31]
+//!      | ra == 0: "li {rd}, {simm}"
+//!      | "addi {rd}, {ra}, {simm}"
 //! ```
 //!
 //! ## Syntax
@@ -105,6 +110,53 @@
 //! import std::num::Wrapping
 //! ```
 //!
+//! ### Format lines
+//!
+//! Format lines follow an instruction and define its disassembly output:
+//!
+//! ```text
+//! bx [0:5]=010010 li:simm24[6:29] aa:bool[30] lk:bool[31]
+//!    | "b{lk ? l}{aa ? a} {li:#x}"
+//! ```
+//!
+//! Features:
+//! * `{field}` - insert field value, with optional format spec: `{field:#x}`
+//! * `{field ? text}` - emit `text` if nonzero, `{field ? yes : no}` for else
+//! * `{a + b * 4}` - inline arithmetic (`+`, `-`, `*`)
+//! * `{map_name(arg)}` - call a map lookup
+//! * `{rotate_right(val, amt)}` - builtin functions
+//! * Guards: `| ra == 0: "li {rd}, {simm}"` - conditional format selection
+//!
+//! ### Maps
+//!
+//! Lookup tables for use in format strings:
+//!
+//! ```text
+//! map spr_name(spr) {
+//!     1 => xer
+//!     8 => lr
+//!     9 => ctr
+//!     _ => ???
+//! }
+//! ```
+//!
+//! ### Formatting trait
+//!
+//! chipi generates a `{Name}Format` trait with one method per instruction.
+//! Default implementations come from format lines. Override selectively:
+//!
+//! ```ignore
+//! struct MyFormat;
+//! impl cpu::CpuFormat for MyFormat {
+//!     fn fmt_bx(li: i32, aa: bool, lk: bool,
+//!               f: &mut std::fmt::Formatter) -> std::fmt::Result {
+//!         write!(f, "BRANCH {:#x}", li)
+//!     }
+//! }
+//!
+//! println!("{}", instr.display::<MyFormat>());
+//! ```
+//!
 //! ## API
 //!
 //! ```ignore
@@ -121,6 +173,7 @@
 
 pub mod codegen;
 pub mod error;
+pub mod format_parser;
 pub mod parser;
 pub mod tree;
 pub mod types;

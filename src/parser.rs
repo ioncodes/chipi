@@ -10,6 +10,7 @@
 //! to hardware notation (LSB=0) during validation.
 
 use crate::error::{Error, ErrorKind, Span};
+use crate::format_parser::parse_format_string;
 use crate::types::*;
 
 /// Parse DSL source text into a decoder definition.
@@ -59,6 +60,7 @@ impl<'a> Parser<'a> {
         let mut imports = Vec::new();
         let mut config: Option<DecoderConfig> = None;
         let mut type_aliases = Vec::new();
+        let mut maps = Vec::new();
         let mut instructions = Vec::new();
 
         while self.line_idx < self.lines.len() {
@@ -87,6 +89,11 @@ impl<'a> Parser<'a> {
                     Err(e) => self.errors.push(e),
                 }
                 self.advance();
+            } else if trimmed.starts_with("map ") {
+                match self.parse_map_block() {
+                    Ok(map) => maps.push(map),
+                    Err(e) => self.errors.push(e),
+                }
             } else {
                 // Instruction line
                 match self.parse_instruction(trimmed) {
@@ -94,6 +101,11 @@ impl<'a> Parser<'a> {
                     Err(e) => self.errors.push(e),
                 }
                 self.advance();
+                // Consume format lines (| ...)
+                let format_lines = self.parse_format_lines();
+                if let Some(last) = instructions.last_mut() {
+                    last.format_lines = format_lines;
+                }
             }
         }
 
@@ -115,6 +127,7 @@ impl<'a> Parser<'a> {
             imports,
             config,
             type_aliases,
+            maps,
             instructions,
         })
     }
@@ -322,6 +335,7 @@ impl<'a> Parser<'a> {
         Ok(InstructionDef {
             name,
             segments,
+            format_lines: Vec::new(),
             span: self.span(0, line.len()),
         })
     }
@@ -467,6 +481,175 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parse a `map name(params) { ... }` block.
+    fn parse_map_block(&mut self) -> Result<MapDef, Error> {
+        let first_line = self.lines[self.line_idx].trim();
+        let block_start_line = self.line_idx;
+
+        let rest = first_line.strip_prefix("map ").unwrap().trim();
+
+        // Parse: name(param1, param2) {
+        let paren_pos = rest.find('(').ok_or_else(|| {
+            Error::new(
+                ErrorKind::ExpectedToken("'(' after map name".to_string()),
+                self.span(4, rest.len()),
+            )
+        })?;
+        let name = rest[..paren_pos].trim().to_string();
+
+        let close_paren = rest.find(')').ok_or_else(|| {
+            Error::new(
+                ErrorKind::ExpectedToken("')' in map definition".to_string()),
+                self.span(0, rest.len()),
+            )
+        })?;
+
+        let params_str = &rest[paren_pos + 1..close_paren];
+        let params: Vec<String> = params_str
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        // Expect `{` after params
+        let after_paren = rest[close_paren + 1..].trim();
+        if !after_paren.starts_with('{') {
+            return Err(Error::new(
+                ErrorKind::ExpectedToken("'{' after map parameters".to_string()),
+                self.span(0, first_line.len()),
+            ));
+        }
+
+        self.advance();
+
+        let mut entries = Vec::new();
+
+        while self.line_idx < self.lines.len() {
+            let line = self.lines[self.line_idx].trim();
+
+            if line == "}" {
+                self.advance();
+                break;
+            }
+
+            if line.is_empty() || line.starts_with('#') {
+                self.advance();
+                continue;
+            }
+
+            // Parse: key1, key2 => output_text
+            let arrow_pos = line.find("=>").ok_or_else(|| {
+                Error::new(
+                    ErrorKind::ExpectedToken("'=>' in map entry".to_string()),
+                    self.span(0, line.len()),
+                )
+            })?;
+
+            let keys_str = &line[..arrow_pos];
+            let output_str = line[arrow_pos + 2..].trim();
+
+            let keys: Vec<MapKey> = keys_str
+                .split(',')
+                .map(|s| {
+                    let s = s.trim();
+                    if s == "_" {
+                        MapKey::Wildcard
+                    } else if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X"))
+                    {
+                        MapKey::Value(i64::from_str_radix(hex, 16).unwrap_or(0))
+                    } else {
+                        MapKey::Value(s.parse::<i64>().unwrap_or(0))
+                    }
+                })
+                .collect();
+
+            let entry_span = self.span(0, line.len());
+            let output = parse_format_string(output_str, &entry_span)?;
+
+            entries.push(MapEntry {
+                keys,
+                output,
+                span: entry_span,
+            });
+
+            self.advance();
+        }
+
+        Ok(MapDef {
+            name,
+            params,
+            entries,
+            span: Span::new(&self.filename, block_start_line + 1, 1, 0),
+        })
+    }
+
+    /// Parse format lines (`| ...`) following an instruction.
+    fn parse_format_lines(&mut self) -> Vec<FormatLine> {
+        let mut format_lines = Vec::new();
+
+        while self.line_idx < self.lines.len() {
+            let line = self.lines[self.line_idx];
+            let trimmed = line.trim();
+
+            if !trimmed.starts_with('|') {
+                break;
+            }
+
+            let content = trimmed[1..].trim();
+            let span = self.span(0, line.len());
+
+            match self.parse_single_format_line(content, &span) {
+                Ok(fl) => format_lines.push(fl),
+                Err(e) => self.errors.push(e),
+            }
+
+            self.advance();
+        }
+
+        format_lines
+    }
+
+    /// Parse a single format line content (after stripping the leading `|`).
+    fn parse_single_format_line(&self, content: &str, span: &Span) -> Result<FormatLine, Error> {
+        // Check if there's a guard: content before first `"` that contains a `:`
+        // Format: `guard_expr: "format string"` or just `"format string"`
+        if let Some(quote_pos) = content.find('"') {
+            let before_quote = &content[..quote_pos];
+            let after_quote = &content[quote_pos..];
+
+            // Extract the quoted format string
+            let fmt_str = extract_quoted_string(after_quote).ok_or_else(|| {
+                Error::new(
+                    ErrorKind::InvalidFormatString("unclosed quote in format line".to_string()),
+                    span.clone(),
+                )
+            })?;
+
+            let guard = if before_quote.trim().is_empty() {
+                None
+            } else {
+                // Strip trailing `:` from guard
+                let guard_str = before_quote.trim().trim_end_matches(':').trim();
+                Some(parse_guard(guard_str, span)?)
+            };
+
+            let pieces = parse_format_string(fmt_str, span)?;
+
+            Ok(FormatLine {
+                guard,
+                pieces,
+                span: span.clone(),
+            })
+        } else {
+            Err(Error::new(
+                ErrorKind::InvalidFormatString(
+                    "format line must contain a quoted string".to_string(),
+                ),
+                span.clone(),
+            ))
+        }
+    }
+
     /// Parse `[start:end]` or `[N]` bit range notation.
     fn parse_bit_range(&self, input: &str, pos: &mut usize) -> Result<(BitRange, (u32, u32)), Error> {
         if *pos >= input.len() || input.as_bytes()[*pos] != b'[' {
@@ -520,6 +703,112 @@ impl<'a> Parser<'a> {
         // Conversion from DSL to hardware notation happens in validate() where width is known
         Ok((BitRange { start: dsl_start, end: dsl_end }, (dsl_start, dsl_end)))
     }
+}
+
+/// Extract contents of a quoted string (strips surrounding `"`).
+fn extract_quoted_string(s: &str) -> Option<&str> {
+    let s = s.trim();
+    if s.starts_with('"') {
+        let inner = &s[1..];
+        // Find closing quote (not escaped)
+        let mut i = 0;
+        let chars: Vec<char> = inner.chars().collect();
+        while i < chars.len() {
+            if chars[i] == '\\' {
+                i += 2;
+            } else if chars[i] == '"' {
+                let byte_pos: usize = inner[..].char_indices().nth(i).map(|(p, _)| p).unwrap_or(inner.len());
+                return Some(&inner[..byte_pos]);
+            } else {
+                i += 1;
+            }
+        }
+    }
+    None
+}
+
+/// Parse a guard condition string like `ra == 0` or `ra == 0, lk == 1`.
+fn parse_guard(s: &str, span: &Span) -> Result<Guard, Error> {
+    let mut conditions = Vec::new();
+
+    // Split on `,` or `&&`
+    let parts: Vec<&str> = if s.contains("&&") {
+        s.split("&&").collect()
+    } else {
+        s.split(',').collect()
+    };
+
+    for part in parts {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+
+        let cond = parse_guard_condition(part, span)?;
+        conditions.push(cond);
+    }
+
+    if conditions.is_empty() {
+        return Err(Error::new(
+            ErrorKind::InvalidGuard("empty guard".to_string()),
+            span.clone(),
+        ));
+    }
+
+    Ok(Guard { conditions })
+}
+
+fn parse_guard_condition(s: &str, span: &Span) -> Result<GuardCondition, Error> {
+    // Try each operator from longest to shortest
+    let ops: &[(&str, CompareOp)] = &[
+        ("!=", CompareOp::Ne),
+        ("<=", CompareOp::Le),
+        (">=", CompareOp::Ge),
+        ("==", CompareOp::Eq),
+        ("<", CompareOp::Lt),
+        (">", CompareOp::Gt),
+    ];
+
+    for &(op_str, ref op) in ops {
+        if let Some(pos) = s.find(op_str) {
+            let left = s[..pos].trim();
+            let right = s[pos + op_str.len()..].trim();
+
+            return Ok(GuardCondition {
+                left: parse_guard_operand(left, span)?,
+                op: op.clone(),
+                right: parse_guard_operand(right, span)?,
+            });
+        }
+    }
+
+    Err(Error::new(
+        ErrorKind::InvalidGuard(format!("no operator found in '{}'", s)),
+        span.clone(),
+    ))
+}
+
+fn parse_guard_operand(s: &str, span: &Span) -> Result<GuardOperand, Error> {
+    let s = s.trim();
+    if s.is_empty() {
+        return Err(Error::new(
+            ErrorKind::InvalidGuard("empty operand".to_string()),
+            span.clone(),
+        ));
+    }
+
+    // Try integer literal
+    if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+        if let Ok(val) = i64::from_str_radix(hex, 16) {
+            return Ok(GuardOperand::Literal(val));
+        }
+    }
+    if let Ok(val) = s.parse::<i64>() {
+        return Ok(GuardOperand::Literal(val));
+    }
+
+    // Must be a field reference
+    Ok(GuardOperand::Field(s.to_string()))
 }
 
 fn is_builtin_type(name: &str) -> bool {

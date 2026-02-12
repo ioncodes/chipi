@@ -37,6 +37,12 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
     // Phase 4: Pattern conflicts
     check_pattern_conflicts(&instructions, &mut errors);
 
+    // Phase 5: Map validation
+    check_maps(&def.maps, &mut errors);
+
+    // Phase 6: Format validation
+    check_formats(&instructions, &def.maps, &mut errors);
+
     if !errors.is_empty() {
         return Err(errors);
     }
@@ -72,6 +78,7 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
                 name: instr.name.clone(),
                 segments: instr.segments.clone(),
                 resolved_fields,
+                format_lines: instr.format_lines.clone(),
                 span: instr.span.clone(),
             }
         })
@@ -81,6 +88,7 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
         imports: def.imports.clone(),
         config: def.config.clone(),
         type_aliases: def.type_aliases.clone(),
+        maps: def.maps.clone(),
         instructions: validated_instructions,
     })
 }
@@ -129,6 +137,7 @@ fn convert_bit_ranges(def: &DecoderDef) -> Vec<InstructionDef> {
             InstructionDef {
                 name: instr.name.clone(),
                 segments,
+                format_lines: instr.format_lines.clone(),
                 span: instr.span.clone(),
             }
         })
@@ -315,6 +324,203 @@ fn fixed_bit_map(instr: &InstructionDef) -> HashMap<u32, Bit> {
         }
     }
     map
+}
+
+fn check_maps(maps: &[MapDef], errors: &mut Vec<Error>) {
+    let mut seen_names: HashMap<&str, &Span> = HashMap::new();
+
+    for map in maps {
+        // Duplicate map names
+        if let Some(prev) = seen_names.get(map.name.as_str()) {
+            errors.push(
+                Error::new(
+                    ErrorKind::DuplicateMapName(map.name.clone()),
+                    map.span.clone(),
+                )
+                .with_help(format!("first defined at line {}", prev.line)),
+            );
+        } else {
+            seen_names.insert(&map.name, &map.span);
+        }
+
+        // Check for duplicate entries (same key pattern)
+        let mut seen_keys: Vec<&Vec<MapKey>> = Vec::new();
+        for entry in &map.entries {
+            if seen_keys.iter().any(|k| *k == &entry.keys) {
+                errors.push(Error::new(
+                    ErrorKind::DuplicateMapEntry {
+                        map: map.name.clone(),
+                    },
+                    entry.span.clone(),
+                ));
+            } else {
+                seen_keys.push(&entry.keys);
+            }
+        }
+
+        // Check param uniqueness within map
+        let mut seen_params: HashSet<&str> = HashSet::new();
+        for param in &map.params {
+            if !seen_params.insert(param.as_str()) {
+                errors.push(Error::new(
+                    ErrorKind::InvalidFormatString(format!(
+                        "duplicate parameter '{}' in map '{}'",
+                        param, map.name
+                    )),
+                    map.span.clone(),
+                ));
+            }
+        }
+    }
+}
+
+fn check_formats(
+    instructions: &[InstructionDef],
+    maps: &[MapDef],
+    errors: &mut Vec<Error>,
+) {
+    let map_names: HashMap<&str, &MapDef> = maps.iter().map(|m| (m.name.as_str(), m)).collect();
+
+    for instr in instructions {
+        if instr.format_lines.is_empty() {
+            continue;
+        }
+
+        let field_names: HashSet<String> = instr
+            .segments
+            .iter()
+            .filter_map(|seg| {
+                if let Segment::Field { name, .. } = seg {
+                    Some(name.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Check guard ordering: all non-last format lines must have guards
+        for (i, fl) in instr.format_lines.iter().enumerate() {
+            if i < instr.format_lines.len() - 1 && fl.guard.is_none() {
+                errors.push(Error::new(
+                    ErrorKind::UnguardedNonLastFormatLine {
+                        instruction: instr.name.clone(),
+                    },
+                    fl.span.clone(),
+                ));
+            }
+
+            // Check guard field references
+            if let Some(guard) = &fl.guard {
+                for cond in &guard.conditions {
+                    check_guard_operand_field(&cond.left, &field_names, &instr.name, &fl.span, errors);
+                    check_guard_operand_field(&cond.right, &field_names, &instr.name, &fl.span, errors);
+                }
+            }
+
+            // Check format string field references
+            for piece in &fl.pieces {
+                if let FormatPiece::FieldRef { expr, .. } = piece {
+                    check_format_expr_fields(
+                        expr,
+                        &field_names,
+                        &instr.name,
+                        &fl.span,
+                        &map_names,
+                        errors,
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn check_guard_operand_field(
+    operand: &GuardOperand,
+    field_names: &HashSet<String>,
+    instr_name: &str,
+    span: &Span,
+    errors: &mut Vec<Error>,
+) {
+    if let GuardOperand::Field(name) = operand {
+        if !field_names.contains(name.as_str()) {
+            errors.push(Error::new(
+                ErrorKind::UndefinedFieldInGuard {
+                    instruction: instr_name.to_string(),
+                    field: name.clone(),
+                },
+                span.clone(),
+            ));
+        }
+    }
+}
+
+fn check_format_expr_fields(
+    expr: &FormatExpr,
+    field_names: &HashSet<String>,
+    instr_name: &str,
+    span: &Span,
+    maps: &HashMap<&str, &MapDef>,
+    errors: &mut Vec<Error>,
+) {
+    match expr {
+        FormatExpr::Field(name) => {
+            if !field_names.contains(name.as_str()) {
+                errors.push(Error::new(
+                    ErrorKind::UndefinedFieldInFormat {
+                        instruction: instr_name.to_string(),
+                        field: name.clone(),
+                    },
+                    span.clone(),
+                ));
+            }
+        }
+        FormatExpr::Ternary { field, .. } => {
+            if !field_names.contains(field.as_str()) {
+                errors.push(Error::new(
+                    ErrorKind::UndefinedFieldInFormat {
+                        instruction: instr_name.to_string(),
+                        field: field.clone(),
+                    },
+                    span.clone(),
+                ));
+            }
+        }
+        FormatExpr::Arithmetic { left, right, .. } => {
+            check_format_expr_fields(left, field_names, instr_name, span, maps, errors);
+            check_format_expr_fields(right, field_names, instr_name, span, maps, errors);
+        }
+        FormatExpr::IntLiteral(_) => {}
+        FormatExpr::MapCall {
+            map_name, args, ..
+        } => {
+            if let Some(map_def) = maps.get(map_name.as_str()) {
+                if args.len() != map_def.params.len() {
+                    errors.push(Error::new(
+                        ErrorKind::MapArgCountMismatch {
+                            map: map_name.clone(),
+                            expected: map_def.params.len(),
+                            got: args.len(),
+                        },
+                        span.clone(),
+                    ));
+                }
+            } else {
+                errors.push(Error::new(
+                    ErrorKind::UndefinedMap(map_name.clone()),
+                    span.clone(),
+                ));
+            }
+            for arg in args {
+                check_format_expr_fields(arg, field_names, instr_name, span, maps, errors);
+            }
+        }
+        FormatExpr::BuiltinCall { args, .. } => {
+            // Builtins are already validated during parsing
+            for arg in args {
+                check_format_expr_fields(arg, field_names, instr_name, span, maps, errors);
+            }
+        }
+    }
 }
 
 fn resolve_field_type(field_type: &FieldType, type_aliases: &[TypeAlias]) -> ResolvedFieldType {

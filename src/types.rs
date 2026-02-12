@@ -10,6 +10,7 @@ pub struct DecoderDef {
     pub imports: Vec<Import>,
     pub config: DecoderConfig,
     pub type_aliases: Vec<TypeAlias>,
+    pub maps: Vec<MapDef>,
     pub instructions: Vec<InstructionDef>,
 }
 
@@ -59,11 +60,119 @@ pub enum Transform {
     ShiftLeft(u32),
 }
 
+/// A map definition (lookup table for format strings).
+#[derive(Debug, Clone)]
+pub struct MapDef {
+    pub name: String,
+    pub params: Vec<String>,
+    pub entries: Vec<MapEntry>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct MapEntry {
+    pub keys: Vec<MapKey>,
+    pub output: Vec<FormatPiece>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MapKey {
+    Value(i64),
+    Wildcard,
+}
+
+/// A format line attached to an instruction.
+#[derive(Debug, Clone)]
+pub struct FormatLine {
+    pub guard: Option<Guard>,
+    pub pieces: Vec<FormatPiece>,
+    pub span: Span,
+}
+
+/// A guard condition (between `|` and `:`).
+#[derive(Debug, Clone)]
+pub struct Guard {
+    pub conditions: Vec<GuardCondition>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GuardCondition {
+    pub left: GuardOperand,
+    pub op: CompareOp,
+    pub right: GuardOperand,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompareOp {
+    Eq,
+    Ne,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GuardOperand {
+    Field(String),
+    Literal(i64),
+}
+
+/// A piece of a parsed format string.
+#[derive(Debug, Clone)]
+pub enum FormatPiece {
+    Literal(String),
+    FieldRef {
+        expr: FormatExpr,
+        spec: Option<String>,
+    },
+}
+
+/// Expression inside `{...}` in a format string.
+#[derive(Debug, Clone)]
+pub enum FormatExpr {
+    Field(String),
+    Ternary {
+        field: String,
+        if_nonzero: String,
+        if_zero: Option<String>,
+    },
+    Arithmetic {
+        left: Box<FormatExpr>,
+        op: ArithOp,
+        right: Box<FormatExpr>,
+    },
+    IntLiteral(i64),
+    MapCall {
+        map_name: String,
+        args: Vec<FormatExpr>,
+    },
+    BuiltinCall {
+        func: BuiltinFunc,
+        args: Vec<FormatExpr>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArithOp {
+    Add,
+    Sub,
+    Mul,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BuiltinFunc {
+    RotateRight,
+    RotateLeft,
+}
+
 /// Raw instruction definition from parsing.
 #[derive(Debug, Clone)]
 pub struct InstructionDef {
     pub name: String,
     pub segments: Vec<Segment>,
+    pub format_lines: Vec<FormatLine>,
     pub span: Span,
 }
 
@@ -152,6 +261,7 @@ pub struct ValidatedDef {
     pub imports: Vec<Import>,
     pub config: DecoderConfig,
     pub type_aliases: Vec<TypeAlias>,
+    pub maps: Vec<MapDef>,
     pub instructions: Vec<ValidatedInstruction>,
 }
 
@@ -161,6 +271,7 @@ pub struct ValidatedInstruction {
     pub name: String,
     pub segments: Vec<Segment>,
     pub resolved_fields: Vec<ResolvedField>,
+    pub format_lines: Vec<FormatLine>,
     pub span: Span,
 }
 
