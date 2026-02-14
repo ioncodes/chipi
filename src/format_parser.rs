@@ -204,6 +204,18 @@ fn parse_expression(input: &str, span: &Span) -> Result<FormatExpr, Error> {
         }
     }
 
+    // Unary negation: -expr becomes 0 - expr
+    if let Some(rest) = input.strip_prefix('-') {
+        let rest = rest.trim();
+        if !rest.is_empty() {
+            return Ok(FormatExpr::Arithmetic {
+                left: Box::new(FormatExpr::IntLiteral(0)),
+                op: ArithOp::Sub,
+                right: Box::new(parse_expression(rest, span)?),
+            });
+        }
+    }
+
     // Integer literal
     if let Some(val) = try_parse_int(input) {
         return Ok(FormatExpr::IntLiteral(val));

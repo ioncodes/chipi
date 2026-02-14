@@ -127,9 +127,11 @@
 //! * `{field}` - insert field value, with optional format spec: `{field:#x}`
 //! * `{field ? text}` - emit `text` if nonzero, `{field ? yes : no}` for else
 //! * `{a + b * 4}` - inline arithmetic (`+`, `-`, `*`, `/`, `%`)
+//! * `{-field}` - unary negation
 //! * `{map_name(arg)}` - call a map lookup
 //! * `{rotate_right(val, amt)}` - builtin functions
 //! * Guards: `| ra == 0: "li {rd}, {simm}"` - conditional format selection
+//! * Guard arithmetic: `| sh == 32 - mb : "srwi ..."` - arithmetic in guard operands
 //!
 //! ### Maps
 //!

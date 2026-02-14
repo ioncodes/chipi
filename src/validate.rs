@@ -441,16 +441,23 @@ fn check_guard_operand_field(
     span: &Span,
     errors: &mut Vec<Error>,
 ) {
-    if let GuardOperand::Field(name) = operand {
-        if !field_names.contains(name.as_str()) {
-            errors.push(Error::new(
-                ErrorKind::UndefinedFieldInGuard {
-                    instruction: instr_name.to_string(),
-                    field: name.clone(),
-                },
-                span.clone(),
-            ));
+    match operand {
+        GuardOperand::Field(name) => {
+            if !field_names.contains(name.as_str()) {
+                errors.push(Error::new(
+                    ErrorKind::UndefinedFieldInGuard {
+                        instruction: instr_name.to_string(),
+                        field: name.clone(),
+                    },
+                    span.clone(),
+                ));
+            }
         }
+        GuardOperand::Expr { left, right, .. } => {
+            check_guard_operand_field(left, field_names, instr_name, span, errors);
+            check_guard_operand_field(right, field_names, instr_name, span, errors);
+        }
+        GuardOperand::Literal(_) => {}
     }
 }
 

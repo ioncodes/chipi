@@ -983,6 +983,18 @@ fn guard_operand_to_rust(operand: &GuardOperand, fields: &[ResolvedField]) -> St
             }
         }
         GuardOperand::Literal(val) => format!("{}", val),
+        GuardOperand::Expr { left, op, right } => {
+            let l = guard_operand_to_rust(left, fields);
+            let r = guard_operand_to_rust(right, fields);
+            let op_str = match op {
+                ArithOp::Add => "+",
+                ArithOp::Sub => "-",
+                ArithOp::Mul => "*",
+                ArithOp::Div => "/",
+                ArithOp::Mod => "%",
+            };
+            format!("({} {} {})", l, op_str, r)
+        }
     }
 }
 

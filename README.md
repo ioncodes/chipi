@@ -143,6 +143,14 @@ This produces `b 0x100`, `bl 0x100`, `ba 0x100`, or `bla 0x100` depending on the
 
 **Arithmetic:** `{a + b * 4}` evaluates inline arithmetic (`+`, `-`, `*`, `/`, `%`).
 
+**Unary negation:** `{-field}` negates a field value.
+
+```chipi
+addi  [0:5]=001110 rd:reg[6:10] ra:reg[11:15] simm:simm16[16:31]
+      | simm < 0 : "subi {rd}, {ra}, {-simm}"
+      | "addi {rd}, {ra}, {simm}"
+```
+
 **Builtin functions:** `{rotate_right(val, amt)}` and `{rotate_left(val, amt)}`.
 
 **Guards:** Multiple format lines can be used with guard conditions to select different output based on field values:
@@ -153,7 +161,7 @@ addi  [0:5]=001110 rd:reg[6:10] ra:reg[11:15] simm:simm16[16:31]
       | "addi {rd}, {ra}, {simm}"
 ```
 
-Guard conditions support `==`, `!=`, `<`, `<=`, `>`, `>=` and can be joined with `,` or `&&`. The last format line may omit the guard (acts as the default).
+Guard conditions support `==`, `!=`, `<`, `<=`, `>`, `>=` and can be joined with `,` or `&&`. Guard operands can be field names, integer literals, or arithmetic expressions (`sh == 32 - mb`). The last format line may omit the guard (acts as the default).
 
 **Escapes:** Use `\{`, `\}`, `\?`, `\:` to emit literal characters.
 

@@ -127,6 +127,11 @@ pub enum CompareOp {
 pub enum GuardOperand {
     Field(String),
     Literal(i64),
+    Expr {
+        left: Box<GuardOperand>,
+        op: ArithOp,
+        right: Box<GuardOperand>,
+    },
 }
 
 /// A piece of a parsed format string.

@@ -816,6 +816,41 @@ fn parse_guard_operand(s: &str, span: &Span) -> Result<GuardOperand, Error> {
         ));
     }
 
+    // Try arithmetic: +, - at top level
+    if let Some(op_pos) = find_guard_arith_op(s, &['+', '-']) {
+        let left = s[..op_pos].trim();
+        let op_char = s.as_bytes()[op_pos] as char;
+        let right = s[op_pos + 1..].trim();
+        let op = match op_char {
+            '+' => ArithOp::Add,
+            '-' => ArithOp::Sub,
+            _ => unreachable!(),
+        };
+        return Ok(GuardOperand::Expr {
+            left: Box::new(parse_guard_operand(left, span)?),
+            op,
+            right: Box::new(parse_guard_operand(right, span)?),
+        });
+    }
+
+    // Try arithmetic: *, /, % at top level
+    if let Some(op_pos) = find_guard_arith_op(s, &['*', '/', '%']) {
+        let left = s[..op_pos].trim();
+        let op_char = s.as_bytes()[op_pos] as char;
+        let right = s[op_pos + 1..].trim();
+        let op = match op_char {
+            '*' => ArithOp::Mul,
+            '/' => ArithOp::Div,
+            '%' => ArithOp::Mod,
+            _ => unreachable!(),
+        };
+        return Ok(GuardOperand::Expr {
+            left: Box::new(parse_guard_operand(left, span)?),
+            op,
+            right: Box::new(parse_guard_operand(right, span)?),
+        });
+    }
+
     // Try integer literal
     if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
         if let Ok(val) = i64::from_str_radix(hex, 16) {
@@ -828,6 +863,18 @@ fn parse_guard_operand(s: &str, span: &Span) -> Result<GuardOperand, Error> {
 
     // Must be a field reference
     Ok(GuardOperand::Field(s.to_string()))
+}
+
+/// Find rightmost top-level arithmetic operator in a guard operand string.
+fn find_guard_arith_op(s: &str, ops: &[char]) -> Option<usize> {
+    let bytes = s.as_bytes();
+    let mut last = None;
+    for (i, &b) in bytes.iter().enumerate() {
+        if i > 0 && ops.contains(&(b as char)) {
+            last = Some(i);
+        }
+    }
+    last
 }
 
 fn is_builtin_type(name: &str) -> bool {
