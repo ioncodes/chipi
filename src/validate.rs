@@ -531,6 +531,7 @@ fn resolve_field_type(field_type: &FieldType, type_aliases: &[TypeAlias]) -> Res
                     base_type: alias.base_type.clone(),
                     wrapper_type: alias.wrapper_type.clone(),
                     transforms: alias.transforms.clone(),
+                    display_format: alias.display_format,
                 }
             } else {
                 // Built-in type used as alias
@@ -538,6 +539,7 @@ fn resolve_field_type(field_type: &FieldType, type_aliases: &[TypeAlias]) -> Res
                     base_type: resolve_builtin(name),
                     wrapper_type: None,
                     transforms: Vec::new(),
+                    display_format: None,
                 }
             }
         }
@@ -548,6 +550,7 @@ fn resolve_field_type(field_type: &FieldType, type_aliases: &[TypeAlias]) -> Res
             base_type: resolve_builtin(base_type),
             wrapper_type: None,
             transforms: transforms.clone(),
+            display_format: None,
         },
     }
 }

@@ -105,6 +105,10 @@ type reg = u8 as Register
 
 # Multiple transformations (comma-separated)
 type addr = u32 { shift_left(2), zero_extend(32) }
+
+# With display format hint
+type simm16 = i32 { sign_extend(16), display(signed_hex) }
+type uimm = u16 { display(hex) }
 ```
 
 **Builtin types:**
@@ -117,6 +121,10 @@ type addr = u32 { shift_left(2), zero_extend(32) }
 - `sign_extend(n)`: Sign-extends the extracted value from n bits
 - `zero_extend(n)`: Zero-extends the extracted value from n bits
 - `shift_left(n)`: Shifts the value left by n bits
+
+**Display formats:**
+- `display(signed_hex)`: Formats as signed hex (`0x1A`, `-0x1A`, `0`)
+- `display(hex)`: Formats as unsigned hex (`0x1A`, `0`)
 
 ### Format lines
 

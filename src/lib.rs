@@ -101,6 +101,10 @@
 //! * `zero_extend(n)` - zero extend from n bits
 //! * `shift_left(n)` - shift left by n bits
 //!
+//! Display format hints (controls how the field is printed in format strings):
+//! * `display(signed_hex)` - signed hex: `0x1A`, `-0x1A`, `0`
+//! * `display(hex)` - unsigned hex: `0x1A`, `0`
+//!
 //! ### Imports
 //!
 //! Import Rust types to wrap extracted values:

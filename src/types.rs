@@ -46,6 +46,7 @@ pub struct TypeAlias {
     pub base_type: String,
     pub wrapper_type: Option<String>,
     pub transforms: Vec<Transform>,
+    pub display_format: Option<DisplayFormat>,
     pub span: Span,
 }
 
@@ -58,6 +59,15 @@ pub enum Transform {
     ZeroExtend(u32),
     /// Left-shift the value by N bits
     ShiftLeft(u32),
+}
+
+/// Display format hint for field values in format strings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisplayFormat {
+    /// Signed hexadecimal: 0x1A, -0x1A, 0
+    SignedHex,
+    /// Unsigned hexadecimal: 0x1A, 0
+    Hex,
 }
 
 /// A map definition (lookup table for format strings).
@@ -255,6 +265,7 @@ pub struct ResolvedFieldType {
     pub base_type: String,
     pub wrapper_type: Option<String>,
     pub transforms: Vec<Transform>,
+    pub display_format: Option<DisplayFormat>,
 }
 
 /// A fully validated decoder definition, ready for tree building and code generation.

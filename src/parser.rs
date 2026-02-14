@@ -244,7 +244,7 @@ impl<'a> Parser<'a> {
         let name = rest[..eq_pos].trim().to_string();
         let rhs = rest[eq_pos + 1..].trim();
 
-        let (base_and_wrapper, transforms) = if let Some(brace_pos) = rhs.find('{') {
+        let (base_and_wrapper, transforms, display_format) = if let Some(brace_pos) = rhs.find('{') {
             let close = rhs.rfind('}').ok_or_else(|| {
                 Error::new(
                     ErrorKind::ExpectedToken("closing '}'".to_string()),
@@ -252,10 +252,10 @@ impl<'a> Parser<'a> {
                 )
             })?;
             let transforms_str = &rhs[brace_pos + 1..close];
-            let transforms = self.parse_transforms(transforms_str)?;
-            (rhs[..brace_pos].trim(), transforms)
+            let (transforms, display_format) = self.parse_transforms(transforms_str)?;
+            (rhs[..brace_pos].trim(), transforms, display_format)
         } else {
-            (rhs, Vec::new())
+            (rhs, Vec::new(), None)
         };
 
         let (base_type, wrapper_type) = if let Some(as_pos) = base_and_wrapper.find(" as ") {
@@ -271,12 +271,14 @@ impl<'a> Parser<'a> {
             base_type,
             wrapper_type,
             transforms,
+            display_format,
             span: self.span(0, line.len()),
         })
     }
 
-    fn parse_transforms(&self, s: &str) -> Result<Vec<Transform>, Error> {
+    fn parse_transforms(&self, s: &str) -> Result<(Vec<Transform>, Option<DisplayFormat>), Error> {
         let mut transforms = Vec::new();
+        let mut display_format = None;
         for part in s.split(',') {
             let part = part.trim();
             if part.is_empty() {
@@ -311,6 +313,20 @@ impl<'a> Parser<'a> {
                     )
                 })?;
                 transforms.push(Transform::ShiftLeft(n));
+            } else if let Some(inner) =
+                part.strip_prefix("display(").and_then(|s| s.strip_suffix(')'))
+            {
+                let fmt = match inner.trim() {
+                    "signed_hex" => DisplayFormat::SignedHex,
+                    "hex" => DisplayFormat::Hex,
+                    other => {
+                        return Err(Error::new(
+                            ErrorKind::UnexpectedToken(format!("unknown display format: {}", other)),
+                            self.span(0, part.len()),
+                        ));
+                    }
+                };
+                display_format = Some(fmt);
             } else {
                 return Err(Error::new(
                     ErrorKind::UnexpectedToken(part.to_string()),
@@ -318,7 +334,7 @@ impl<'a> Parser<'a> {
                 ));
             }
         }
-        Ok(transforms)
+        Ok((transforms, display_format))
     }
 
     fn parse_instruction(&self, line: &str) -> Result<InstructionDef, Error> {
@@ -447,7 +463,7 @@ impl<'a> Parser<'a> {
             if *pos < input.len() {
                 *pos += 1; // skip '}'
             }
-            Some(self.parse_transforms(transforms_str)?)
+            Some(self.parse_transforms(transforms_str)?.0)
         } else {
             None
         };

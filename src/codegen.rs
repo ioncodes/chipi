@@ -38,6 +38,9 @@ pub fn generate_code(def: &ValidatedDef, tree: &DecodeNode) -> String {
     let default_struct = format!("Default{}Format", def.config.name);
     let display_with = "DisplayWith";
 
+    // Display format helpers
+    generate_display_helpers(&mut out, def);
+
     // Map functions
     generate_map_functions(&mut out, def);
 
@@ -375,6 +378,55 @@ fn apply_transforms(extract_expr: &str, resolved: &ResolvedFieldType) -> String 
     expr
 }
 
+/// Generate display format helper structs (SignedHex, Hex) if needed.
+fn generate_display_helpers(out: &mut String, def: &ValidatedDef) {
+    let mut need_signed_hex = false;
+    let mut need_hex = false;
+
+    for instr in &def.instructions {
+        for field in &instr.resolved_fields {
+            match field.resolved_type.display_format {
+                Some(DisplayFormat::SignedHex) => need_signed_hex = true,
+                Some(DisplayFormat::Hex) => need_hex = true,
+                None => {}
+            }
+        }
+    }
+
+    if need_signed_hex {
+        writeln!(out, "struct SignedHex<T>(T);").unwrap();
+        writeln!(out).unwrap();
+
+        for ty in &["i8", "i16", "i32"] {
+            writeln!(out, "impl fmt::Display for SignedHex<{}> {{", ty).unwrap();
+            writeln!(out, "    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {{").unwrap();
+            writeln!(out, "        if self.0 == 0 {{ write!(f, \"0\") }}").unwrap();
+            writeln!(out, "        else if self.0 > 0 {{ write!(f, \"0x{{:X}}\", self.0) }}").unwrap();
+            writeln!(out, "        else {{ write!(f, \"-0x{{:X}}\", (self.0 as i64).wrapping_neg()) }}").unwrap();
+            writeln!(out, "    }}").unwrap();
+            writeln!(out, "}}").unwrap();
+            writeln!(out).unwrap();
+        }
+    }
+
+    if need_hex {
+        if !need_signed_hex {
+            writeln!(out, "struct SignedHex<T>(T);").unwrap();
+            writeln!(out).unwrap();
+        }
+
+        for ty in &["u8", "u16", "u32"] {
+            writeln!(out, "impl fmt::Display for SignedHex<{}> {{", ty).unwrap();
+            writeln!(out, "    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {{").unwrap();
+            writeln!(out, "        if self.0 == 0 {{ write!(f, \"0\") }}").unwrap();
+            writeln!(out, "        else {{ write!(f, \"0x{{:X}}\", self.0) }}").unwrap();
+            writeln!(out, "    }}").unwrap();
+            writeln!(out, "}}").unwrap();
+            writeln!(out).unwrap();
+        }
+    }
+}
+
 /// Generate map lookup functions.
 fn generate_map_functions(out: &mut String, def: &ValidatedDef) {
     if def.maps.is_empty() {
@@ -612,12 +664,21 @@ fn generate_format_trait(
         let method_name = format!("fmt_{}", instr.name);
         let params = trait_method_params(&instr.resolved_fields);
 
-        writeln!(
-            out,
-            "    fn {}({}, f: &mut fmt::Formatter) -> fmt::Result {{",
-            method_name, params
-        )
-        .unwrap();
+        if params.is_empty() {
+            writeln!(
+                out,
+                "    fn {}(f: &mut fmt::Formatter) -> fmt::Result {{",
+                method_name
+            )
+            .unwrap();
+        } else {
+            writeln!(
+                out,
+                "    fn {}({}, f: &mut fmt::Formatter) -> fmt::Result {{",
+                method_name, params
+            )
+            .unwrap();
+        }
 
         generate_format_body(out, instr, 2);
 
@@ -729,10 +790,19 @@ fn emit_write_call(
             FormatPiece::FieldRef { expr, spec } => {
                 if let Some(spec) = spec {
                     fmt_str.push_str(&format!("{{:{}}}", spec));
+                    args.push(expr_to_rust(expr, fields));
+                } else if let Some(display_fmt) = resolve_display_format(expr, fields) {
+                    fmt_str.push_str("{}");
+                    let rust_expr = expr_to_rust(expr, fields);
+                    match display_fmt {
+                        DisplayFormat::SignedHex | DisplayFormat::Hex => {
+                            args.push(format!("SignedHex({})", rust_expr));
+                        }
+                    }
                 } else {
                     fmt_str.push_str("{}");
+                    args.push(expr_to_rust(expr, fields));
                 }
-                args.push(expr_to_rust(expr, fields));
             }
         }
     }
@@ -748,6 +818,18 @@ fn emit_write_call(
             args.join(", ")
         )
         .unwrap();
+    }
+}
+
+/// Resolve display format for a format expression, if the expression is a simple field reference.
+fn resolve_display_format(expr: &FormatExpr, fields: &[ResolvedField]) -> Option<DisplayFormat> {
+    if let FormatExpr::Field(name) = expr {
+        fields
+            .iter()
+            .find(|f| f.name == *name)
+            .and_then(|f| f.resolved_type.display_format)
+    } else {
+        None
     }
 }
 
