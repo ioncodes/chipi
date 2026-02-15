@@ -1061,12 +1061,12 @@ fn generate_write_asm(
     writeln!(out, "    }}").unwrap();
 }
 
-fn word_type_for_width(width: u32) -> &'static str {
+fn word_type_for_width(width: DecoderWidth) -> String {
     match width {
-        8 => "u8",
-        16 => "u16",
-        32 => "u32",
-        _ => "u32",
+        DecoderWidth::Fixed(8) => "u8".to_string(),
+        DecoderWidth::Fixed(16) => "u16".to_string(),
+        DecoderWidth::Fixed(32) => "u32".to_string(),
+        _ => "&[u8]".to_string(),
     }
 }
 

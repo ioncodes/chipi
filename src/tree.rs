@@ -35,7 +35,7 @@ pub fn build_tree(def: &ValidatedDef) -> DecodeNode {
 fn build_node(
     instructions: &[ValidatedInstruction],
     candidates: &[usize],
-    width: u32,
+    width: DecoderWidth,
 ) -> DecodeNode {
     match candidates.len() {
         0 => DecodeNode::Fail,
@@ -163,11 +163,11 @@ fn has_all_fixed_at(instr: &ValidatedInstruction, range: BitRange) -> bool {
 fn find_useful_bit_groups(
     instructions: &[ValidatedInstruction],
     candidates: &[usize],
-    width: u32,
+    width: DecoderWidth,
 ) -> Vec<BitRange> {
-    let mut useful = vec![false; width as usize];
+    let mut useful = vec![false; width.max_bits() as usize];
 
-    for bit in 0..width {
+    for bit in 0..width.max_bits() {
         // Collect fixed values at this bit (skip candidates without fixed bits here)
         let fixed_values: Vec<Bit> = candidates
             .iter()
@@ -184,10 +184,10 @@ fn find_useful_bit_groups(
     // Group contiguous useful bits into ranges
     let mut groups = Vec::new();
     let mut i = 0u32;
-    while i < width {
+    while i < width.max_bits() {
         if useful[i as usize] {
             let start = i;
-            while i < width && useful[i as usize] {
+            while i < width.max_bits() && useful[i as usize] {
                 i += 1;
             }
             let end = i - 1;
