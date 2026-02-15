@@ -9,6 +9,11 @@ use std::fmt::Write;
 use crate::tree::DecodeNode;
 use crate::types::*;
 
+/// Check if any instruction in the decoder requires multiple units.
+fn needs_variable_length_decode(def: &ValidatedDef) -> bool {
+    def.instructions.iter().any(|i| i.unit_count() > 1)
+}
+
 /// Generate Rust source code from a validated definition and dispatch tree.
 ///
 /// The output includes:
@@ -33,6 +38,7 @@ pub fn generate_code(def: &ValidatedDef, tree: &DecodeNode) -> String {
     }
 
     let word_type = word_type_for_width(def.config.width);
+    let variable_length = needs_variable_length_decode(def);
     let enum_name = format!("{}Instruction", def.config.name);
     let trait_name = format!("{}Format", def.config.name);
     let default_struct = format!("Default{}Format", def.config.name);
@@ -74,14 +80,27 @@ pub fn generate_code(def: &ValidatedDef, tree: &DecodeNode) -> String {
     // impl block with decode() and write_asm() and display()
     writeln!(out, "impl {} {{", enum_name).unwrap();
     writeln!(out, "    #[inline]").unwrap();
-    writeln!(
-        out,
-        "    pub fn decode(opcode: {}) -> Option<Self> {{",
-        word_type
-    )
-    .unwrap();
 
-    emit_tree(&mut out, tree, def, &enum_name, 2);
+    // Generate decode signature based on whether we have variable-length instructions
+    if variable_length {
+        writeln!(
+            out,
+            "    pub fn decode(units: &[{}]) -> Option<(Self, usize)> {{",
+            word_type
+        )
+        .unwrap();
+        writeln!(out, "        if units.is_empty() {{ return None; }}").unwrap();
+        writeln!(out, "        let opcode = units[0];").unwrap();
+    } else {
+        writeln!(
+            out,
+            "    pub fn decode(opcode: {}) -> Option<Self> {{",
+            word_type
+        )
+        .unwrap();
+    }
+
+    emit_tree(&mut out, tree, def, &enum_name, 2, variable_length, &word_type);
 
     writeln!(out, "    }}").unwrap();
     writeln!(out).unwrap();
@@ -162,6 +181,8 @@ fn emit_tree(
     def: &ValidatedDef,
     enum_name: &str,
     indent: usize,
+    variable_length: bool,
+    word_type: &str,
 ) {
     let pad = "    ".repeat(indent);
     match node {
@@ -169,12 +190,48 @@ fn emit_tree(
             let instr = &def.instructions[*instruction_index];
             if let Some(guard) = leaf_guard(instr) {
                 writeln!(out, "{}if {} {{", pad, guard).unwrap();
-                emit_some(out, instr, enum_name, &format!("{}    ", pad));
+                emit_some(out, instr, enum_name, &format!("{}    ", pad), variable_length, word_type);
                 writeln!(out, "{}}} else {{", pad).unwrap();
                 writeln!(out, "{}    None", pad).unwrap();
                 writeln!(out, "{}}}", pad).unwrap();
             } else {
-                emit_some(out, instr, enum_name, &pad);
+                emit_some(out, instr, enum_name, &pad, variable_length, word_type);
+            }
+        }
+        DecodeNode::PriorityLeaves { candidates } => {
+            // Try each candidate in priority order (most specific first)
+            for (i, &idx) in candidates.iter().enumerate() {
+                let instr = &def.instructions[idx];
+                let guard = leaf_guard(instr);
+
+                if i == 0 {
+                    // First candidate
+                    if let Some(guard_expr) = guard {
+                        writeln!(out, "{}if {} {{", pad, guard_expr).unwrap();
+                        emit_some(out, instr, enum_name, &format!("{}    ", pad), variable_length, word_type);
+                    } else {
+                        // No guard needed - this should match unconditionally
+                        emit_some(out, instr, enum_name, &pad, variable_length, word_type);
+                        break; // No need to check further candidates
+                    }
+                } else if i == candidates.len() - 1 {
+                    // Last candidate
+                    writeln!(out, "{}}} else {{", pad).unwrap();
+                    if let Some(guard_expr) = guard {
+                        writeln!(out, "{}    if {} {{", pad, guard_expr).unwrap();
+                        emit_some(out, instr, enum_name, &format!("{}        ", pad), variable_length, word_type);
+                        writeln!(out, "{}    }} else {{", pad).unwrap();
+                        writeln!(out, "{}        None", pad).unwrap();
+                        writeln!(out, "{}    }}", pad).unwrap();
+                    } else {
+                        emit_some(out, instr, enum_name, &format!("{}    ", pad), variable_length, word_type);
+                    }
+                    writeln!(out, "{}}}", pad).unwrap();
+                } else {
+                    // Middle candidates
+                    writeln!(out, "{}}} else if {} {{", pad, guard.unwrap_or_else(|| "true".to_string())).unwrap();
+                    emit_some(out, instr, enum_name, &format!("{}    ", pad), variable_length, word_type);
+                }
             }
         }
         DecodeNode::Fail => {
@@ -185,14 +242,14 @@ fn emit_tree(
             arms,
             default,
         } => {
-            let extract_expr = extract_expression("opcode", *range);
+            let extract_expr = extract_expression("opcode", &[*range], variable_length);
             writeln!(out, "{}match {} {{", pad, extract_expr).unwrap();
 
             for (value, child) in arms {
-                emit_arm(out, child, def, enum_name, indent + 1, &format!("{:#x}", value));
+                emit_arm(out, child, def, enum_name, indent + 1, &format!("{:#x}", value), variable_length, word_type);
             }
 
-            emit_arm(out, default, def, enum_name, indent + 1, "_");
+            emit_arm(out, default, def, enum_name, indent + 1, "_", variable_length, word_type);
 
             writeln!(out, "{}}}", pad).unwrap();
         }
@@ -207,6 +264,8 @@ fn emit_arm(
     enum_name: &str,
     indent: usize,
     pattern: &str,
+    variable_length: bool,
+    word_type: &str,
 ) {
     let pad = "    ".repeat(indent);
     match node {
@@ -219,15 +278,56 @@ fn emit_arm(
                 if pattern == "_" {
                     // Default arm with guard: emit guarded arm then fallback
                     write!(out, "{}{} if {} => ", pad, pattern, guard).unwrap();
-                    emit_some_inline(out, instr, enum_name, indent);
+                    emit_some_inline(out, instr, enum_name, indent, variable_length, word_type);
                     writeln!(out, "{}{} => None,", pad, pattern).unwrap();
                 } else {
                     write!(out, "{}{} if {} => ", pad, pattern, guard).unwrap();
-                    emit_some_inline(out, instr, enum_name, indent);
+                    emit_some_inline(out, instr, enum_name, indent, variable_length, word_type);
                 }
             } else {
                 write!(out, "{}{} => ", pad, pattern).unwrap();
-                emit_some_inline(out, instr, enum_name, indent);
+                emit_some_inline(out, instr, enum_name, indent, variable_length, word_type);
+            }
+        }
+        DecodeNode::PriorityLeaves { candidates } => {
+            // Emit as a block with if-else chain
+            writeln!(out, "{}{} => {{", pad, pattern).unwrap();
+            let inner_pad = "    ".repeat(indent + 1);
+
+            for (i, &idx) in candidates.iter().enumerate() {
+                let instr = &def.instructions[idx];
+                let guard = leaf_guard(instr);
+
+                if i == 0 {
+                    // First candidate
+                    if let Some(guard_expr) = guard {
+                        writeln!(out, "{}if {} {{", inner_pad, guard_expr).unwrap();
+                        emit_some(out, instr, enum_name, &format!("{}    ", inner_pad), variable_length, word_type);
+                    } else {
+                        // No guard - matches unconditionally
+                        emit_some(out, instr, enum_name, &inner_pad, variable_length, word_type);
+                        writeln!(out, "{}}}", pad).unwrap();
+                        return;
+                    }
+                } else if i == candidates.len() - 1 {
+                    // Last candidate
+                    writeln!(out, "{}}} else {{", inner_pad).unwrap();
+                    if let Some(guard_expr) = guard {
+                        writeln!(out, "{}    if {} {{", inner_pad, guard_expr).unwrap();
+                        emit_some(out, instr, enum_name, &format!("{}        ", inner_pad), variable_length, word_type);
+                        writeln!(out, "{}    }} else {{", inner_pad).unwrap();
+                        writeln!(out, "{}        None", inner_pad).unwrap();
+                        writeln!(out, "{}    }}", inner_pad).unwrap();
+                    } else {
+                        emit_some(out, instr, enum_name, &format!("{}    ", inner_pad), variable_length, word_type);
+                    }
+                    writeln!(out, "{}}}", inner_pad).unwrap();
+                    writeln!(out, "{}}}", pad).unwrap();
+                } else {
+                    // Middle candidates
+                    writeln!(out, "{}}} else if {} {{", inner_pad, guard.unwrap_or_else(|| "true".to_string())).unwrap();
+                    emit_some(out, instr, enum_name, &format!("{}    ", inner_pad), variable_length, word_type);
+                }
             }
         }
         DecodeNode::Branch {
@@ -236,15 +336,15 @@ fn emit_arm(
             default,
         } => {
             writeln!(out, "{}{} => {{", pad, pattern).unwrap();
-            let extract_expr = extract_expression("opcode", *range);
+            let extract_expr = extract_expression("opcode", &[*range], variable_length);
             let inner_pad = "    ".repeat(indent + 1);
             writeln!(out, "{}match {} {{", inner_pad, extract_expr).unwrap();
 
             for (value, child) in arms {
-                emit_arm(out, child, def, enum_name, indent + 2, &format!("{:#x}", value));
+                emit_arm(out, child, def, enum_name, indent + 2, &format!("{:#x}", value), variable_length, word_type);
             }
 
-            emit_arm(out, default, def, enum_name, indent + 2, "_");
+            emit_arm(out, default, def, enum_name, indent + 2, "_", variable_length, word_type);
 
             writeln!(out, "{}}}", inner_pad).unwrap();
             writeln!(out, "{}}}", pad).unwrap();
@@ -254,16 +354,38 @@ fn emit_arm(
 
 /// Compute the guard condition string for a leaf instruction, if needed.
 /// Returns `None` if all fixed bits were already fully dispatched by the tree.
+/// For multi-unit instructions, generates guards for ALL units (unit 0 and unit 1+).
 fn leaf_guard(instr: &ValidatedInstruction) -> Option<String> {
     let fixed_bits = instr.fixed_bits();
     if fixed_bits.is_empty() {
         return None;
     }
-    let (mask, value) = compute_mask_value(&fixed_bits);
-    if mask == 0 {
-        return None;
+
+    // Group fixed bits by unit
+    let mut units_map: std::collections::HashMap<u32, Vec<(u32, Bit)>> = std::collections::HashMap::new();
+    for (unit, hw_bit, bit) in fixed_bits {
+        units_map.entry(unit).or_default().push((hw_bit, bit));
     }
-    Some(format!("opcode & {:#x} == {:#x}", mask, value))
+
+    let mut conditions = Vec::new();
+
+    for (unit, bits) in units_map {
+        let (mask, value) = compute_mask_value(&bits);
+        if mask != 0 {
+            let source = if unit == 0 {
+                "opcode".to_string()
+            } else {
+                format!("units[{}]", unit)
+            };
+            conditions.push(format!("{} & {:#x} == {:#x}", source, mask, value));
+        }
+    }
+
+    if conditions.is_empty() {
+        None
+    } else {
+        Some(conditions.join(" && "))
+    }
 }
 
 /// Write `Some(EnumName::Variant { ... })` as an inline match arm value (terminated with comma+newline).
@@ -272,28 +394,74 @@ fn emit_some_inline(
     instr: &ValidatedInstruction,
     enum_name: &str,
     _indent: usize,
+    variable_length: bool,
+    _word_type: &str,
 ) {
     let variant_name = to_pascal_case(&instr.name);
-    if instr.resolved_fields.is_empty() {
-        writeln!(out, "Some({}::{}),", enum_name, variant_name).unwrap();
+    let unit_count = instr.unit_count();
+
+    if variable_length {
+        // Emit bounds check if multi-unit instruction
+        if unit_count > 1 {
+            // For inline, we need to check bounds first
+            let cond = format!("units.len() >= {}", unit_count);
+            write!(out, "if {} {{ ", cond).unwrap();
+        }
+
+        if instr.resolved_fields.is_empty() {
+            if unit_count > 1 {
+                write!(out, "Some(({}::{}, {}))", enum_name, variant_name, unit_count).unwrap();
+            } else {
+                write!(out, "Some(({}::{}, 1))", enum_name, variant_name).unwrap();
+            }
+        } else {
+            let fields: Vec<String> = instr
+                .resolved_fields
+                .iter()
+                .map(|f| {
+                    let extract = extract_expression("opcode", &f.ranges, variable_length);
+                    let expr = apply_transforms(&extract, &f.resolved_type);
+                    format!("{}: {}", f.name, expr)
+                })
+                .collect();
+            write!(
+                out,
+                "Some(({}::{} {{ {} }}, {}))",
+                enum_name,
+                variant_name,
+                fields.join(", "),
+                unit_count
+            )
+            .unwrap();
+        }
+
+        if unit_count > 1 {
+            write!(out, " }} else {{ None }}").unwrap();
+        }
+        writeln!(out, ",").unwrap();
     } else {
-        let fields: Vec<String> = instr
-            .resolved_fields
-            .iter()
-            .map(|f| {
-                let extract = extract_expression("opcode", f.range);
-                let expr = apply_transforms(&extract, &f.resolved_type);
-                format!("{}: {}", f.name, expr)
-            })
-            .collect();
-        writeln!(
-            out,
-            "Some({}::{} {{ {} }}),",
-            enum_name,
-            variant_name,
-            fields.join(", ")
-        )
-        .unwrap();
+        // Single-unit mode (backward compatible)
+        if instr.resolved_fields.is_empty() {
+            writeln!(out, "Some({}::{}),", enum_name, variant_name).unwrap();
+        } else {
+            let fields: Vec<String> = instr
+                .resolved_fields
+                .iter()
+                .map(|f| {
+                    let extract = extract_expression("opcode", &f.ranges, variable_length);
+                    let expr = apply_transforms(&extract, &f.resolved_type);
+                    format!("{}: {}", f.name, expr)
+                })
+                .collect();
+            writeln!(
+                out,
+                "Some({}::{} {{ {} }}),",
+                enum_name,
+                variant_name,
+                fields.join(", ")
+            )
+            .unwrap();
+        }
     }
 }
 
@@ -303,18 +471,60 @@ fn emit_some(
     instr: &ValidatedInstruction,
     enum_name: &str,
     pad: &str,
+    variable_length: bool,
+    _word_type: &str,
+) {
+    let variant_name = to_pascal_case(&instr.name);
+    let unit_count = instr.unit_count();
+
+    if variable_length {
+        // Emit bounds check if multi-unit instruction
+        if unit_count > 1 {
+            writeln!(out, "{}if units.len() >= {} {{", pad, unit_count).unwrap();
+            let inner_pad = format!("{}    ", pad);
+            emit_some_inner(out, instr, enum_name, &inner_pad, variable_length, unit_count);
+            writeln!(out, "{}}} else {{", pad).unwrap();
+            writeln!(out, "{}    None", pad).unwrap();
+            writeln!(out, "{}}}", pad).unwrap();
+        } else {
+            emit_some_inner(out, instr, enum_name, pad, variable_length, unit_count);
+        }
+    } else {
+        // Single-unit mode (backward compatible)
+        if instr.resolved_fields.is_empty() {
+            writeln!(out, "{}Some({}::{})", pad, enum_name, variant_name).unwrap();
+        } else {
+            writeln!(out, "{}Some({}::{} {{", pad, enum_name, variant_name).unwrap();
+            for field in &instr.resolved_fields {
+                let extract = extract_expression("opcode", &field.ranges, variable_length);
+                let expr = apply_transforms(&extract, &field.resolved_type);
+                writeln!(out, "{}    {}: {},", pad, field.name, expr).unwrap();
+            }
+            writeln!(out, "{}}})", pad).unwrap();
+        }
+    }
+}
+
+/// Helper to emit the Some(...) part without bounds checking.
+fn emit_some_inner(
+    out: &mut String,
+    instr: &ValidatedInstruction,
+    enum_name: &str,
+    pad: &str,
+    variable_length: bool,
+    unit_count: u32,
 ) {
     let variant_name = to_pascal_case(&instr.name);
     if instr.resolved_fields.is_empty() {
-        writeln!(out, "{}Some({}::{})", pad, enum_name, variant_name).unwrap();
+        writeln!(out, "{}Some(({}::{}, {}))", pad, enum_name, variant_name, unit_count).unwrap();
     } else {
-        writeln!(out, "{}Some({}::{} {{", pad, enum_name, variant_name).unwrap();
+        writeln!(out, "{}Some(({}::{} {{", pad, enum_name, variant_name).unwrap();
         for field in &instr.resolved_fields {
-            let extract = extract_expression("opcode", field.range);
+            let extract = extract_expression("opcode", &field.ranges, variable_length);
             let expr = apply_transforms(&extract, &field.resolved_type);
             writeln!(out, "{}    {}: {},", pad, field.name, expr).unwrap();
         }
-        writeln!(out, "{}}})", pad).unwrap();
+        writeln!(out, "{}}}, {}))", pad, unit_count).unwrap();
     }
 }
 
@@ -331,16 +541,64 @@ fn compute_mask_value(fixed_bits: &[(u32, Bit)]) -> (u64, u64) {
     (mask, value)
 }
 
-/// Generate an expression to extract bits from an opcode variable.
-fn extract_expression(var: &str, range: BitRange) -> String {
-    let width = range.width();
-    let shift = range.end;
-    let mask = (1u64 << width) - 1;
+/// Generate an expression to extract bits from multiple ranges (potentially cross-unit).
+fn extract_expression(var: &str, ranges: &[BitRange], variable_length: bool) -> String {
+    if ranges.is_empty() {
+        return "0".to_string();
+    }
 
-    if shift == 0 {
-        format!("{} & {:#x}", var, mask)
+    if ranges.len() == 1 {
+        // Single range - simple extraction
+        let range = ranges[0];
+        let source = if !variable_length || range.unit == 0 {
+            var.to_string()
+        } else {
+            format!("units[{}]", range.unit)
+        };
+
+        let width = range.width();
+        let shift = range.end;
+        let mask = (1u64 << width) - 1;
+
+        if shift == 0 {
+            format!("{} & {:#x}", source, mask)
+        } else {
+            format!("({} >> {}) & {:#x}", source, shift, mask)
+        }
     } else {
-        format!("({} >> {}) & {:#x}", var, shift, mask)
+        // Multi-range extraction - combine bits from multiple ranges
+        let mut parts = Vec::new();
+        let mut accumulated_width = 0u32;
+
+        // Ranges are ordered from low-order to high-order bits
+        for range in ranges {
+            let source = if !variable_length || range.unit == 0 {
+                var.to_string()
+            } else {
+                format!("units[{}]", range.unit)
+            };
+
+            let width = range.width();
+            let shift = range.end;
+            let mask = (1u64 << width) - 1;
+
+            let extracted = if shift == 0 {
+                format!("({} & {:#x})", source, mask)
+            } else {
+                format!("(({} >> {}) & {:#x})", source, shift, mask)
+            };
+
+            // Shift this part into its position in the final value
+            if accumulated_width > 0 {
+                parts.push(format!("({} << {})", extracted, accumulated_width));
+            } else {
+                parts.push(extracted);
+            }
+
+            accumulated_width += width;
+        }
+
+        parts.join(" | ")
     }
 }
 
@@ -1134,13 +1392,25 @@ mod tests {
     fn test_extract_expression() {
         // Extract bits [5:0] (6 bits from position 5 down to 0)
         let range = BitRange::new(5, 0);
-        assert_eq!(extract_expression("opcode", range), "opcode & 0x3f");
+        assert_eq!(extract_expression("opcode", &[range], false), "opcode & 0x3f");
 
         // Extract bits [31:26] (6 bits from position 31 down to 26)
         let range = BitRange::new(31, 26);
         assert_eq!(
-            extract_expression("opcode", range),
+            extract_expression("opcode", &[range], false),
             "(opcode >> 26) & 0x3f"
         );
+
+        // Extract bits from unit 1 in variable-length mode
+        let range = BitRange::new_in_unit(1, 15, 0);
+        assert_eq!(extract_expression("opcode", &[range], true), "units[1] & 0xffff");
+
+        // Extract cross-unit field (width=16, bits [8:23] -> 2 units)
+        // Unit 0: bits 8-15 (8 bits), Unit 1: bits 0-7 (8 bits)
+        let range0 = BitRange::new_in_unit(0, 7, 0); // 8 bits from unit 0
+        let range1 = BitRange::new_in_unit(1, 15, 8); // 8 bits from unit 1
+        let result = extract_expression("opcode", &[range0, range1], true);
+        assert!(result.contains("opcode & 0xff"));
+        assert!(result.contains("units[1]"));
     }
 }

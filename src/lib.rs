@@ -68,8 +68,31 @@
 //! decoder Name {
 //!     width = 32        # 8, 16, or 32 bits
 //!     bit_order = msb0  # msb0 or lsb0
+//!     max_units = 4     # optional: safety guard (validates bit ranges)
 //! }
 //! ```
+//!
+//! #### Variable-Length Instructions
+//!
+//! chipi automatically generates variable-length decoders when you use bit positions
+//! beyond `width-1`. Simply reference subsequent units in your bit ranges:
+//!
+//! ```text
+//! decoder Dsp {
+//!     width = 16
+//!     bit_order = msb0
+//!     max_units = 2     # Optional safety check: ensures bits don't exceed 32 (width * max_units)
+//! }
+//!
+//! nop    [0:15]=0000000000000000        # 1 unit (16 bits)
+//! lri    [0:10]=00000010000 rd:u5[11:15] imm:u16[16:31]  # 2 units (32 bits)
+//! ```
+//!
+//! Generated `decode` signature for `width = u16`:
+//! - Single-unit: `pub fn decode(opcode: u16) -> Option<Self>`
+//! - Variable-length: `pub fn decode(units: &[u16]) -> Option<(Self, usize)>`
+//!
+//! The variable-length decoder returns both the instruction and the number of units consumed.
 //!
 //! ### Instructions
 //!
@@ -80,6 +103,24 @@
 //! ```
 //!
 //! Fixed bits use `[range]=pattern`. Fields use `name:type[range]`.
+//!
+//! #### Overlapping Patterns
+//!
+//! chipi supports overlapping instruction patterns where one pattern is a subset of another.
+//! More specific patterns (with more fixed bits) are checked first:
+//!
+//! ```text
+//! # Generic instruction - matches 0x1X (any value in bits 4-7)
+//! load  [0:3]=0001 reg:u4[4:7]
+//!       | "load r{reg}"
+//!
+//! # Specific instruction - matches only 0x1F
+//! load_max [0:3]=0001 [4:7]=1111
+//!          | "load rmax"
+//! ```
+//!
+//! The decoder will check `load_max` first (all bits fixed), then fall back to `load`
+//! (bits 4-7 are wildcards). This works across all units in variable-length decoders.
 //!
 //! ### Types
 //!

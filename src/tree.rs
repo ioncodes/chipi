@@ -19,6 +19,9 @@ pub enum DecodeNode {
     },
     /// Leaf: matched this instruction
     Leaf { instruction_index: usize },
+    /// Multiple candidates to try in priority order (most specific to least specific)
+    /// Used when patterns overlap and can't be distinguished by bit splits alone
+    PriorityLeaves { candidates: Vec<usize> },
     /// No instruction matches
     Fail,
 }
@@ -48,15 +51,40 @@ fn build_node(
 
             if groups.is_empty() {
                 // No bits can distinguish candidates.
-                // Pick the most specific instruction (most fixed bits).
-                let best = candidates
-                    .iter()
-                    .copied()
-                    .max_by_key(|&idx| instructions[idx].fixed_bits().len())
-                    .unwrap();
-                return DecodeNode::Leaf {
-                    instruction_index: best,
-                };
+                // Separate specific patterns from wildcards and preserve both.
+                let (specifics, wildcards) = separate_specific_and_wildcards(instructions, candidates, width);
+
+                if !specifics.is_empty() && !wildcards.is_empty() {
+                    // Both specific and wildcard patterns exist
+                    // Return a PriorityLeaves node with specifics first, then wildcards
+                    let mut priority_order = specifics;
+                    priority_order.extend(wildcards);
+                    return DecodeNode::PriorityLeaves {
+                        candidates: priority_order,
+                    };
+                } else if !specifics.is_empty() {
+                    // Only specific patterns
+                    if specifics.len() == 1 {
+                        return DecodeNode::Leaf {
+                            instruction_index: specifics[0],
+                        };
+                    } else {
+                        return DecodeNode::PriorityLeaves {
+                            candidates: specifics,
+                        };
+                    }
+                } else {
+                    // Only wildcards
+                    if wildcards.len() == 1 {
+                        return DecodeNode::Leaf {
+                            instruction_index: wildcards[0],
+                        };
+                    } else {
+                        return DecodeNode::PriorityLeaves {
+                            candidates: wildcards,
+                        };
+                    }
+                }
             }
 
             // Try all candidate ranges and pick the best
@@ -99,15 +127,36 @@ fn build_node(
             let range = match best_range {
                 Some(r) => r,
                 None => {
-                    // Can't split further, pick most specific
-                    let best = candidates
-                        .iter()
-                        .copied()
-                        .max_by_key(|&idx| instructions[idx].fixed_bits().len())
-                        .unwrap();
-                    return DecodeNode::Leaf {
-                        instruction_index: best,
-                    };
+                    // Can't split further, separate specifics from wildcards
+                    let (specifics, wildcards) = separate_specific_and_wildcards(instructions, candidates, width);
+
+                    if !specifics.is_empty() && !wildcards.is_empty() {
+                        let mut priority_order = specifics;
+                        priority_order.extend(wildcards);
+                        return DecodeNode::PriorityLeaves {
+                            candidates: priority_order,
+                        };
+                    } else if !specifics.is_empty() {
+                        if specifics.len() == 1 {
+                            return DecodeNode::Leaf {
+                                instruction_index: specifics[0],
+                            };
+                        } else {
+                            return DecodeNode::PriorityLeaves {
+                                candidates: specifics,
+                            };
+                        }
+                    } else {
+                        if wildcards.len() == 1 {
+                            return DecodeNode::Leaf {
+                                instruction_index: wildcards[0],
+                            };
+                        } else {
+                            return DecodeNode::PriorityLeaves {
+                                candidates: wildcards,
+                            };
+                        }
+                    }
                 }
             };
 
@@ -124,13 +173,36 @@ fn build_node(
             for (value, sub_candidates) in partitions {
                 // Guard: if partition didn't reduce candidate count, avoid infinite recursion
                 if sub_candidates.len() >= candidates.len() {
-                    // No progress, pick the most specific instruction from this set
-                    let best = sub_candidates
-                        .iter()
-                        .copied()
-                        .max_by_key(|&idx| instructions[idx].fixed_bits().len())
-                        .unwrap();
-                    arms.insert(value, DecodeNode::Leaf { instruction_index: best });
+                    // No progress, separate specifics from wildcards
+                    let (specifics, wildcards) = separate_specific_and_wildcards(instructions, &sub_candidates, width);
+
+                    if !specifics.is_empty() && !wildcards.is_empty() {
+                        let mut priority_order = specifics;
+                        priority_order.extend(wildcards);
+                        arms.insert(value, DecodeNode::PriorityLeaves {
+                            candidates: priority_order,
+                        });
+                    } else if !specifics.is_empty() {
+                        if specifics.len() == 1 {
+                            arms.insert(value, DecodeNode::Leaf {
+                                instruction_index: specifics[0],
+                            });
+                        } else {
+                            arms.insert(value, DecodeNode::PriorityLeaves {
+                                candidates: specifics,
+                            });
+                        }
+                    } else {
+                        if wildcards.len() == 1 {
+                            arms.insert(value, DecodeNode::Leaf {
+                                instruction_index: wildcards[0],
+                            });
+                        } else {
+                            arms.insert(value, DecodeNode::PriorityLeaves {
+                                candidates: wildcards,
+                            });
+                        }
+                    }
                 } else {
                     let child = build_node(instructions, &sub_candidates, width);
                     arms.insert(value, child);
@@ -287,4 +359,35 @@ fn extract_fixed_value(instr: &ValidatedInstruction, range: BitRange) -> u64 {
         }
     }
     value
+}
+
+/// Separate candidates into specific (all bits fixed in unit 0) vs wildcards (some don't-care bits).
+/// Returns (specific_candidates, wildcard_candidates).
+/// Specific candidates are ordered by number of fixed bits (most specific first).
+fn separate_specific_and_wildcards(
+    instructions: &[ValidatedInstruction],
+    candidates: &[usize],
+    width: u32,
+) -> (Vec<usize>, Vec<usize>) {
+    let mut specifics = Vec::new();
+    let mut wildcards = Vec::new();
+
+    for &idx in candidates {
+        // Check if this instruction has a fixed bit at EVERY position in unit 0
+        let all_fixed = (0..width).all(|bit| instructions[idx].fixed_bit_at(bit).is_some());
+
+        if all_fixed {
+            specifics.push(idx);
+        } else {
+            wildcards.push(idx);
+        }
+    }
+
+    // Sort specifics by number of fixed bits across ALL units (most to least)
+    specifics.sort_by_key(|&idx| std::cmp::Reverse(instructions[idx].fixed_bits().len()));
+
+    // Sort wildcards by number of fixed bits too (for consistent prioritization)
+    wildcards.sort_by_key(|&idx| std::cmp::Reverse(instructions[idx].fixed_bits().len()));
+
+    (specifics, wildcards)
 }

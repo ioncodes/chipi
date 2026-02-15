@@ -1,0 +1,28 @@
+# Test DSP-style variable-length instructions
+# Similar to GameCube/Wii DSP architecture
+
+decoder TestDsp {
+    width = 16
+    bit_order = msb0
+    max_units = 2
+}
+
+# 1-unit instructions (all bits within [0:15])
+nop     [0:15]=0000000000000000
+        | "nop"
+
+halt    [0:15]=0000000000100001
+        | "halt"
+
+dar     [0:13]=00000000000001 ar:u2[14:15]
+        | "dar {ar}"
+
+# 2-unit instructions (bits [16:31] are in the second unit)
+lri     [0:10]=00000010000 rd:u5[11:15] imm:u16[16:31]
+        | "lri r{rd}, #0x{imm:04x}"
+
+si      [0:7]=00010110 mem:u8[8:15] imm:u16[16:31]
+        | "si @0x{mem:02x}, #0x{imm:04x}"
+
+call    [0:15]=0000001010111111 addr:u16[16:31]
+        | "call 0x{addr:04x}"

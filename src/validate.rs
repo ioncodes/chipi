@@ -23,7 +23,7 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
     let mut errors = Vec::new();
 
     // Phase 0: Convert all bit ranges from DSL notation to hardware notation
-    let instructions = convert_bit_ranges(def);
+    let instructions = convert_bit_ranges(def, &mut errors);
 
     // Phase 1: Name uniqueness
     check_name_uniqueness(&instructions, &def.type_aliases, &mut errors);
@@ -33,6 +33,11 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
 
     // Phase 3: Bit coverage
     check_bit_coverage(&instructions, def.config.width, &mut errors);
+
+    // Phase 3b: Max units check (if configured)
+    if def.config.max_units.is_some() {
+        check_max_units(&instructions, &def.config, &mut errors);
+    }
 
     // Phase 4: Pattern conflicts
     check_pattern_conflicts(&instructions, &mut errors);
@@ -58,14 +63,14 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
                     if let Segment::Field {
                         name,
                         field_type,
-                        range,
+                        ranges,
                         ..
                     } = seg
                     {
                         let resolved = resolve_field_type(field_type, &def.type_aliases);
                         Some(ResolvedField {
                             name: name.clone(),
-                            range: *range,
+                            ranges: ranges.clone(),
                             resolved_type: resolved,
                         })
                     } else {
@@ -94,7 +99,8 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
 }
 
 /// Convert all DSL bit ranges to hardware (LSB=0) notation.
-fn convert_bit_ranges(def: &DecoderDef) -> Vec<InstructionDef> {
+/// Now supports cross-unit fields by splitting them into multiple BitRange objects.
+fn convert_bit_ranges(def: &DecoderDef, _errors: &mut Vec<Error>) -> Vec<InstructionDef> {
     let width = def.config.width;
     let order = def.config.bit_order;
 
@@ -106,13 +112,15 @@ fn convert_bit_ranges(def: &DecoderDef) -> Vec<InstructionDef> {
                 .iter()
                 .map(|seg| match seg {
                     Segment::Fixed {
-                        range,
+                        ranges,
                         pattern,
                         span,
                     } => {
-                        let hw_range = dsl_to_hardware(range.start, range.end, width, order);
+                        // Convert each DSL range to hardware notation
+                        // Since ranges is already vec![range], we just need to convert it
+                        let hw_ranges = dsl_to_hardware(ranges[0].start, ranges[0].end, width, order);
                         Segment::Fixed {
-                            range: hw_range,
+                            ranges: hw_ranges,
                             pattern: pattern.clone(),
                             span: span.clone(),
                         }
@@ -120,14 +128,15 @@ fn convert_bit_ranges(def: &DecoderDef) -> Vec<InstructionDef> {
                     Segment::Field {
                         name,
                         field_type,
-                        range,
+                        ranges,
                         span,
                     } => {
-                        let hw_range = dsl_to_hardware(range.start, range.end, width, order);
+                        // Convert each DSL range to hardware notation
+                        let hw_ranges = dsl_to_hardware(ranges[0].start, ranges[0].end, width, order);
                         Segment::Field {
                             name: name.clone(),
                             field_type: field_type.clone(),
-                            range: hw_range,
+                            ranges: hw_ranges,
                             span: span.clone(),
                         }
                     }
@@ -214,29 +223,83 @@ fn check_bit_coverage(
     errors: &mut Vec<Error>,
 ) {
     for instr in instructions {
-        let mut covered = vec![false; width as usize];
+        // Group ranges by unit (flattening all segment ranges)
+        let mut units_map: HashMap<u32, Vec<BitRange>> = HashMap::new();
 
         for seg in &instr.segments {
-            let range = match seg {
-                Segment::Fixed { range, pattern, span, .. } => {
-                    // Check pattern length matches range width
-                    if pattern.len() as u32 != range.width() {
+            match seg {
+                Segment::Fixed { ranges, pattern, span, .. } => {
+                    // Check pattern length matches total range width
+                    let total_width: u32 = ranges.iter().map(|r| r.width()).sum();
+                    if pattern.len() as u32 != total_width {
                         errors.push(Error::new(
                             ErrorKind::PatternLengthMismatch {
                                 instruction: instr.name.clone(),
-                                expected: range.width(),
+                                expected: total_width,
                                 got: pattern.len() as u32,
                             },
                             span.clone(),
                         ));
                     }
-                    range
+                    for range in ranges {
+                        units_map.entry(range.unit).or_default().push(*range);
+                    }
                 }
-                Segment::Field { range, .. } => range,
+                Segment::Field { ranges, .. } => {
+                    for range in ranges {
+                        units_map.entry(range.unit).or_default().push(*range);
+                    }
+                }
             };
+        }
 
-            for bit in range.end..=range.start {
-                if bit < width {
+        // For unit 0: require full coverage
+        if let Some(unit0_ranges) = units_map.get(&0) {
+            let mut covered = vec![false; width as usize];
+
+            for range in unit0_ranges {
+                for bit in range.end..=range.start {
+                    let idx = bit as usize;
+                    if covered[idx] {
+                        errors.push(Error::new(
+                            ErrorKind::OverlappingBits {
+                                instruction: instr.name.clone(),
+                                bit,
+                            },
+                            instr.span.clone(),
+                        ));
+                    }
+                    covered[idx] = true;
+                }
+            }
+
+            let missing: Vec<u32> = covered
+                .iter()
+                .enumerate()
+                .filter(|&(_, c)| !c)
+                .map(|(i, _)| i as u32)
+                .collect();
+
+            if !missing.is_empty() {
+                errors.push(Error::new(
+                    ErrorKind::BitCoverageGap {
+                        instruction: instr.name.clone(),
+                        missing_bits: missing,
+                    },
+                    instr.span.clone(),
+                ));
+            }
+        }
+
+        // For units 1+: only check for overlaps, gaps are allowed
+        for (unit_idx, ranges) in &units_map {
+            if *unit_idx == 0 {
+                continue;
+            }
+
+            let mut covered = vec![false; width as usize];
+            for range in ranges {
+                for bit in range.end..=range.start {
                     let idx = bit as usize;
                     if covered[idx] {
                         errors.push(Error::new(
@@ -251,22 +314,42 @@ fn check_bit_coverage(
                 }
             }
         }
+    }
+}
 
-        let missing: Vec<u32> = covered
+/// Check that instructions don't exceed the configured max_units limit.
+fn check_max_units(
+    instructions: &[InstructionDef],
+    config: &DecoderConfig,
+    errors: &mut Vec<Error>,
+) {
+    let max_units = config.max_units.expect("check_max_units called without max_units configured");
+
+    for instr in instructions {
+        // Find the maximum unit index across all segments
+        let max_unit = instr.segments
             .iter()
-            .enumerate()
-            .filter(|&(_, c)| !c)
-            .map(|(i, _)| i as u32)
-            .collect();
+            .flat_map(|seg| match seg {
+                Segment::Fixed { ranges, .. } | Segment::Field { ranges, .. } => ranges.iter(),
+            })
+            .map(|range| range.unit)
+            .max()
+            .unwrap_or(0);
 
-        if !missing.is_empty() {
+        let required_units = max_unit + 1;
+
+        if required_units > max_units {
             errors.push(Error::new(
-                ErrorKind::BitCoverageGap {
+                ErrorKind::ExceedsMaxUnits {
                     instruction: instr.name.clone(),
-                    missing_bits: missing,
+                    required: required_units,
+                    max_units,
                 },
                 instr.span.clone(),
-            ));
+            ).with_help(format!(
+                "set max_units = {} in the decoder block or remove max_units to allow any length",
+                required_units
+            )));
         }
     }
 }
@@ -310,16 +393,23 @@ fn patterns_conflict(a: &InstructionDef, b: &InstructionDef) -> bool {
     true
 }
 
-fn fixed_bit_map(instr: &InstructionDef) -> HashMap<u32, Bit> {
+fn fixed_bit_map(instr: &InstructionDef) -> HashMap<(u32, u32), Bit> {
     let mut map = HashMap::new();
     for seg in &instr.segments {
         if let Segment::Fixed {
-            range, pattern, ..
+            ranges, pattern, ..
         } = seg
         {
-            for (i, bit) in pattern.iter().enumerate() {
-                let hw_bit = range.start - i as u32;
-                map.insert(hw_bit, *bit);
+            let mut bit_idx = 0;
+            for range in ranges {
+                for i in 0..range.width() as usize {
+                    if bit_idx < pattern.len() {
+                        let hw_bit = range.start - i as u32;
+                        // Key is (unit, hw_bit) to avoid collisions between units
+                        map.insert((range.unit, hw_bit), pattern[bit_idx]);
+                        bit_idx += 1;
+                    }
+                }
             }
         }
     }

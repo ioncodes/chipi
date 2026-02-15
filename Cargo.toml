@@ -2,7 +2,7 @@
 name = "chipi"
 version = "0.1.0"
 edition = "2024"
-description = "A declarative instruction set decoder generator"
+description = "A declarative instruction set decoder and disassembler generator"
 license = "MIT"
 authors = ["Luca Marcelli <contact@layle.dev>"]
 repository = "https://github.com/ioncodes/chipi"

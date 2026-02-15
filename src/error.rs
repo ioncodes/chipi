@@ -96,6 +96,21 @@ pub enum ErrorKind {
     UnguardedNonLastFormatLine { instruction: String },
     /// Unknown builtin function name
     UnknownBuiltinFunction(String),
+
+    // Variable-length instruction errors
+    /// A bit range spans across unit boundaries
+    CrossUnitBoundary {
+        instruction: String,
+        range_start: u32,
+        range_end: u32,
+        width: u32,
+    },
+    /// Instruction requires more units than max_units allows
+    ExceedsMaxUnits {
+        instruction: String,
+        required: u32,
+        max_units: u32,
+    },
 }
 
 /// An error with location and optional help text.
@@ -203,6 +218,27 @@ impl fmt::Display for Error {
             }
             ErrorKind::UnknownBuiltinFunction(name) => {
                 format!("unknown builtin function '{}'", name)
+            }
+            ErrorKind::CrossUnitBoundary {
+                instruction,
+                range_start,
+                range_end,
+                width,
+            } => {
+                format!(
+                    "instruction '{}': bit range [{}:{}] spans across unit boundary (width={})",
+                    instruction, range_start, range_end, width
+                )
+            }
+            ErrorKind::ExceedsMaxUnits {
+                instruction,
+                required,
+                max_units,
+            } => {
+                format!(
+                    "instruction '{}' requires {} units but decoder max_units is {}",
+                    instruction, required, max_units
+                )
             }
         };
 

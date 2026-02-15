@@ -171,6 +171,7 @@ impl<'a> Parser<'a> {
 
         let mut width: Option<u32> = None;
         let mut bit_order: Option<BitOrder> = None;
+        let mut max_units: Option<u32> = None;
 
         // Parse body lines until '}'
         while self.line_idx < self.lines.len() {
@@ -215,6 +216,23 @@ impl<'a> Parser<'a> {
                         ));
                     }
                 }
+            } else if let Some(val) = line.strip_prefix("max_units") {
+                let val = val.trim().strip_prefix('=').map(|s| s.trim()).unwrap_or(val.trim());
+                match val.parse::<u32>() {
+                    Ok(m) if m > 0 => max_units = Some(m),
+                    Ok(_) => {
+                        return Err(Error::new(
+                            ErrorKind::ExpectedToken("positive integer for max_units".to_string()),
+                            self.span(0, line.len()),
+                        ));
+                    }
+                    Err(_) => {
+                        return Err(Error::new(
+                            ErrorKind::ExpectedToken("positive integer for max_units".to_string()),
+                            self.span(0, line.len()),
+                        ));
+                    }
+                }
             }
 
             self.advance();
@@ -227,6 +245,7 @@ impl<'a> Parser<'a> {
             name,
             width,
             bit_order,
+            max_units,
             span: Span::new(&self.filename, block_start_line + 1, 1, 0),
         })
     }
@@ -418,7 +437,7 @@ impl<'a> Parser<'a> {
             .collect();
 
         Ok(Segment::Fixed {
-            range,
+            ranges: vec![range],  // Single-unit range for now
             pattern,
             span: self.span(start, pattern_str.len()),
         })
@@ -492,7 +511,7 @@ impl<'a> Parser<'a> {
         Ok(Segment::Field {
             name,
             field_type,
-            range,
+            ranges: vec![range],  // Single-unit range for now
             span: self.span(name_start, *pos - name_start),
         })
     }
@@ -720,7 +739,8 @@ impl<'a> Parser<'a> {
         }
 
         // Conversion from DSL to hardware notation happens in validate() where width is known
-        Ok((BitRange { start: dsl_start, end: dsl_end }, (dsl_start, dsl_end)))
+        // Use BitRange::new() which defaults to unit 0
+        Ok((BitRange::new(dsl_start, dsl_end), (dsl_start, dsl_end)))
     }
 }
 
@@ -884,20 +904,49 @@ fn is_builtin_type(name: &str) -> bool {
     )
 }
 
-/// Convert DSL bit positions to hardware (LSB=0) positions.
-pub fn dsl_to_hardware(dsl_start: u32, dsl_end: u32, width: u32, order: BitOrder) -> BitRange {
-    match order {
-        BitOrder::Msb0 => {
-            let hw_a = width - 1 - dsl_start;
-            let hw_b = width - 1 - dsl_end;
-            let hw_start = std::cmp::max(hw_a, hw_b);
-            let hw_end = std::cmp::min(hw_a, hw_b);
-            BitRange::new(hw_start, hw_end)
-        }
-        BitOrder::Lsb0 => {
-            let hw_start = std::cmp::max(dsl_start, dsl_end);
-            let hw_end = std::cmp::min(dsl_start, dsl_end);
-            BitRange::new(hw_start, hw_end)
-        }
+/// Convert DSL bit positions to hardware (LSB=0) positions with unit support.
+///
+/// For variable-length instructions, bit positions beyond width-1 automatically
+/// refer to subsequent units. The unit index is computed as bit_position / width.
+///
+/// For cross-unit ranges (e.g., `\[8:31\]` with width=16), this splits the range into
+/// multiple BitRange objects, one for each unit spanned.
+///
+/// Returns a Vec of BitRange objects ordered by unit index.
+pub fn dsl_to_hardware(dsl_start: u32, dsl_end: u32, width: u32, order: BitOrder) -> Vec<BitRange> {
+    let (dsl_lo, dsl_hi) = (dsl_start.min(dsl_end), dsl_start.max(dsl_end));
+
+    let start_unit = dsl_lo / width;
+    let end_unit = dsl_hi / width;
+
+    let mut ranges = Vec::new();
+
+    for unit in start_unit..=end_unit {
+        let unit_dsl_start = unit * width;
+        let unit_dsl_end = (unit + 1) * width - 1;
+
+        // Calculate which bits from this unit are included
+        let range_start_in_unit = if unit == start_unit { dsl_lo } else { unit_dsl_start };
+        let range_end_in_unit = if unit == end_unit { dsl_hi } else { unit_dsl_end };
+
+        // Convert to local positions within the unit
+        let local_start = range_start_in_unit % width;
+        let local_end = range_end_in_unit % width;
+
+        // Convert to hardware notation
+        let (hw_start, hw_end) = match order {
+            BitOrder::Msb0 => {
+                let hw_a = width - 1 - local_start;
+                let hw_b = width - 1 - local_end;
+                (std::cmp::max(hw_a, hw_b), std::cmp::min(hw_a, hw_b))
+            }
+            BitOrder::Lsb0 => {
+                (std::cmp::max(local_start, local_end), std::cmp::min(local_start, local_end))
+            }
+        };
+
+        ranges.push(BitRange::new_in_unit(unit, hw_start, hw_end));
     }
+
+    ranges
 }

@@ -1,6 +1,8 @@
 # chipi
 
-A declarative instruction decoder generator using a custom DSL. Define your CPUs instruction encoding in a `.chipi` file, and chipi generates a decoder and disassembler for you. Seemless interaction with Rust types.
+A declarative instruction decoder generator using a custom DSL. Define your CPUs instruction encoding in a `.chipi` file, and chipi generates a decoder and disassembler for you. Seemless interaction with Rust types.  
+
+An example disassembler for GameCube CPU and DSP can be found [here](https://github.com/ioncodes/chipi-gekko).
 
 ## Usage
 
@@ -37,6 +39,12 @@ match ppc::PpcInstruction::decode(raw) {
     None => println!(".long {:#010x}", raw),
 };
 ```
+
+Note: The generated `decode()` function signature changes depending on amount of units (e.g. if the architecture is of variable length)! Example:
+- Single-unit: `pub fn decode(opcode: u16) -> Option<Self>`
+  - Returns `instruction` only
+- Multi-unit: `pub fn decode(units: &[u16]) -> Option<(Self, usize)>`
+  - Returns `(instruction, unit_count)` tuple, `unit_count` indicating the amount of units consumed
 
 The generated `Display` impl uses format lines defined in the DSL. You can also override formatting per-instruction by implementing the generated trait:
 
@@ -88,6 +96,43 @@ addi    [0:5]=001110 rd:reg[6:10] ra:reg[11:15] simm:simm16[16:31]
 
 - `msb0`: position 0 is the most significant bit
 - `lsb0`: position 0 is the least significant bit
+
+### Variable-Length Instructions
+
+Chipi supports variable-length instructions. When a bit position exceeds `width - 1`, it implicitly references subsequent units (1 unit = `width` bits). The unit index is automatically computed as `bit_position / width`.
+
+```chipi
+decoder GcDsp {
+    width = 16
+    bit_order = msb0
+    max_units = 2       # optional safety guard
+}
+
+# 1-unit instruction: all bits within [0:15]
+nop     [0:15]=0000000000000000
+        | "nop"
+
+# 2-unit instruction: bits [16:31] are in the second unit
+lri     [0:10]=00000010000 rd:u5[11:15] imm:u16[16:31]
+        | "lri r{rd}, #0x{imm:04x}"
+
+call    [0:15]=0000001010111111 addr:u16[16:31]
+        | "call 0x{addr:04x}"
+```
+
+### Optional Safety Guard: `max_units`
+
+The `max_units` decoder option acts as a compile-time safety net:
+
+```chipi
+decoder GcDsp {
+    width = 16
+    bit_order = msb0
+    max_units = 2       # enforce maximum instruction length
+}
+```
+
+It ensures at compile-time that bitranges do not exceed `max_units * width`. Helps with catching typos.
 
 ### Custom types
 
