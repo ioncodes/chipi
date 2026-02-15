@@ -1,6 +1,6 @@
 [package]
 name = "chipi"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "A declarative instruction set decoder and disassembler generator"
 license = "MIT"
