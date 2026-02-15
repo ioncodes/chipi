@@ -169,7 +169,7 @@ impl<'a> Parser<'a> {
 
         self.advance();
 
-        let mut width: Option<u32> = None;
+        let mut width: Option<DecoderWidth> = None;
         let mut bit_order: Option<BitOrder> = None;
 
         // Parse body lines until '}'
@@ -188,19 +188,34 @@ impl<'a> Parser<'a> {
 
             if let Some(val) = line.strip_prefix("width") {
                 let val = val.trim().strip_prefix('=').map(|s| s.trim()).unwrap_or(val.trim());
-                match val.parse::<u32>() {
-                    Ok(w) if w == 8 || w == 16 || w == 32 => width = Some(w),
-                    Ok(w) => {
+                if let Some(var_fields) = val.strip_prefix("[") {
+                    // Parse variable[8:32]
+                    let fields: Vec<&str> = var_fields.split(':').collect();
+                    if fields.len() != 2 {
                         return Err(Error::new(
-                            ErrorKind::InvalidWidth(w),
+                            ErrorKind::InvalidWidth(0),
                             self.span(0, line.len()),
                         ));
                     }
-                    Err(_) => {
-                        return Err(Error::new(
-                            ErrorKind::ExpectedToken("integer width (8, 16, or 32)".to_string()),
-                            self.span(0, line.len()),
-                        ));
+
+                    let min_width = fields[0].trim().parse::<u32>().unwrap_or(8);
+                    let max_width = fields[1].strip_suffix(']').unwrap().trim().parse::<u32>().unwrap_or(32);
+                    width = Some(DecoderWidth::Variable { min: min_width, max: max_width });
+                } else {
+                    match val.parse::<u32>() {
+                        Ok(w) if w == 8 || w == 16 || w == 32 => width = Some(DecoderWidth::Fixed(w)),
+                        Ok(w) => {
+                            return Err(Error::new(
+                                ErrorKind::InvalidWidth(w),
+                                self.span(0, line.len()),
+                            ));
+                        }
+                        Err(_) => {
+                            return Err(Error::new(
+                                ErrorKind::ExpectedToken("integer width (8, 16, or 32)".to_string()),
+                                self.span(0, line.len()),
+                            ));
+                        }
                     }
                 }
             } else if let Some(val) = line.strip_prefix("bit_order") {
@@ -220,7 +235,7 @@ impl<'a> Parser<'a> {
             self.advance();
         }
 
-        let width = width.unwrap_or(32);
+        let width = width.unwrap_or(DecoderWidth::Variable { min: 8, max: 32 });
         let bit_order = bit_order.unwrap_or(BitOrder::Msb0);
 
         Ok(DecoderConfig {
@@ -885,11 +900,11 @@ fn is_builtin_type(name: &str) -> bool {
 }
 
 /// Convert DSL bit positions to hardware (LSB=0) positions.
-pub fn dsl_to_hardware(dsl_start: u32, dsl_end: u32, width: u32, order: BitOrder) -> BitRange {
+pub fn dsl_to_hardware(dsl_start: u32, dsl_end: u32, width: DecoderWidth, order: BitOrder) -> BitRange {
     match order {
         BitOrder::Msb0 => {
-            let hw_a = width - 1 - dsl_start;
-            let hw_b = width - 1 - dsl_end;
+            let hw_a = width.max_bits() - 1 - dsl_start;
+            let hw_b = width.max_bits() - 1 - dsl_end;
             let hw_start = std::cmp::max(hw_a, hw_b);
             let hw_end = std::cmp::min(hw_a, hw_b);
             BitRange::new(hw_start, hw_end)

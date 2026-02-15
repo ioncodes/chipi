@@ -25,9 +25,32 @@ pub struct Import {
 #[derive(Debug, Clone)]
 pub struct DecoderConfig {
     pub name: String,
-    pub width: u32,
+    pub width: DecoderWidth,
     pub bit_order: BitOrder,
     pub span: Span,
+}
+
+/// Decoder input width.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DecoderWidth {
+    Fixed(u32),
+    Variable { min: u32, max: u32 },
+}
+
+impl DecoderWidth {
+    pub fn min_bits(&self) -> u32 {
+        match self {
+            DecoderWidth::Fixed(w) => *w,
+            DecoderWidth::Variable { min, .. } => *min,
+        }
+    }
+    
+    pub fn max_bits(&self) -> u32 {
+        match self {
+            DecoderWidth::Fixed(w) => *w,
+            DecoderWidth::Variable { max, .. } => *max,
+        }
+    }
 }
 
 /// Bit order convention for DSL input.

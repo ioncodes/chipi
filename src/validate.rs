@@ -210,11 +210,11 @@ fn resolve_types(
 
 fn check_bit_coverage(
     instructions: &[InstructionDef],
-    width: u32,
+    width: DecoderWidth,
     errors: &mut Vec<Error>,
 ) {
     for instr in instructions {
-        let mut covered = vec![false; width as usize];
+        let mut covered = vec![false; width.max_bits() as usize];
 
         for seg in &instr.segments {
             let range = match seg {
@@ -236,7 +236,7 @@ fn check_bit_coverage(
             };
 
             for bit in range.end..=range.start {
-                if bit < width {
+                if bit < width.max_bits() {
                     let idx = bit as usize;
                     if covered[idx] {
                         errors.push(Error::new(
@@ -254,6 +254,7 @@ fn check_bit_coverage(
 
         let missing: Vec<u32> = covered
             .iter()
+            .take(width.min_bits() as usize)
             .enumerate()
             .filter(|&(_, c)| !c)
             .map(|(i, _)| i as u32)
