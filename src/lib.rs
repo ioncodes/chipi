@@ -11,7 +11,7 @@
 //!
 //! ```toml
 //! [build-dependencies]
-//! chipi = "0.1"
+//! chipi = "0.1.1"
 //! ```
 //!
 //! Create `build.rs`:

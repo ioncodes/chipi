@@ -10,7 +10,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [build-dependencies]
-chipi = "0.1"
+chipi = "0.1.1"
 ```
 
 In `build.rs`:
