@@ -413,9 +413,9 @@ impl<'a> Parser<'a> {
         }
         *pos += 1;
 
-        // Parse binary pattern
+        // Parse binary pattern (0, 1, or ?)
         let start = *pos;
-        while *pos < input.len() && (input.as_bytes()[*pos] == b'0' || input.as_bytes()[*pos] == b'1')
+        while *pos < input.len() && (input.as_bytes()[*pos] == b'0' || input.as_bytes()[*pos] == b'1' || input.as_bytes()[*pos] == b'?')
         {
             *pos += 1;
         }
@@ -432,6 +432,7 @@ impl<'a> Parser<'a> {
             .map(|c| match c {
                 '0' => Bit::Zero,
                 '1' => Bit::One,
+                '?' => Bit::Wildcard,
                 _ => unreachable!(),
             })
             .collect();

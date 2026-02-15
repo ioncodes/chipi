@@ -529,10 +529,15 @@ fn emit_some_inner(
 }
 
 /// Compute a bitmask and expected value from a list of (hw_bit_position, Bit) pairs.
+/// Wildcard bits are skipped (not included in the mask).
 fn compute_mask_value(fixed_bits: &[(u32, Bit)]) -> (u64, u64) {
     let mut mask: u64 = 0;
     let mut value: u64 = 0;
     for &(bit_pos, bit_val) in fixed_bits {
+        // Skip wildcard bits - they don't contribute to the mask
+        if bit_val == Bit::Wildcard {
+            continue;
+        }
         mask |= 1u64 << bit_pos;
         if bit_val == Bit::One {
             value |= 1u64 << bit_pos;

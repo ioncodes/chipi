@@ -10,7 +10,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [build-dependencies]
-chipi = "0.1.1"
+chipi = "0.2.0"
 ```
 
 In `build.rs`:
@@ -89,6 +89,8 @@ addi    [0:5]=001110 rd:reg[6:10] ra:reg[11:15] simm:simm16[16:31]
 - Each line defines an instruction: a name, fixed-bit patterns for matching, and named fields to extract
 - Fields have a name, a type (`u8`, `u16`, ...), and a bit range
 - Fixed bits use `[range]=value` syntax
+  - Use `0` or `1` for bits that must match exactly
+  - Use `?` for wildcard bits
 - Format lines start with `|` and define disassembly output
 - Comments start with `#`
 
@@ -96,6 +98,22 @@ addi    [0:5]=001110 rd:reg[6:10] ra:reg[11:15] simm:simm16[16:31]
 
 - `msb0`: position 0 is the most significant bit
 - `lsb0`: position 0 is the least significant bit
+
+### Wildcard bits
+
+Use `?` in fixed bit patterns to indicate "don't care" bits that can be any value. This is useful when certain bit positions are reserved, unused, or ignored by the hardware:
+
+```chipi
+# Match when bits [15:8] are 0x8c, bits [7:0] can be anything
+clr15   [15:0]=10001100????????
+        | "CLR15"
+
+# Mix wildcards with specific bits
+nop     [7:4]=0000 [3:0]=????
+        | "nop"
+```
+
+Wildcard bits are excluded from the matching mask, meaning instructions will match regardless of the values in those positions. This allows you to accurately represent instruction encodings where certain bits are architecturally undefined or reserved.
 
 ### Variable-Length Instructions
 

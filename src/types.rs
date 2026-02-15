@@ -265,11 +265,12 @@ impl BitRange {
     }
 }
 
-/// An individual bit: 0 or 1.
+/// An individual bit: 0, 1, or wildcard (?).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Bit {
     Zero,
     One,
+    Wildcard,
 }
 
 /// Type specification for a field (either an alias or inline with transforms).
@@ -339,6 +340,7 @@ impl ValidatedInstruction {
     /// Get all fixed bit positions and their values as a flat list.
     /// Returns (unit, hw_bit, bit_value) tuples for ALL units (not just unit 0).
     /// This allows checking fixed bits in any unit during decoding.
+    /// Wildcard bits are excluded from the result.
     pub fn fixed_bits(&self) -> Vec<(u32, u32, Bit)> {
         let mut result = Vec::new();
         for seg in &self.segments {
@@ -348,8 +350,12 @@ impl ValidatedInstruction {
                     let range_width = range.width() as usize;
                     for i in 0..range_width {
                         if bit_idx < pattern.len() {
-                            let hw_bit = range.start - i as u32;
-                            result.push((range.unit, hw_bit, pattern[bit_idx]));
+                            let bit = pattern[bit_idx];
+                            // Skip wildcard bits
+                            if bit != Bit::Wildcard {
+                                let hw_bit = range.start - i as u32;
+                                result.push((range.unit, hw_bit, bit));
+                            }
                             bit_idx += 1;
                         }
                     }
@@ -361,6 +367,7 @@ impl ValidatedInstruction {
 
     /// Get the fixed bit value at a specific hardware bit position in unit 0, if any.
     /// Only considers bits in unit 0 (for backward compatibility with decision tree).
+    /// Returns None for wildcard bits (treating them as not fixed).
     pub fn fixed_bit_at(&self, hw_bit: u32) -> Option<Bit> {
         for seg in &self.segments {
             if let Segment::Fixed { ranges, pattern, .. } = seg {
@@ -375,7 +382,12 @@ impl ValidatedInstruction {
                         let offset = (range.start - hw_bit) as usize;
                         let idx = bit_idx + offset;
                         if idx < pattern.len() {
-                            return Some(pattern[idx]);
+                            let bit = pattern[idx];
+                            // Treat wildcard bits as not fixed
+                            if bit == Bit::Wildcard {
+                                return None;
+                            }
+                            return Some(bit);
                         }
                     }
                     bit_idx += range.width() as usize;

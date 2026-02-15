@@ -11,7 +11,7 @@
 //!
 //! ```toml
 //! [build-dependencies]
-//! chipi = "0.1.1"
+//! chipi = "0.2.0"
 //! ```
 //!
 //! Create `build.rs`:
@@ -103,6 +103,24 @@
 //! ```
 //!
 //! Fixed bits use `[range]=pattern`. Fields use `name:type[range]`.
+//!
+//! #### Wildcard Bits
+//!
+//! Use `?` in bit patterns for bits that can be any value:
+//!
+//! ```text
+//! # Match when bits [15:8] are 0x8c, bits [7:0] can be anything
+//! clr15   [15:0]=10001100????????
+//!         | "CLR15"
+//!
+//! # Mix wildcards with specific bits
+//! nop     [7:4]=0000 [3:0]=????
+//!         | "nop"
+//! ```
+//!
+//! Wildcard bits are excluded from the matching mask, so instructions match
+//! regardless of the values in those positions. This is useful for reserved or
+//! architecturally undefined bits.
 //!
 //! #### Overlapping Patterns
 //!
