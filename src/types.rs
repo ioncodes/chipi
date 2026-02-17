@@ -27,6 +27,7 @@ pub struct DecoderConfig {
     pub name: String,
     pub width: u32,
     pub bit_order: BitOrder,
+    pub endian: ByteEndian,
     /// Optional maximum number of units an instruction can span.
     /// When specified, acts as a compile-time safety guard against typos.
     /// When None, no limit is enforced.
@@ -41,6 +42,13 @@ pub enum BitOrder {
     Msb0,
     /// LSB0: bit 0 is the least significant bit
     Lsb0,
+}
+
+/// Byte endianness for the generated decode function.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ByteEndian {
+    Big,
+    Little,
 }
 
 /// A custom type alias for field types.

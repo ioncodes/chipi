@@ -10,7 +10,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [build-dependencies]
-chipi = "0.2.0"
+chipi = "0.3.0"
 ```
 
 In `build.rs`:
@@ -34,17 +34,19 @@ mod ppc {
     include!(concat!(env!("OUT_DIR"), "/ppc.rs"));
 }
 
-match ppc::PpcInstruction::decode(raw) {
-    Some(i) => println!("{}", i),    // uses generated Display impl
-    None => println!(".long {:#010x}", raw),
+match ppc::PpcInstruction::decode(&data[offset..]) {
+    Some((instr, bytes)) => {
+        println!("{}", instr);  // uses generated Display impl
+        offset += bytes;
+    }
+    None => {
+        println!(".long {:#010x}", raw);
+        offset += 4;
+    }
 };
 ```
 
-Note: The generated `decode()` function signature changes depending on amount of units (e.g. if the architecture is of variable length)! Example:
-- Single-unit: `pub fn decode(opcode: u16) -> Option<Self>`
-  - Returns `instruction` only
-- Multi-unit: `pub fn decode(units: &[u16]) -> Option<(Self, usize)>`
-  - Returns `(instruction, unit_count)` tuple, `unit_count` indicating the amount of units consumed
+The generated `decode()` has the signature `pub fn decode(data: &[u8]) -> Option<(Self, usize)>`, where `usize` is the number of bytes consumed.
 
 The generated `Display` impl uses format lines defined in the DSL. You can also override formatting per-instruction by implementing the generated trait:
 
@@ -70,6 +72,7 @@ import crate::cpu::Register
 decoder Ppc {
     width = 32
     bit_order = msb0
+    endian = big
 }
 
 type reg = u8 as Register
@@ -85,7 +88,7 @@ addi    [0:5]=001110 rd:reg[6:10] ra:reg[11:15] simm:simm16[16:31]
         | "addi {rd}, {ra}, {simm}"
 ```
 
-- `decoder` block sets the instruction width (in bits) and bit ordering
+- `decoder` block sets the instruction width (in bits), bit ordering, and byte endianness
 - Each line defines an instruction: a name, fixed-bit patterns for matching, and named fields to extract
 - Fields have a name, a type (`u8`, `u16`, ...), and a bit range
 - Fixed bits use `[range]=value` syntax
@@ -123,7 +126,8 @@ Chipi supports variable-length instructions. When a bit position exceeds `width 
 decoder GcDsp {
     width = 16
     bit_order = msb0
-    max_units = 2       # optional safety guard
+    endian = big          # byte endianness (big or little, default: big)
+    max_units = 2         # optional safety check
 }
 
 # 1-unit instruction: all bits within [0:15]
@@ -138,6 +142,8 @@ call    [0:15]=0000001010111111 addr:u16[16:31]
         | "call 0x{addr:04x}"
 ```
 
+The generated decoder always accepts `&[u8]` and returns bytes consumed. For single-unit instructions, it returns `width / 8` bytes; for multi-unit instructions, it returns `unit_count * (width / 8)` bytes.
+
 ### Optional Safety Guard: `max_units`
 
 The `max_units` decoder option acts as a compile-time safety net:
@@ -146,6 +152,7 @@ The `max_units` decoder option acts as a compile-time safety net:
 decoder GcDsp {
     width = 16
     bit_order = msb0
+    endian = big
     max_units = 2       # enforce maximum instruction length
 }
 ```

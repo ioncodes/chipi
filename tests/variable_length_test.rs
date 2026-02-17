@@ -25,12 +25,12 @@ call    [0:15]=0000001010111111 addr:u16[16:31]
     let result = generate_from_str(source, "test_dsp.chipi");
     match result {
         Ok(code) => {
-            // Should generate variable-length decode function
-            assert!(code.contains("pub fn decode(units: &[u16]) -> Option<(Self, usize)>"));
-            // Should have bounds checks for 2-unit instructions
-            assert!(code.contains("units.len() >= 2"));
-            // Should extract from units[1]
-            assert!(code.contains("units[1]"));
+            // Should generate byte-based decode function
+            assert!(code.contains("pub fn decode(data: &[u8]) -> Option<(Self, usize)>"));
+            // Should have bounds checks for 2-unit instructions (4 bytes)
+            assert!(code.contains("data.len() >= 4"));
+            // Should read unit 1 via byte conversion
+            assert!(code.contains("u16::from_be_bytes(data[2..4]"));
             println!("Generated code:\n{}", code);
         }
         Err(e) => {
@@ -57,11 +57,10 @@ add     [0:5]=000001 rd:u5[6:10] rs:u5[11:15] rt:u5[16:20] [21:31]=00000000000
     let result = generate_from_str(source, "test_dsp.chipi");
     match result {
         Ok(code) => {
-            // Should generate single-unit decode function (backward compatible)
-            assert!(code.contains("pub fn decode(opcode: u32) -> Option<Self>"));
-            // Should NOT have variable-length features
-            assert!(!code.contains("units: &["));
-            assert!(!code.contains("units.len()"));
+            // Should generate byte-based decode function (unified signature)
+            assert!(code.contains("pub fn decode(data: &[u8]) -> Option<(Self, usize)>"));
+            // Should read opcode from bytes
+            assert!(code.contains("u32::from_be_bytes(data[0..4]"));
             println!("Generated code:\n{}", code);
         }
         Err(e) => {
@@ -108,10 +107,10 @@ cross_unit [0:13]=00000000000000 field:u32[14:31]
     let result = generate_from_str(source, "test_dsp.chipi");
     match result {
         Ok(code) => {
-            // Should generate variable-length decode function
-            assert!(code.contains("pub fn decode(units: &[u16]) -> Option<(Self, usize)>"));
-            // Should extract from both unit 0 and unit 1
-            assert!(code.contains("units[1]"));
+            // Should generate byte-based decode function
+            assert!(code.contains("pub fn decode(data: &[u8]) -> Option<(Self, usize)>"));
+            // Should read unit 1 via byte conversion
+            assert!(code.contains("u16::from_be_bytes(data[2..4]"));
             // Should have multi-range extraction (combining bits from multiple units)
             println!("Generated code:\n{}", code);
         }
@@ -142,10 +141,10 @@ instr_b [0:15]=0000000100000000 [16:31]=1111111111111111
     let result = generate_from_str(source, "test_dsp.chipi");
     match result {
         Ok(code) => {
-            // Should generate variable-length decode
-            assert!(code.contains("pub fn decode(units: &[u16]) -> Option<(Self, usize)>"));
-            // Should check unit 1 patterns to distinguish instructions
-            assert!(code.contains("units[1]"));
+            // Should generate byte-based decode
+            assert!(code.contains("pub fn decode(data: &[u8]) -> Option<(Self, usize)>"));
+            // Should read unit 1 via byte conversion to distinguish instructions
+            assert!(code.contains("u16::from_be_bytes(data[2..4]"));
             // Should have guards checking unit 1 bits
             println!("Generated code:\n{}", code);
         }

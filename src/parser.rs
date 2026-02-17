@@ -171,6 +171,7 @@ impl<'a> Parser<'a> {
 
         let mut width: Option<u32> = None;
         let mut bit_order: Option<BitOrder> = None;
+        let mut endian: Option<ByteEndian> = None;
         let mut max_units: Option<u32> = None;
 
         // Parse body lines until '}'
@@ -216,6 +217,18 @@ impl<'a> Parser<'a> {
                         ));
                     }
                 }
+            } else if let Some(val) = line.strip_prefix("endian") {
+                let val = val.trim().strip_prefix('=').map(|s| s.trim()).unwrap_or(val.trim());
+                match val {
+                    "big" => endian = Some(ByteEndian::Big),
+                    "little" => endian = Some(ByteEndian::Little),
+                    _ => {
+                        return Err(Error::new(
+                            ErrorKind::ExpectedToken("big or little".to_string()),
+                            self.span(0, line.len()),
+                        ));
+                    }
+                }
             } else if let Some(val) = line.strip_prefix("max_units") {
                 let val = val.trim().strip_prefix('=').map(|s| s.trim()).unwrap_or(val.trim());
                 match val.parse::<u32>() {
@@ -240,11 +253,13 @@ impl<'a> Parser<'a> {
 
         let width = width.unwrap_or(32);
         let bit_order = bit_order.unwrap_or(BitOrder::Msb0);
+        let endian = endian.unwrap_or(ByteEndian::Big);
 
         Ok(DecoderConfig {
             name,
             width,
             bit_order,
+            endian,
             max_units,
             span: Span::new(&self.filename, block_start_line + 1, 1, 0),
         })

@@ -11,7 +11,7 @@
 //!
 //! ```toml
 //! [build-dependencies]
-//! chipi = "0.2.0"
+//! chipi = "0.3.0"
 //! ```
 //!
 //! Create `build.rs`:
@@ -35,8 +35,12 @@
 //!     include!(concat!(env!("OUT_DIR"), "/cpu.rs"));
 //! }
 //!
-//! match cpu::CpuInstruction::decode(raw) {
-//!     Some(instr) => println!("{}", instr),
+//! // decode() always takes &[u8] and returns (instruction, bytes_consumed)
+//! match cpu::CpuInstruction::decode(&data[offset..]) {
+//!     Some((instr, bytes)) => {
+//!         println!("{}", instr);
+//!         offset += bytes;
+//!     }
 //!     None => println!("invalid instruction"),
 //! }
 //! ```
@@ -47,6 +51,7 @@
 //! decoder Cpu {
 //!     width = 32
 //!     bit_order = msb0
+//!     endian = big
 //! }
 //!
 //! type simm16 = i32 { sign_extend(16) }
@@ -68,6 +73,7 @@
 //! decoder Name {
 //!     width = 32        # 8, 16, or 32 bits
 //!     bit_order = msb0  # msb0 or lsb0
+//!     endian = big      # big or little (default: big)
 //!     max_units = 4     # optional: safety guard (validates bit ranges)
 //! }
 //! ```
@@ -81,6 +87,7 @@
 //! decoder Dsp {
 //!     width = 16
 //!     bit_order = msb0
+//!     endian = big
 //!     max_units = 2     # Optional safety check: ensures bits don't exceed 32 (width * max_units)
 //! }
 //!
@@ -88,11 +95,11 @@
 //! lri    [0:10]=00000010000 rd:u5[11:15] imm:u16[16:31]  # 2 units (32 bits)
 //! ```
 //!
-//! Generated `decode` signature for `width = u16`:
-//! - Single-unit: `pub fn decode(opcode: u16) -> Option<Self>`
-//! - Variable-length: `pub fn decode(units: &[u16]) -> Option<(Self, usize)>`
+//! The generated `decode` always has the signature:
+//! `pub fn decode(data: &[u8]) -> Option<(Self, usize)>`
 //!
-//! The variable-length decoder returns both the instruction and the number of units consumed.
+//! It accepts raw bytes and returns the decoded instruction along with the
+//! number of bytes consumed.
 //!
 //! ### Instructions
 //!

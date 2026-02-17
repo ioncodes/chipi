@@ -93,15 +93,15 @@ specific [0:15]=0000000100000000 [16:31]=1111111111111111
     let result = generate_from_str(source, "test.chipi");
     match result {
         Ok(code) => {
-            // Should generate variable-length decode
-            assert!(code.contains("pub fn decode(units: &[u16]) -> Option<(Self, usize)>"));
+            // Should generate byte-based decode
+            assert!(code.contains("pub fn decode(data: &[u8]) -> Option<(Self, usize)>"));
 
             // Both instructions should exist
             assert!(code.contains("Generic { data: u16 }"));
             assert!(code.contains("Specific"));
 
-            // Specific should check both unit 0 and unit 1
-            assert!(code.contains("units[1]"));
+            // Specific should read unit 1 via byte conversion
+            assert!(code.contains("u16::from_be_bytes(data[2..4]"));
 
             // Should check specific first (both units fixed) then generic (unit 1 wildcard)
             println!("Generated code:\n{}", code);
