@@ -229,28 +229,153 @@
 //! println!("{}", instr.display::<MyFormat>());
 //! ```
 //!
+//! ## Emulator LUT
+//!
+//! chipi can generate a function-pointer **lookup table** for emulator dispatch.
+//! Each opcode is routed directly to a handler function via static `[Handler; N]`
+//! arrays derived from the same decision tree.
+//!
+//! ### build.rs
+//!
+//! Use [`LutBuilder`] to configure and emit both the LUT and the handler stubs:
+//!
+//! ```ignore
+//! use std::env;
+//! use std::path::PathBuf;
+//!
+//! fn main() {
+//!     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+//!     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+//!     let spec = "cpu.chipi";
+//!
+//!     let builder = chipi::LutBuilder::new(spec)
+//!         .handler_mod("crate::cpu::interpreter")
+//!         .ctx_type("crate::Cpu");
+//!
+//!     // Regenerated every build, stays in sync with the spec
+//!     builder
+//!         .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())
+//!         .expect("failed to generate LUT");
+//!
+//!     // Written once, hand-edits are never overwritten
+//!     let stubs = manifest.join("src/cpu/interpreter.rs");
+//!     if !stubs.exists() {
+//!         builder.build_stubs(stubs.to_str().unwrap())
+//!             .expect("failed to generate stubs");
+//!     }
+//!
+//!     println!("cargo:rerun-if-changed={spec}");
+//! }
+//! ```
+//!
+//! ### Include and dispatch
+//!
+//! ```ignore
+//! // src/cpu.rs
+//! #[allow(dead_code, non_upper_case_globals)]
+//! pub mod lut {
+//!     include!(concat!(env!("OUT_DIR"), "/cpu_lut.rs"));
+//! }
+//!
+//! // fetch-decode-execute
+//! let opcode = mem.read_u32(cpu.pc);
+//! cpu.pc = cpu.pc.wrapping_add(4);
+//! crate::cpu::lut::dispatch(&mut ctx, opcode);
+//! ```
+//!
+//! ### Handler stubs
+//!
+//! On the first build, `build_stubs` writes `src/cpu/interpreter.rs` with
+//! `todo!()` bodies. Replace each `todo!()` as you go; the file is never
+//! regenerated so hand-edits are safe.
+//!
+//! The second parameter type is derived from the spec's `width`:
+//! `u8` (8-bit), `u16` (16-bit), or `u32` (32-bit).
+//!
+//! ```ignore
+//! pub fn addi(_ctx: &mut crate::Cpu, _opcode: u32) { todo!("addi") }
+//! pub fn lwz(_ctx: &mut crate::Cpu, _opcode: u32) { todo!("lwz")  }
+//! // ... one fn per instruction
+//! ```
+//!
+//! ### Grouped handlers with const generics
+//!
+//! Use `.group()` to fold multiple instructions into one handler via a
+//! `const OP: u32` generic parameter. Each LUT entry is a separate
+//! monomorphization.
+//!
+//! Provide `.lut_mod()` so that generated stubs can `use` the `OP_*` constants:
+//!
+//! ```ignore
+//! chipi::LutBuilder::new("cpu.chipi")
+//!     .handler_mod("crate::cpu::interpreter")
+//!     .ctx_type("crate::Cpu")
+//!     .lut_mod("crate::cpu::lut")
+//!     .group("alu", ["addi", "addis", "ori", "oris"])
+//!     .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())?;
+//! ```
+//!
+//! ### Custom instruction wrapper type
+//!
+//! Use `.instr_type()` to replace the raw integer with a richer type.
+//! chipi uses it in the generated `Handler` alias and all stub signatures.
+//! `.raw_expr()` tells chipi how to extract the underlying integer for table
+//! indexing; it defaults to `"instr.0"` for newtype wrappers.
+//!
+//! ```ignore
+//! chipi::LutBuilder::new("cpu.chipi")
+//!     .handler_mod("crate::cpu::interpreter")
+//!     .ctx_type("crate::Cpu")
+//!     .instr_type("crate::cpu::Instruction")  // struct Instruction(pub u32)
+//!     // .raw_expr("instr.0")                 // default for newtype wrappers
+//!     .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())?;
+//! ```
+//!
+//! Generated `Handler` type and stub signature:
+//! ```ignore
+//! pub type Handler = fn(&mut crate::Cpu, crate::cpu::Instruction);
+//!
+//! pub fn addi(_ctx: &mut crate::Cpu, _instr: crate::cpu::Instruction) { todo!("addi") }
+//! ```
+//!
 //! ## API
 //!
 //! ```ignore
-//! // Parse and generate from file
+//! // Parse and generate decoder from file
 //! chipi::generate("cpu.chipi", "out.rs")?;
 //!
-//! // Generate from string
+//! // Generate decoder from source string
 //! let code = chipi::generate_from_str(source, "cpu.chipi")?;
 //!
-//! // Step by step
+//! // Step-by-step
 //! let def = chipi::parse("cpu.chipi")?;
 //! chipi::emit(&def, "out.rs")?;
+//!
+//! // Emulator LUT, simple
+//! // (instr type auto-derived from spec width: u8 / u16 / u32)
+//! chipi::generate_lut("cpu.chipi", "out/lut.rs", "crate::interp", "crate::Cpu")?;
+//! chipi::generate_stubs("cpu.chipi", "src/interp.rs", "crate::Cpu")?; // once only
+//!
+//! // Emulator LUT, full control via LutBuilder
+//! chipi::LutBuilder::new("cpu.chipi")
+//!     .handler_mod("crate::cpu::interpreter")
+//!     .ctx_type("crate::Cpu")
+//!     .lut_mod("crate::cpu::lut")              // needed when using groups
+//!     .group("alu", ["addi", "addis"])         // const-generic shared handler
+//!     .instr_type("crate::cpu::Instruction")   // optional wrapper type
+//!     .build_lut("out/lut.rs")?;
 //! ```
 
 pub mod codegen;
 pub mod error;
 pub mod format_parser;
+pub mod lut_gen;
 pub mod parser;
 pub mod tree;
 pub mod types;
 pub mod validate;
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -316,6 +441,217 @@ pub fn generate(input: &str, output: &str) -> Result<(), Box<dyn std::error::Err
     let def = parse(input)?;
     emit(&def, output)?;
     Ok(())
+}
+
+/// Generate a function-pointer LUT from a `.chipi` spec file.
+///
+/// Produces a Rust source file containing:
+/// - `pub type Handler = fn(&mut Ctx, u32)`
+/// - Static dispatch tables (`_T0`, `_T1`, ...) indexed by opcode bit ranges
+/// - `pub fn dispatch(ctx: &mut Ctx, opcode: u32)`
+///
+/// `handler_mod` is the module path where handler functions live, e.g.
+/// `"crate::cpu::interpreter"`Each instruction `foo` in the spec must have
+/// a corresponding `pub fn foo(ctx: &mut Ctx, opcode: u32)` there.
+///
+/// `ctx_type` is the mutable context passed to every handler, e.g.
+/// `"crate::gekko::Gekko"`.
+///
+/// # Example (build.rs)
+///
+/// ```ignore
+/// chipi::generate_lut(
+///     "cpu.chipi",
+///     out_dir.join("cpu_lut.rs").to_str().unwrap(),
+///     "crate::cpu::interpreter",
+///     "crate::Cpu",
+/// )?;
+/// ```
+pub fn generate_lut(
+    input: &str,
+    output: &str,
+    handler_mod: &str,
+    ctx_type: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let def = parse(input)?;
+    let validated = validate::validate(&def)
+        .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
+    let t = tree::build_tree(&validated);
+    let code = lut_gen::generate_lut_code(&validated, &t, handler_mod, ctx_type, &HashMap::new(), None, None);
+    fs::write(output, code)?;
+    Ok(())
+}
+
+/// Generate handler stub functions for every instruction in a `.chipi` spec.
+///
+/// Each stub has the form:
+/// ```rust,ignore
+/// pub fn twi(_ctx: &mut Ctx, _opcode: u32) { todo!("twi") }
+/// ```
+///
+/// Intended to be run **once** to bootstrap an interpreter module. After that,
+/// replace `todo!()` bodies with real implementations as you go.
+pub fn generate_stubs(
+    input: &str,
+    output: &str,
+    ctx_type: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let def = parse(input)?;
+    let validated = validate::validate(&def)
+        .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
+    let code = lut_gen::generate_stubs_code(&validated, ctx_type, &HashMap::new(), None, None);
+    fs::write(output, code)?;
+    Ok(())
+}
+
+/// Builder for generating a function-pointer LUT and handler stubs,
+/// with optional grouping of instructions under shared const-generic handlers.
+///
+/// Use this when you want multiple instructions to share one handler function
+/// via a `const OP: u32` generic parameter. See the crate documentation for
+/// the full pattern.
+///
+/// # Example (build.rs)
+///
+/// ```ignore
+/// chipi::LutBuilder::new("cpu.chipi")
+///     .handler_mod("crate::cpu::interpreter")
+///     .ctx_type("crate::Cpu")
+///     .lut_mod("crate::cpu::lut")
+///     .group("alu", ["addi", "addis", "ori", "oris"])
+///     .group("mem", ["lwz", "stw", "lbz", "stb"])
+///     .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())?;
+///
+/// if !stubs.exists() {
+///     chipi::LutBuilder::new("cpu.chipi")
+///         .ctx_type("crate::Cpu")
+///         .lut_mod("crate::cpu::lut")
+///         .group("alu", ["addi", "addis", "ori", "oris"])
+///         .group("mem", ["lwz", "stw", "lbz", "stb"])
+///         .build_stubs(stubs.to_str().unwrap())?;
+/// }
+/// ```
+#[derive(Default)]
+pub struct LutBuilder {
+    input: String,
+    handler_mod: String,
+    ctx_type: String,
+    /// instruction name → group fn name
+    instr_to_group: HashMap<String, String>,
+    /// group fn name → instruction names (for stubs)
+    group_to_instrs: HashMap<String, Vec<String>>,
+    lut_mod: Option<String>,
+    /// Type of the second parameter of every handler (default: `u32`).
+    instr_type: Option<String>,
+    /// Expression to extract the raw `u32` from the instr local (default: `"instr.0"`
+    /// when `instr_type` is set, `"opcode"` otherwise).
+    raw_expr: Option<String>,
+}
+
+impl LutBuilder {
+    /// Create a new builder targeting the given `.chipi` spec file.
+    pub fn new(input: impl Into<String>) -> Self {
+        Self {
+            input: input.into(),
+            ..Default::default()
+        }
+    }
+
+    /// Set the Rust module path where handler functions live (e.g. `"crate::cpu::interpreter"`).
+    pub fn handler_mod(mut self, m: impl Into<String>) -> Self {
+        self.handler_mod = m.into();
+        self
+    }
+
+    /// Set the mutable context type passed to every handler (e.g. `"crate::Cpu"`).
+    pub fn ctx_type(mut self, t: impl Into<String>) -> Self {
+        self.ctx_type = t.into();
+        self
+    }
+
+    /// Set the Rust module path where the generated `OP_*` constants live
+    /// (e.g. `"crate::cpu::lut"`). Required when using groups so that stubs
+    /// can `use {lut_mod}::*` to import the constants.
+    pub fn lut_mod(mut self, path: impl Into<String>) -> Self {
+        self.lut_mod = Some(path.into());
+        self
+    }
+
+    /// Override the type of the second parameter of every handler function.
+    ///
+    /// Defaults to `u32` (raw opcode word). Set to a wrapper type such as
+    /// `"crate::cpu::semantics::Instruction"` to have handlers receive a
+    /// richer type instead. You must also call [`Self::raw_expr`] to tell
+    /// chipi how to extract the underlying `u32` for table indexing.
+    pub fn instr_type(mut self, t: impl Into<String>) -> Self {
+        self.instr_type = Some(t.into());
+        self
+    }
+
+    /// Expression that yields a `u32` from the `instr` local inside a generated
+    /// dispatch function. Only meaningful when [`Self::instr_type`] is set.
+    ///
+    /// For a newtype `struct Instruction(pub u32)` this is `"instr.0"` (the default
+    /// when `instr_type` is set). For a struct with a `raw()` method use `"instr.raw()"`.
+    pub fn raw_expr(mut self, expr: impl Into<String>) -> Self {
+        self.raw_expr = Some(expr.into());
+        self
+    }
+
+    /// Register a group: `name` is the shared handler function name (e.g. `"alu"`),
+    /// `instrs` lists the instruction names that route to it.
+    ///
+    /// Each instruction in `instrs` will appear in the LUT as
+    /// `handler_mod::alu::<{ OP_INSTR }>` instead of `handler_mod::instr`.
+    /// The generated stub is `pub fn alu<const OP: u32>(...)` with a `match OP` body.
+    pub fn group(
+        mut self,
+        name: impl Into<String>,
+        instrs: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Self {
+        let name = name.into();
+        let instrs: Vec<String> = instrs.into_iter().map(|s| s.into()).collect();
+        for instr in &instrs {
+            self.instr_to_group.insert(instr.clone(), name.clone());
+        }
+        self.group_to_instrs.insert(name, instrs);
+        self
+    }
+
+    /// Generate the LUT source file.
+    pub fn build_lut(&self, output: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let def = parse(&self.input)?;
+        let validated = validate::validate(&def)
+            .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
+        let t = tree::build_tree(&validated);
+        let code = lut_gen::generate_lut_code(
+            &validated,
+            &t,
+            &self.handler_mod,
+            &self.ctx_type,
+            &self.instr_to_group,
+            self.instr_type.as_deref(),
+            self.raw_expr.as_deref(),
+        );
+        fs::write(output, code)?;
+        Ok(())
+    }
+
+    /// Generate handler stubs source file.
+    pub fn build_stubs(&self, output: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let def = parse(&self.input)?;
+        let validated = validate::validate(&def)
+            .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
+        let code = lut_gen::generate_stubs_code(
+            &validated,
+            &self.ctx_type,
+            &self.group_to_instrs,
+            self.lut_mod.as_deref(),
+            self.instr_type.as_deref(),
+        );
+        fs::write(output, code)?;
+        Ok(())
+    }
 }
 
 /// Parse, validate, and generate code from source text. Returns the

@@ -1,6 +1,6 @@
 # chipi
 
-A declarative instruction decoder generator using a custom DSL. Define your CPUs instruction encoding in a `.chipi` file, and chipi generates a decoder and disassembler for you. Seemless interaction with Rust types.  
+A declarative instruction decoder generator using a custom DSL. Define your CPUs instruction encoding in a `.chipi` file, and chipi generates a decoder and disassembler for you. Seemless interaction with Rust types. 
 
 An example disassembler for GameCube CPU and DSP can be found [here](https://github.com/ioncodes/chipi-gekko).
 
@@ -279,6 +279,139 @@ println!("{}", instr.display::<MyFormat>());
 ```
 
 Instructions without format lines get a raw fallback: `instr_name field1, field2, ...`.
+
+## Emulator LUT
+
+In addition to the decoder/disassembler output, chipi can generate a function-pointer lookup table (LUT) suited for emulator dispatch. Each opcode is routed directly to a handler function via static `[Handler; N]` arrays, one per tree level.
+
+### build.rs
+
+Use `LutBuilder` to configure the LUT and stubs together:
+
+```rs
+use std::env;
+use std::path::PathBuf;
+
+fn main() {
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let spec = "cpu.chipi";
+
+    let builder = chipi::LutBuilder::new(spec)
+        .handler_mod("crate::cpu::interpreter")
+        .ctx_type("crate::Cpu");
+
+    // Always regenerate the LUT tables from the spec.
+    builder
+        .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())
+        .expect("failed to generate LUT");
+
+    // Generate handler stubs the first time only, never overwritten after that.
+    let stubs = manifest.join("src/cpu/interpreter.rs");
+    if !stubs.exists() {
+        builder.build_stubs(stubs.to_str().unwrap())
+            .expect("failed to generate stubs");
+    }
+
+    println!("cargo:rerun-if-changed={spec}");
+}
+```
+
+### Include the LUT
+
+```rs
+// src/cpu.rs
+#[allow(dead_code, non_upper_case_globals)]
+pub mod lut {
+    include!(concat!(env!("OUT_DIR"), "/cpu_lut.rs"));
+}
+```
+
+### Dispatch
+
+```rs
+// fetch → dispatch
+let opcode = mem.read_u32(pc);
+crate::cpu::lut::dispatch(&mut ctx, opcode);
+```
+
+### Handler functions
+
+`build_stubs` writes `src/cpu/interpreter.rs` on the first build with `todo!()` bodies. The second parameter type is derived from the spec's `width`: `u8` (8-bit), `u16` (16-bit), or `u32` (32-bit).
+
+```rs
+pub fn addi(_ctx: &mut crate::Cpu, _opcode: u32) { todo!("addi") }
+pub fn lwz(_ctx: &mut crate::Cpu, _opcode: u32) { todo!("lwz")  }
+// ... one stub per instruction in the spec
+```
+
+Replace each `todo!()` with a real implementation as you go. The file is never regenerated, so hand-edits are preserved.
+
+### Grouped handlers with const generics
+
+Use `.group()` to fold multiple instructions into one handler function via a `const OP: u32` generic parameter. The compiler monomorphizes each entry.
+
+Provide `.lut_mod()` so the generated stubs can `use` the `OP_*` constants:
+
+```rs
+chipi::LutBuilder::new("cpu.chipi")
+    .handler_mod("crate::cpu::interpreter")
+    .ctx_type("crate::Cpu")
+    .lut_mod("crate::cpu::lut")
+    .group("alu", ["addi", "addis", "ori", "oris"])
+    .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())?;
+```
+
+Generated LUT entry for `addi`:
+
+```rs
+crate::cpu::interpreter::alu::<{ OP_ADDI }>
+```
+
+Generated stub:
+
+```rs
+pub fn alu<const OP: u32>(_ctx: &mut crate::Cpu, _opcode: u32) {
+    match OP {
+        OP_ADDI  => todo!("addi"),
+        OP_ADDIS => todo!("addis"),
+        _ => unreachable!(),
+    }
+}
+```
+
+### Custom instruction wrapper type
+
+Use `.instr_type()` to replace the raw integer with a richer type. chipi uses it in the generated `Handler` alias and all stub signatures. `.raw_expr()` specifies how to extract the underlying integer for table indexing; it defaults to `instr.0` for newtype wrappers.
+
+```rs
+chipi::LutBuilder::new("cpu.chipi")
+    .handler_mod("crate::cpu::interpreter")
+    .ctx_type("crate::Cpu")
+    .instr_type("crate::cpu::Instruction")  // struct Instruction(pub u32)
+    // .raw_expr("instr.0")                 // default for newtype wrappers
+    .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())?;
+```
+
+Generated `Handler` type and stub signature:
+
+```rs
+pub type Handler = fn(&mut crate::Cpu, crate::cpu::Instruction);
+
+pub fn addi(_ctx: &mut crate::Cpu, _instr: crate::cpu::Instruction) { todo!("addi") }
+```
+
+### Generated output
+
+The LUT file contains:
+
+- `pub const OP_*: u32`: one constant per instruction, usable as const-generic arguments
+- `pub type Handler = fn(&mut Ctx, T)`: handler function pointer type (`T` is `u8`/`u16`/`u32` or your wrapper)
+- `static _T0: [Handler; 64]`: one table per dispatch level, sized to the bit range (e.g. 64 entries for a 6-bit primary opcode, 1024 for a 10-bit secondary)
+- Inline `_d*` dispatch functions that index into each table
+- `pub fn dispatch(ctx: &mut Ctx, opcode: T)`: the public entry point
+
+Overlapping patterns (wildcards vs. specific) are handled by generated `_priority_*` functions that check bitmask guards in priority order.
 
 ## Syntax Highlighting
 
