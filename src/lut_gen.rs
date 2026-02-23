@@ -50,7 +50,7 @@ struct Ctx<'a> {
     uid: usize,
     /// Accumulated auxiliary items (tables + dispatch fns) in emission order.
     buf: String,
-    /// instr_name → group handler function name (empty = no grouping)
+    /// instr_name -> group handler function name (empty = no grouping)
     groups: &'a HashMap<String, String>,
 }
 
@@ -187,7 +187,7 @@ pub fn generate_stubs_code(
 ) -> String {
     let instr_type = instr_type.unwrap_or_else(|| width_to_type(def.config.width));
 
-    // Reverse map: instr_name → group fn name
+    // Reverse map: instr_name -> group fn name
     let instr_to_group: HashMap<&str, &str> = group_to_instrs
         .iter()
         .flat_map(|(g, v)| v.iter().map(move |i| (i.as_str(), g.as_str())))
@@ -355,7 +355,7 @@ fn is_primitive(t: &str) -> bool {
 
 /// Convert an instruction name to its `OP_*` constant name.
 ///
-/// e.g. `"addi"` → `"OP_ADDI"`, `"ps_add."` → `"OP_PS_ADD_DOT"`
+/// e.g. `"addi"` -> `"OP_ADDI"`, `"ps_add."` -> `"OP_PS_ADD_DOT"`
 pub fn op_const_name(name: &str) -> String {
     let sanitised = name.to_uppercase().replace('.', "_DOT").replace('-', "_");
     format!("OP_{sanitised}")

@@ -11,7 +11,7 @@
 //!
 //! ```toml
 //! [build-dependencies]
-//! chipi = "0.3.0"
+//! chipi = "0.5.0"
 //! ```
 //!
 //! Create `build.rs`:
@@ -338,6 +338,63 @@
 //! pub fn addi(_ctx: &mut crate::Cpu, _instr: crate::cpu::Instruction) { todo!("addi") }
 //! ```
 //!
+//! ## Instruction Type Generation
+//!
+//! chipi can auto-generate the instruction newtype with field accessor methods,
+//! eliminating the need to hand-write bit extraction code. This is useful in
+//! cases where a thin wrapper for decoding is prefered (e.g. emulation).
+//!
+//! ### build.rs
+//!
+//! Add `.build_instr_type()` to your `LutBuilder` chain:
+//!
+//! ```ignore
+//! chipi::LutBuilder::new("cpu.chipi")
+//!     .instr_type("crate::cpu::Instruction")
+//!     .build_instr_type(out_dir.join("instruction.rs").to_str().unwrap())?;
+//! ```
+//!
+//! ### Generated output
+//!
+//! Creates a newtype with `#[inline]` accessor methods for every unique field:
+//!
+//! ```ignore
+//! pub struct Instruction(pub u32);
+//!
+//! #[rustfmt::skip]
+//! impl Instruction {
+//!     #[inline] pub fn rd(&self) -> u8 { ((self.0 >> 21) & 0x1f) as u8 }
+//!     #[inline] pub fn ra(&self) -> u8 { ((self.0 >> 16) & 0x1f) as u8 }
+//!     #[inline] pub fn simm(&self) -> i32 { ((((self.0 >> 0) & 0xffff) as i32) << 16) >> 16 }
+//!     #[inline] pub fn rc(&self) -> bool { (self.0 & 0x1) != 0 }
+//!     // ... one accessor per unique field across all instructions
+//! }
+//! ```
+//!
+//! ### Usage
+//!
+//! Include the generated file and optionally add custom methods:
+//!
+//! ```ignore
+//! // src/cpu/semantics.rs
+//! include!(concat!(env!("OUT_DIR"), "/instruction.rs"));
+//!
+//! // Add custom accessors not derivable from the spec
+//! impl Instruction {
+//!     /// SPR field with swapped halves (PowerPC)
+//!     pub fn spr_decoded(&self) -> u32 {
+//!         let raw = self.spr();
+//!         (raw >> 5) | ((raw & 0x1f) << 5)
+//!     }
+//! }
+//! ```
+//!
+//! ### Conflict handling
+//!
+//! Fields with the same name but different bit ranges across instructions generate
+//! separate accessors with bit range suffixes (e.g., `d_15_0()` and `d_11_0()`).
+//! You can add convenience aliases in a separate `impl` block if needed.
+//!
 //! ## API
 //!
 //! ```ignore
@@ -356,6 +413,9 @@
 //! chipi::generate_lut("cpu.chipi", "out/lut.rs", "crate::interp", "crate::Cpu")?;
 //! chipi::generate_stubs("cpu.chipi", "src/interp.rs", "crate::Cpu")?; // once only
 //!
+//! // Instruction type generation
+//! chipi::generate_instr_type("cpu.chipi", "out/instruction.rs", "Instruction")?;
+//!
 //! // Emulator LUT, full control via LutBuilder
 //! chipi::LutBuilder::new("cpu.chipi")
 //!     .handler_mod("crate::cpu::interpreter")
@@ -363,12 +423,14 @@
 //!     .lut_mod("crate::cpu::lut")              // needed when using groups
 //!     .group("alu", ["addi", "addis"])         // const-generic shared handler
 //!     .instr_type("crate::cpu::Instruction")   // optional wrapper type
-//!     .build_lut("out/lut.rs")?;
+//!     .build_lut("out/lut.rs")?
+//!     .build_instr_type("out/instruction.rs")?;  // generate instruction type
 //! ```
 
 pub mod codegen;
 pub mod error;
 pub mod format_parser;
+pub mod instr_gen;
 pub mod lut_gen;
 pub mod parser;
 pub mod tree;
@@ -504,6 +566,47 @@ pub fn generate_stubs(
     Ok(())
 }
 
+/// Generate an instruction newtype with field accessor methods from a `.chipi` spec.
+///
+/// Collects all unique fields across all instructions and generates a
+/// `pub struct Name(pub u32)` with one `#[inline]` accessor method per field.
+///
+/// Fields with the same name but conflicting definitions (different bit ranges
+/// or types) generate separate accessors with bit range suffixes (e.g., `d_15_0`
+/// and `d_11_0`).
+///
+/// # Example
+///
+/// ```ignore
+/// chipi::generate_instr_type("cpu.chipi", "out/instruction.rs", "Instruction")?;
+/// ```
+///
+/// Then in your code:
+///
+/// ```ignore
+/// mod cpu {
+///     include!(concat!(env!("OUT_DIR"), "/instruction.rs"));
+/// }
+/// ```
+pub fn generate_instr_type(
+    input: &str,
+    output: &str,
+    struct_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let def = parse(input)?;
+    let validated = validate::validate(&def)
+        .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
+    let (code, warnings) = instr_gen::generate_instr_type(&validated, struct_name);
+
+    // Print warnings to stderr (visible during cargo build)
+    for warning in &warnings {
+        eprintln!("warning: {}", warning);
+    }
+
+    fs::write(output, code)?;
+    Ok(())
+}
+
 /// Builder for generating a function-pointer LUT and handler stubs,
 /// with optional grouping of instructions under shared const-generic handlers.
 ///
@@ -536,9 +639,9 @@ pub struct LutBuilder {
     input: String,
     handler_mod: String,
     ctx_type: String,
-    /// instruction name → group fn name
+    /// instruction name -> group fn name
     instr_to_group: HashMap<String, String>,
-    /// group fn name → instruction names (for stubs)
+    /// group fn name -> instruction names (for stubs)
     group_to_instrs: HashMap<String, Vec<String>>,
     lut_mod: Option<String>,
     /// Type of the second parameter of every handler (default: `u32`).
@@ -649,6 +752,48 @@ impl LutBuilder {
             self.lut_mod.as_deref(),
             self.instr_type.as_deref(),
         );
+        fs::write(output, code)?;
+        Ok(())
+    }
+
+    /// Generate an instruction newtype with field accessor methods.
+    ///
+    /// Collects all unique fields from the spec and generates a
+    /// `pub struct Name(pub u32)` with one `#[inline]` accessor per field.
+    ///
+    /// The struct name is derived from the last path segment of `.instr_type()`
+    /// (e.g., `"crate::cpu::Instruction"` -> `"Instruction"`), or defaults to
+    /// `"Instruction"` if `.instr_type()` was not called.
+    ///
+    /// Fields with conflicting definitions across instructions generate separate
+    /// accessors with bit range suffixes (e.g., `d_15_0` and `d_11_0`).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// chipi::LutBuilder::new("cpu.chipi")
+    ///     .instr_type("crate::cpu::Instruction")
+    ///     .build_instr_type(out_dir.join("instruction.rs").to_str().unwrap())?;
+    /// ```
+    pub fn build_instr_type(&self, output: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let def = parse(&self.input)?;
+        let validated = validate::validate(&def)
+            .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
+
+        // Derive struct name from instr_type path or default to "Instruction"
+        let struct_name = self
+            .instr_type
+            .as_deref()
+            .and_then(|t| t.rsplit("::").next())
+            .unwrap_or("Instruction");
+
+        let (code, warnings) = instr_gen::generate_instr_type(&validated, struct_name);
+
+        // Print warnings to stderr (visible during cargo build)
+        for warning in &warnings {
+            eprintln!("cargo:warning={}", warning);
+        }
+
         fs::write(output, code)?;
         Ok(())
     }

@@ -1318,7 +1318,7 @@ fn word_type_for_width(width: u32) -> &'static str {
     }
 }
 
-fn signed_type_for(base: &str) -> &'static str {
+pub(crate) fn signed_type_for(base: &str) -> &'static str {
     match base {
         "u8" | "i8" => "i8",
         "u16" | "i16" => "i16",
@@ -1327,7 +1327,7 @@ fn signed_type_for(base: &str) -> &'static str {
     }
 }
 
-fn type_bits(base: &str) -> u32 {
+pub(crate) fn type_bits(base: &str) -> u32 {
     match base {
         "u8" | "i8" => 8,
         "u16" | "i16" => 16,
@@ -1345,9 +1345,9 @@ fn field_rust_type(field: &ResolvedField) -> String {
 }
 
 /// Convert a DSL instruction name to PascalCase.
-/// - `addi` → `Addi`
-/// - `ld_b_c` → `LdBC`
-/// - `ADD` → `Add`
+/// - `addi` -> `Addi`
+/// - `ld_b_c` -> `LdBC`
+/// - `ADD` -> `Add`
 pub fn to_pascal_case(name: &str) -> String {
     let mut result = String::new();
     let mut capitalize_next = true;
