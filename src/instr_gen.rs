@@ -115,7 +115,13 @@ fn format_chipi_type(field: &ResolvedField) -> String {
     let ranges_str = field
         .ranges
         .iter()
-        .map(|r| format!("[{}-{}]", r.start, r.end))
+        .map(|r| {
+            if r.start == r.end {
+                format!("[{}]", r.start)
+            } else {
+                format!("[{}:{}]", r.start, r.end)
+            }
+        })
         .collect::<Vec<_>>()
         .join("");
 
