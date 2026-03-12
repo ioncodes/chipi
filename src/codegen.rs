@@ -1087,8 +1087,8 @@ fn expr_to_rust(expr: &FormatExpr, fields: &[ResolvedField]) -> String {
         FormatExpr::Field(name) => {
             let field = fields.iter().find(|f| f.name == *name);
             if let Some(f) = field {
-                if f.resolved_type.wrapper_type.is_some() {
-                    name.clone()
+                if f.resolved_type.base_type == "bool" {
+                    format!("{} as u8", name)
                 } else {
                     name.clone()
                 }
