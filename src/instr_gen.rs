@@ -12,6 +12,14 @@ use std::fmt::Write;
 use crate::codegen::{signed_type_for, type_bits};
 use crate::types::*;
 
+/// Convert a hardware bit position back to DSL notation.
+fn hw_to_dsl(hw_bit: u32, width: u32, bit_order: BitOrder) -> u32 {
+    match bit_order {
+        BitOrder::Msb0 => width - 1 - hw_bit,
+        BitOrder::Lsb0 => hw_bit,
+    }
+}
+
 /// A field ready for accessor generation.
 #[derive(Debug, Clone)]
 struct FieldAccessor {
@@ -32,6 +40,9 @@ struct FieldAccessor {
 /// Returns (fields, warnings). Fields with the same name but conflicting definitions
 /// get separate accessors with bit ranges in their names (e.g., `d_16_31`, `d_20_31`).
 fn collect_fields(def: &ValidatedDef) -> (Vec<FieldAccessor>, Vec<String>) {
+    let width = def.config.width;
+    let bit_order = def.config.bit_order;
+
     // Group fields by name
     let mut by_name: HashMap<String, Vec<&ResolvedField>> = HashMap::new();
     for instr in &def.instructions {
@@ -64,7 +75,7 @@ fn collect_fields(def: &ValidatedDef) -> (Vec<FieldAccessor>, Vec<String>) {
                 ranges: field.ranges.clone(),
                 base_type: field.resolved_type.base_type.clone(),
                 transforms: field.resolved_type.transforms.clone(),
-                chipi_type: format_chipi_type(field),
+                chipi_type: format_chipi_type(field, width, bit_order),
             });
         } else {
             // Conflict - generate accessors with bit range suffixes
@@ -76,14 +87,14 @@ fn collect_fields(def: &ValidatedDef) -> (Vec<FieldAccessor>, Vec<String>) {
             ));
 
             for field in unique {
-                let range_suffix = format_range_suffix(&field.ranges);
+                let range_suffix = format_range_suffix(&field.ranges, width, bit_order);
                 let fn_name = format!("{}_{}", name, range_suffix);
                 accessors.push(FieldAccessor {
                     fn_name,
                     ranges: field.ranges.clone(),
                     base_type: field.resolved_type.base_type.clone(),
                     transforms: field.resolved_type.transforms.clone(),
-                    chipi_type: format_chipi_type(field),
+                    chipi_type: format_chipi_type(field, width, bit_order),
                 });
             }
         }
@@ -94,32 +105,39 @@ fn collect_fields(def: &ValidatedDef) -> (Vec<FieldAccessor>, Vec<String>) {
     (accessors, warnings)
 }
 
-/// Format a bit range as a suffix (e.g., "16_31" for bits [16:31]).
-fn format_range_suffix(ranges: &[BitRange]) -> String {
+/// Format a bit range as a suffix using DSL bit positions (e.g., "16_31" for MSB0 bits [16:31]).
+fn format_range_suffix(ranges: &[BitRange], width: u32, bit_order: BitOrder) -> String {
     if ranges.len() == 1 {
         let r = &ranges[0];
-        // Use hardware bit positions with underscore separator (colons not valid in Rust identifiers)
-        format!("{}_{}", r.start, r.end)
+        let dsl_start = hw_to_dsl(r.start, width, bit_order);
+        let dsl_end = hw_to_dsl(r.end, width, bit_order);
+        format!("{}_{}", dsl_start, dsl_end)
     } else {
         // Multi-range: concatenate all ranges
         ranges
             .iter()
-            .map(|r| format!("{}_{}", r.start, r.end))
+            .map(|r| {
+                let dsl_start = hw_to_dsl(r.start, width, bit_order);
+                let dsl_end = hw_to_dsl(r.end, width, bit_order);
+                format!("{}_{}", dsl_start, dsl_end)
+            })
             .collect::<Vec<_>>()
             .join("_")
     }
 }
 
-/// Format the chipi type definition for a field (for doc comments).
-fn format_chipi_type(field: &ResolvedField) -> String {
+/// Format the chipi type definition for a field (for doc comments), using DSL bit positions.
+fn format_chipi_type(field: &ResolvedField, width: u32, bit_order: BitOrder) -> String {
     let ranges_str = field
         .ranges
         .iter()
         .map(|r| {
-            if r.start == r.end {
-                format!("[{}]", r.start)
+            let dsl_start = hw_to_dsl(r.start, width, bit_order);
+            let dsl_end = hw_to_dsl(r.end, width, bit_order);
+            if dsl_start == dsl_end {
+                format!("[{}]", dsl_start)
             } else {
-                format!("[{}:{}]", r.start, r.end)
+                format!("[{}:{}]", dsl_start, dsl_end)
             }
         })
         .collect::<Vec<_>>()
