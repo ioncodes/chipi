@@ -190,6 +190,16 @@ pub fn generate_lut_code(
         }
     }
 
+    // Generate instr_size() for variable-length decoders
+    if needs_variable_length(def) {
+        writeln!(out).unwrap();
+        writeln!(out, "/// Returns the size of the instruction in units (words).").unwrap();
+        writeln!(out, "#[inline(always)]").unwrap();
+        writeln!(out, "pub fn instr_size({pn}: {it}) -> u32 {{").unwrap();
+        emit_size_node(&mut out, tree, def, &re, 1);
+        writeln!(out, "}}").unwrap();
+    }
+
     out
 }
 
@@ -508,5 +518,78 @@ fn range_extract_expr(range: &BitRange, raw_expr: &str) -> String {
         format!("{raw_expr} & {mask:#x}")
     } else {
         format!("({raw_expr} >> {shift}) & {mask:#x}")
+    }
+}
+
+/// Check if any instruction in the decoder requires multiple units.
+fn needs_variable_length(def: &ValidatedDef) -> bool {
+    def.instructions.iter().any(|i| i.unit_count() > 1)
+}
+
+/// Emit a decode tree node that returns the instruction size in units.
+fn emit_size_node(
+    out: &mut String,
+    node: &DecodeNode,
+    def: &ValidatedDef,
+    raw_expr: &str,
+    indent: usize,
+) {
+    let pad = "    ".repeat(indent);
+
+    match node {
+        DecodeNode::Fail => {
+            writeln!(out, "{pad}1").unwrap();
+        }
+        DecodeNode::Leaf { instruction_index } => {
+            let size = def.instructions[*instruction_index].unit_count();
+            writeln!(out, "{pad}{size}").unwrap();
+        }
+        DecodeNode::PriorityLeaves { candidates } => {
+            for (i, &idx) in candidates.iter().enumerate() {
+                let size = def.instructions[idx].unit_count();
+                let guard = full_guard_expr(&def.instructions[idx], raw_expr);
+
+                match (i, guard) {
+                    (0, Some(g)) => {
+                        writeln!(out, "{pad}if {g} {{").unwrap();
+                        writeln!(out, "{pad}    {size}").unwrap();
+                    }
+                    (_, Some(g)) => {
+                        writeln!(out, "{pad}}} else if {g} {{").unwrap();
+                        writeln!(out, "{pad}    {size}").unwrap();
+                    }
+                    (0, None) => {
+                        writeln!(out, "{pad}{size}").unwrap();
+                        return;
+                    }
+                    (_, None) => {
+                        writeln!(out, "{pad}}} else {{").unwrap();
+                        writeln!(out, "{pad}    {size}").unwrap();
+                        writeln!(out, "{pad}}}").unwrap();
+                        return;
+                    }
+                }
+            }
+            writeln!(out, "{pad}}}").unwrap();
+        }
+        DecodeNode::Branch {
+            range,
+            arms,
+            default,
+        } => {
+            let extract = range_extract_expr(range, raw_expr);
+            writeln!(out, "{pad}match ({extract}) as usize {{").unwrap();
+
+            for (value, child) in arms {
+                writeln!(out, "{pad}    {value:#x} => {{").unwrap();
+                emit_size_node(out, child, def, raw_expr, indent + 2);
+                writeln!(out, "{pad}    }}").unwrap();
+            }
+
+            writeln!(out, "{pad}    _ => {{").unwrap();
+            emit_size_node(out, default, def, raw_expr, indent + 2);
+            writeln!(out, "{pad}    }}").unwrap();
+            writeln!(out, "{pad}}}").unwrap();
+        }
     }
 }

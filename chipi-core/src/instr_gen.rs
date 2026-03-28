@@ -100,6 +100,17 @@ fn collect_fields(def: &ValidatedDef) -> (Vec<FieldAccessor>, Vec<String>) {
         }
     }
 
+    // Resolve remaining duplicates: same name+range but different types get type suffix
+    let mut name_counts: HashMap<String, usize> = HashMap::new();
+    for acc in &accessors {
+        *name_counts.entry(acc.fn_name.clone()).or_default() += 1;
+    }
+    for acc in &mut accessors {
+        if name_counts[&acc.fn_name] > 1 {
+            acc.fn_name = format!("{}_{}", acc.fn_name, acc.base_type);
+        }
+    }
+
     // Sort by function name for stable output
     accessors.sort_by(|a, b| a.fn_name.cmp(&b.fn_name));
     (accessors, warnings)
@@ -247,6 +258,7 @@ pub fn generate_instr_type(def: &ValidatedDef, struct_name: &str) -> (String, Ve
         writeln!(out).unwrap();
     }
 
+    writeln!(out, "#[derive(Clone, Copy)]").unwrap();
     writeln!(out, "pub struct {}(pub u32);", struct_name).unwrap();
     writeln!(out).unwrap();
     writeln!(out, "#[rustfmt::skip]").unwrap();
