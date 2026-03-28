@@ -20,7 +20,26 @@ use crate::types::*;
 /// - Resolves field types
 /// - Validates bit coverage and patterns
 pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
+    validate_with_options(def, &HashMap::new(), &HashMap::new())
+}
+
+pub fn validate_with_type_maps(
+    def: &DecoderDef,
+    type_maps: &HashMap<String, String>,
+) -> Result<ValidatedDef, Vec<Error>> {
+    validate_with_options(def, type_maps, &HashMap::new())
+}
+
+pub fn validate_with_options(
+    def: &DecoderDef,
+    type_maps: &HashMap<String, String>,
+    dispatch_overrides: &HashMap<String, crate::Dispatch>,
+) -> Result<ValidatedDef, Vec<Error>> {
     let mut errors = Vec::new();
+
+    // Collect sub-decoder names for type resolution
+    let sub_decoder_names: HashSet<String> =
+        def.sub_decoders.iter().map(|sd| sd.name.clone()).collect();
 
     // Phase 0: Convert all bit ranges from DSL notation to hardware notation
     let instructions = convert_bit_ranges(def, &mut errors);
@@ -28,8 +47,13 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
     // Phase 1: Name uniqueness
     check_name_uniqueness(&instructions, &def.type_aliases, &mut errors);
 
-    // Phase 2: Type resolution
-    resolve_types(&instructions, &def.type_aliases, &mut errors);
+    // Phase 2: Type resolution (skip sub-decoder types, they're valid)
+    resolve_types(
+        &instructions,
+        &def.type_aliases,
+        &sub_decoder_names,
+        &mut errors,
+    );
 
     // Phase 3: Bit coverage
     check_bit_coverage(&instructions, def.config.width, &mut errors);
@@ -46,7 +70,24 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
     check_maps(&def.maps, &mut errors);
 
     // Phase 6: Format validation
-    check_formats(&instructions, &def.maps, &mut errors);
+    check_formats(
+        &instructions,
+        &def.maps,
+        &sub_decoder_names,
+        &def.sub_decoders,
+        &mut errors,
+    );
+
+    // Phase 7: Validate sub-decoders
+    let validated_sub_decoders = validate_sub_decoders(&def.sub_decoders, &mut errors);
+
+    // Phase 8: Validate sub-decoder field widths
+    check_sub_decoder_field_widths(
+        &instructions,
+        &def.sub_decoders,
+        &sub_decoder_names,
+        &mut errors,
+    );
 
     if !errors.is_empty() {
         return Err(errors);
@@ -67,7 +108,12 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
                         ..
                     } = seg
                     {
-                        let resolved = resolve_field_type(field_type, &def.type_aliases);
+                        let resolved = resolve_field_type(
+                            field_type,
+                            &def.type_aliases,
+                            &sub_decoder_names,
+                            &def.sub_decoders,
+                        );
                         Some(ResolvedField {
                             name: name.clone(),
                             ranges: ranges.clone(),
@@ -90,11 +136,13 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
         .collect();
 
     Ok(ValidatedDef {
-        imports: def.imports.clone(),
         config: def.config.clone(),
         type_aliases: def.type_aliases.clone(),
         maps: def.maps.clone(),
         instructions: validated_instructions,
+        sub_decoders: validated_sub_decoders,
+        type_maps: type_maps.clone(),
+        dispatch_overrides: dispatch_overrides.clone(),
     })
 }
 
@@ -118,7 +166,8 @@ fn convert_bit_ranges(def: &DecoderDef, _errors: &mut Vec<Error>) -> Vec<Instruc
                     } => {
                         // Convert each DSL range to hardware notation
                         // Since ranges is already vec![range], we just need to convert it
-                        let hw_ranges = dsl_to_hardware(ranges[0].start, ranges[0].end, width, order);
+                        let hw_ranges =
+                            dsl_to_hardware(ranges[0].start, ranges[0].end, width, order);
                         Segment::Fixed {
                             ranges: hw_ranges,
                             pattern: pattern.clone(),
@@ -132,7 +181,8 @@ fn convert_bit_ranges(def: &DecoderDef, _errors: &mut Vec<Error>) -> Vec<Instruc
                         span,
                     } => {
                         // Convert each DSL range to hardware notation
-                        let hw_ranges = dsl_to_hardware(ranges[0].start, ranges[0].end, width, order);
+                        let hw_ranges =
+                            dsl_to_hardware(ranges[0].start, ranges[0].end, width, order);
                         Segment::Field {
                             name: name.clone(),
                             field_type: field_type.clone(),
@@ -192,6 +242,7 @@ fn check_name_uniqueness(
 fn resolve_types(
     instructions: &[InstructionDef],
     type_aliases: &[TypeAlias],
+    sub_decoder_names: &HashSet<String>,
     errors: &mut Vec<Error>,
 ) {
     let alias_names: HashSet<&str> = type_aliases.iter().map(|ta| ta.name.as_str()).collect();
@@ -205,6 +256,7 @@ fn resolve_types(
                 if let FieldType::Alias(alias_name) = field_type {
                     if !alias_names.contains(alias_name.as_str())
                         && !is_builtin_type(alias_name)
+                        && !sub_decoder_names.contains(alias_name)
                     {
                         errors.push(Error::new(
                             ErrorKind::UnresolvedType(alias_name.clone()),
@@ -217,18 +269,19 @@ fn resolve_types(
     }
 }
 
-fn check_bit_coverage(
-    instructions: &[InstructionDef],
-    width: u32,
-    errors: &mut Vec<Error>,
-) {
+fn check_bit_coverage(instructions: &[InstructionDef], width: u32, errors: &mut Vec<Error>) {
     for instr in instructions {
         // Group ranges by unit (flattening all segment ranges)
         let mut units_map: HashMap<u32, Vec<BitRange>> = HashMap::new();
 
         for seg in &instr.segments {
             match seg {
-                Segment::Fixed { ranges, pattern, span, .. } => {
+                Segment::Fixed {
+                    ranges,
+                    pattern,
+                    span,
+                    ..
+                } => {
                     // Check pattern length matches total range width
                     let total_width: u32 = ranges.iter().map(|r| r.width()).sum();
                     if pattern.len() as u32 != total_width {
@@ -323,11 +376,14 @@ fn check_max_units(
     config: &DecoderConfig,
     errors: &mut Vec<Error>,
 ) {
-    let max_units = config.max_units.expect("check_max_units called without max_units configured");
+    let max_units = config
+        .max_units
+        .expect("check_max_units called without max_units configured");
 
     for instr in instructions {
         // Find the maximum unit index across all segments
-        let max_unit = instr.segments
+        let max_unit = instr
+            .segments
             .iter()
             .flat_map(|seg| match seg {
                 Segment::Fixed { ranges, .. } | Segment::Field { ranges, .. } => ranges.iter(),
@@ -467,6 +523,8 @@ fn check_maps(maps: &[MapDef], errors: &mut Vec<Error>) {
 fn check_formats(
     instructions: &[InstructionDef],
     maps: &[MapDef],
+    _sub_decoder_names: &HashSet<String>,
+    _sub_decoders: &[SubDecoderDef],
     errors: &mut Vec<Error>,
 ) {
     let map_names: HashMap<&str, &MapDef> = maps.iter().map(|m| (m.name.as_str(), m)).collect();
@@ -502,8 +560,20 @@ fn check_formats(
             // Check guard field references
             if let Some(guard) = &fl.guard {
                 for cond in &guard.conditions {
-                    check_guard_operand_field(&cond.left, &field_names, &instr.name, &fl.span, errors);
-                    check_guard_operand_field(&cond.right, &field_names, &instr.name, &fl.span, errors);
+                    check_guard_operand_field(
+                        &cond.left,
+                        &field_names,
+                        &instr.name,
+                        &fl.span,
+                        errors,
+                    );
+                    check_guard_operand_field(
+                        &cond.right,
+                        &field_names,
+                        &instr.name,
+                        &fl.span,
+                        errors,
+                    );
                 }
             }
 
@@ -587,9 +657,7 @@ fn check_format_expr_fields(
             check_format_expr_fields(right, field_names, instr_name, span, maps, errors);
         }
         FormatExpr::IntLiteral(_) => {}
-        FormatExpr::MapCall {
-            map_name, args, ..
-        } => {
+        FormatExpr::MapCall { map_name, args, .. } => {
             if let Some(map_def) = maps.get(map_name.as_str()) {
                 if args.len() != map_def.params.len() {
                     errors.push(Error::new(
@@ -617,26 +685,61 @@ fn check_format_expr_fields(
                 check_format_expr_fields(arg, field_names, instr_name, span, maps, errors);
             }
         }
+        FormatExpr::SubDecoderAccess { field, .. } => {
+            if !field_names.contains(field.as_str()) {
+                errors.push(Error::new(
+                    ErrorKind::UndefinedFieldInFormat {
+                        instruction: instr_name.to_string(),
+                        field: field.clone(),
+                    },
+                    span.clone(),
+                ));
+            }
+            // Fragment name validation is deferred to after sub-decoders are validated
+        }
     }
 }
 
-fn resolve_field_type(field_type: &FieldType, type_aliases: &[TypeAlias]) -> ResolvedFieldType {
+fn resolve_field_type(
+    field_type: &FieldType,
+    type_aliases: &[TypeAlias],
+    sub_decoder_names: &HashSet<String>,
+    sub_decoders: &[SubDecoderDef],
+) -> ResolvedFieldType {
     match field_type {
         FieldType::Alias(name) => {
+            // Check if it's a sub-decoder reference
+            if sub_decoder_names.contains(name) {
+                let sd = sub_decoders.iter().find(|sd| sd.name == *name).unwrap();
+                let base = match sd.width {
+                    w if w <= 8 => "u8",
+                    w if w <= 16 => "u16",
+                    _ => "u32",
+                };
+                return ResolvedFieldType {
+                    base_type: base.to_string(),
+                    alias_name: None,
+                    transforms: Vec::new(),
+                    display_format: None,
+                    sub_decoder: Some(name.clone()),
+                };
+            }
             if let Some(alias) = type_aliases.iter().find(|ta| ta.name == *name) {
                 ResolvedFieldType {
                     base_type: alias.base_type.clone(),
-                    wrapper_type: alias.wrapper_type.clone(),
+                    alias_name: Some(name.clone()),
                     transforms: alias.transforms.clone(),
                     display_format: alias.display_format,
+                    sub_decoder: None,
                 }
             } else {
                 // Built-in type used as alias
                 ResolvedFieldType {
                     base_type: resolve_builtin(name),
-                    wrapper_type: None,
+                    alias_name: None,
                     transforms: Vec::new(),
                     display_format: None,
+                    sub_decoder: None,
                 }
             }
         }
@@ -645,9 +748,10 @@ fn resolve_field_type(field_type: &FieldType, type_aliases: &[TypeAlias]) -> Res
             transforms,
         } => ResolvedFieldType {
             base_type: resolve_builtin(base_type),
-            wrapper_type: None,
+            alias_name: None,
             transforms: transforms.clone(),
             display_format: None,
+            sub_decoder: None,
         },
     }
 }
@@ -655,14 +759,212 @@ fn resolve_field_type(field_type: &FieldType, type_aliases: &[TypeAlias]) -> Res
 fn is_builtin_type(name: &str) -> bool {
     matches!(
         name,
-        "u1" | "u2" | "u3" | "u4" | "u5" | "u6" | "u7" | "u8" | "u16" | "u32" | "i8" | "i16" | "i32" | "bool"
+        "u1" | "u2"
+            | "u3"
+            | "u4"
+            | "u5"
+            | "u6"
+            | "u7"
+            | "u8"
+            | "u16"
+            | "u32"
+            | "i8"
+            | "i16"
+            | "i32"
+            | "bool"
     )
 }
 
 fn resolve_builtin(name: &str) -> String {
     match name {
         "u1" | "u2" | "u3" | "u4" | "u5" | "u6" | "u7" => "u8".to_string(),
-        "bool" => "bool".to_string(),
         other => other.to_string(),
+    }
+}
+
+/// Validate all sub-decoders and return validated versions.
+fn validate_sub_decoders(
+    sub_decoders: &[SubDecoderDef],
+    errors: &mut Vec<Error>,
+) -> Vec<ValidatedSubDecoder> {
+    let mut validated = Vec::new();
+
+    for sd in sub_decoders {
+        // Convert bit ranges
+        let instructions: Vec<_> = sd
+            .instructions
+            .iter()
+            .map(|instr| {
+                let segments: Vec<Segment> = instr
+                    .segments
+                    .iter()
+                    .map(|seg| match seg {
+                        Segment::Fixed {
+                            ranges,
+                            pattern,
+                            span,
+                        } => {
+                            let hw_ranges = crate::parser::dsl_to_hardware(
+                                ranges[0].start,
+                                ranges[0].end,
+                                sd.width,
+                                sd.bit_order,
+                            );
+                            Segment::Fixed {
+                                ranges: hw_ranges,
+                                pattern: pattern.clone(),
+                                span: span.clone(),
+                            }
+                        }
+                        Segment::Field {
+                            name,
+                            field_type,
+                            ranges,
+                            span,
+                        } => {
+                            let hw_ranges = crate::parser::dsl_to_hardware(
+                                ranges[0].start,
+                                ranges[0].end,
+                                sd.width,
+                                sd.bit_order,
+                            );
+                            Segment::Field {
+                                name: name.clone(),
+                                field_type: field_type.clone(),
+                                ranges: hw_ranges,
+                                span: span.clone(),
+                            }
+                        }
+                    })
+                    .collect();
+                (instr, segments)
+            })
+            .collect();
+
+        // Check bit coverage for each sub-decoder instruction
+        for (instr, segments) in &instructions {
+            let as_instr = InstructionDef {
+                name: instr.name.clone(),
+                segments: segments.clone(),
+                format_lines: Vec::new(),
+                span: instr.span.clone(),
+            };
+            check_bit_coverage(&[as_instr], sd.width, errors);
+        }
+
+        // Validate fragment name consistency
+        let mut fragment_names: Option<Vec<String>> = None;
+        for instr in &sd.instructions {
+            let names: Vec<String> = instr.fragments.iter().map(|f| f.name.clone()).collect();
+            if let Some(ref expected) = fragment_names {
+                if &names != expected {
+                    errors.push(Error::new(
+                        ErrorKind::InconsistentFragmentNames {
+                            subdecoder: sd.name.clone(),
+                            instruction: instr.name.clone(),
+                            expected: expected.clone(),
+                            got: names,
+                        },
+                        instr.span.clone(),
+                    ));
+                }
+            } else {
+                fragment_names = Some(names);
+            }
+        }
+
+        let fragment_names = fragment_names.unwrap_or_default();
+
+        // Validate maps within sub-decoder
+        check_maps(&sd.maps, errors);
+
+        // Build validated sub-decoder instructions
+        let validated_instructions = instructions
+            .into_iter()
+            .map(|(instr, segments)| {
+                let resolved_fields = segments
+                    .iter()
+                    .filter_map(|seg| {
+                        if let Segment::Field {
+                            name,
+                            field_type,
+                            ranges,
+                            ..
+                        } = seg
+                        {
+                            let resolved =
+                                resolve_field_type(&field_type, &[], &HashSet::new(), &[]);
+                            Some(ResolvedField {
+                                name: name.clone(),
+                                ranges: ranges.clone(),
+                                resolved_type: resolved,
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                ValidatedSubInstruction {
+                    name: instr.name.clone(),
+                    segments,
+                    resolved_fields,
+                    fragments: instr.fragments.clone(),
+                    span: instr.span.clone(),
+                }
+            })
+            .collect();
+
+        validated.push(ValidatedSubDecoder {
+            name: sd.name.clone(),
+            width: sd.width,
+            bit_order: sd.bit_order,
+            fragment_names,
+            maps: sd.maps.clone(),
+            instructions: validated_instructions,
+        });
+    }
+
+    validated
+}
+
+/// Check that sub-decoder field widths don't exceed the sub-decoder's declared width.
+fn check_sub_decoder_field_widths(
+    instructions: &[InstructionDef],
+    sub_decoders: &[SubDecoderDef],
+    sub_decoder_names: &HashSet<String>,
+    errors: &mut Vec<Error>,
+) {
+    for instr in instructions {
+        for seg in &instr.segments {
+            if let Segment::Field {
+                name,
+                field_type,
+                ranges,
+                span,
+            } = seg
+            {
+                if let FieldType::Alias(alias_name) = field_type {
+                    if sub_decoder_names.contains(alias_name) {
+                        let sd = sub_decoders
+                            .iter()
+                            .find(|sd| sd.name == *alias_name)
+                            .unwrap();
+                        let field_width: u32 = ranges.iter().map(|r| r.width()).sum();
+                        if field_width > sd.width {
+                            errors.push(Error::new(
+                                ErrorKind::SubDecoderFieldTooWide {
+                                    field: name.clone(),
+                                    field_width,
+                                    subdecoder: alias_name.clone(),
+                                    subdecoder_width: sd.width,
+                                },
+                                span.clone(),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
     }
 }

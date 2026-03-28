@@ -29,11 +29,17 @@ pub fn generate_code(def: &ValidatedDef, tree: &DecodeNode) -> String {
     writeln!(out, "use std::marker::PhantomData;").unwrap();
     writeln!(out).unwrap();
 
-    // Imports
-    for imp in &def.imports {
-        writeln!(out, "use {};", imp.path).unwrap();
+    // Type map imports
+    let mut import_paths: Vec<&str> = def.type_maps.values().map(|v| v.as_str()).collect();
+    import_paths.sort();
+    import_paths.dedup();
+    for path in &import_paths {
+        // Only emit `use` for paths that look like Rust module paths (contain `::`)
+        if path.contains("::") {
+            writeln!(out, "use {};", path).unwrap();
+        }
     }
-    if !def.imports.is_empty() {
+    if !import_paths.is_empty() {
         writeln!(out).unwrap();
     }
 
@@ -55,6 +61,16 @@ pub fn generate_code(def: &ValidatedDef, tree: &DecodeNode) -> String {
     // Map functions
     generate_map_functions(&mut out, def);
 
+    // Sub-decoder types and dispatch
+    for sd in &def.sub_decoders {
+        let dispatch = def
+            .dispatch_overrides
+            .get(&sd.name)
+            .copied()
+            .unwrap_or(crate::Dispatch::FnPtrLut);
+        generate_subdecoder(&mut out, sd, dispatch);
+    }
+
     // Enum definition
     writeln!(out, "#[derive(Debug, Clone, Copy, PartialEq, Eq)]").unwrap();
     writeln!(out, "pub enum {} {{", enum_name).unwrap();
@@ -68,7 +84,7 @@ pub fn generate_code(def: &ValidatedDef, tree: &DecodeNode) -> String {
                 .resolved_fields
                 .iter()
                 .map(|f| {
-                    let rust_type = field_rust_type(f);
+                    let rust_type = field_rust_type_with_maps(f, &def.type_maps);
                     format!("{}: {}", f.name, rust_type)
                 })
                 .collect();
@@ -92,7 +108,12 @@ pub fn generate_code(def: &ValidatedDef, tree: &DecodeNode) -> String {
         "    pub fn decode(data: &[u8]) -> Option<(Self, usize)> {{"
     )
     .unwrap();
-    writeln!(out, "        if data.len() < {} {{ return None; }}", unit_bytes).unwrap();
+    writeln!(
+        out,
+        "        if data.len() < {} {{ return None; }}",
+        unit_bytes
+    )
+    .unwrap();
     writeln!(
         out,
         "        let opcode = {}::from_{}_bytes(data[0..{}].try_into().unwrap());",
@@ -100,7 +121,15 @@ pub fn generate_code(def: &ValidatedDef, tree: &DecodeNode) -> String {
     )
     .unwrap();
 
-    emit_tree(&mut out, tree, def, &enum_name, 2, variable_length, &word_type);
+    emit_tree(
+        &mut out,
+        tree,
+        def,
+        &enum_name,
+        2,
+        variable_length,
+        &word_type,
+    );
 
     writeln!(out, "    }}").unwrap();
     writeln!(out).unwrap();
@@ -130,12 +159,7 @@ pub fn generate_code(def: &ValidatedDef, tree: &DecodeNode) -> String {
 
     // DisplayWith struct
     writeln!(out, "#[allow(dead_code)]").unwrap();
-    writeln!(
-        out,
-        "pub struct {}<'a, F: {}> {{",
-        display_with, trait_name
-    )
-    .unwrap();
+    writeln!(out, "pub struct {}<'a, F: {}> {{", display_with, trait_name).unwrap();
     writeln!(out, "    insn: &'a {},", enum_name).unwrap();
     writeln!(out, "    _phantom: PhantomData<F>,").unwrap();
     writeln!(out, "}}").unwrap();
@@ -197,12 +221,32 @@ fn emit_tree(
             let instr = &def.instructions[*instruction_index];
             if let Some(guard) = leaf_guard(instr, word_type, unit_bytes, endian_suffix) {
                 writeln!(out, "{}if {} {{", pad, guard).unwrap();
-                emit_some(out, instr, enum_name, &format!("{}    ", pad), variable_length, word_type, unit_bytes, endian_suffix);
+                emit_some(
+                    out,
+                    instr,
+                    enum_name,
+                    &format!("{}    ", pad),
+                    variable_length,
+                    word_type,
+                    unit_bytes,
+                    endian_suffix,
+                    &def.type_maps,
+                );
                 writeln!(out, "{}}} else {{", pad).unwrap();
                 writeln!(out, "{}    None", pad).unwrap();
                 writeln!(out, "{}}}", pad).unwrap();
             } else {
-                emit_some(out, instr, enum_name, &pad, variable_length, word_type, unit_bytes, endian_suffix);
+                emit_some(
+                    out,
+                    instr,
+                    enum_name,
+                    &pad,
+                    variable_length,
+                    word_type,
+                    unit_bytes,
+                    endian_suffix,
+                    &def.type_maps,
+                );
             }
         }
         DecodeNode::PriorityLeaves { candidates } => {
@@ -215,10 +259,30 @@ fn emit_tree(
                     // First candidate
                     if let Some(guard_expr) = guard {
                         writeln!(out, "{}if {} {{", pad, guard_expr).unwrap();
-                        emit_some(out, instr, enum_name, &format!("{}    ", pad), variable_length, word_type, unit_bytes, endian_suffix);
+                        emit_some(
+                            out,
+                            instr,
+                            enum_name,
+                            &format!("{}    ", pad),
+                            variable_length,
+                            word_type,
+                            unit_bytes,
+                            endian_suffix,
+                            &def.type_maps,
+                        );
                     } else {
                         // No guard needed - this should match unconditionally
-                        emit_some(out, instr, enum_name, &pad, variable_length, word_type, unit_bytes, endian_suffix);
+                        emit_some(
+                            out,
+                            instr,
+                            enum_name,
+                            &pad,
+                            variable_length,
+                            word_type,
+                            unit_bytes,
+                            endian_suffix,
+                            &def.type_maps,
+                        );
                         break; // No need to check further candidates
                     }
                 } else if i == candidates.len() - 1 {
@@ -226,18 +290,54 @@ fn emit_tree(
                     writeln!(out, "{}}} else {{", pad).unwrap();
                     if let Some(guard_expr) = guard {
                         writeln!(out, "{}    if {} {{", pad, guard_expr).unwrap();
-                        emit_some(out, instr, enum_name, &format!("{}        ", pad), variable_length, word_type, unit_bytes, endian_suffix);
+                        emit_some(
+                            out,
+                            instr,
+                            enum_name,
+                            &format!("{}        ", pad),
+                            variable_length,
+                            word_type,
+                            unit_bytes,
+                            endian_suffix,
+                            &def.type_maps,
+                        );
                         writeln!(out, "{}    }} else {{", pad).unwrap();
                         writeln!(out, "{}        None", pad).unwrap();
                         writeln!(out, "{}    }}", pad).unwrap();
                     } else {
-                        emit_some(out, instr, enum_name, &format!("{}    ", pad), variable_length, word_type, unit_bytes, endian_suffix);
+                        emit_some(
+                            out,
+                            instr,
+                            enum_name,
+                            &format!("{}    ", pad),
+                            variable_length,
+                            word_type,
+                            unit_bytes,
+                            endian_suffix,
+                            &def.type_maps,
+                        );
                     }
                     writeln!(out, "{}}}", pad).unwrap();
                 } else {
                     // Middle candidates
-                    writeln!(out, "{}}} else if {} {{", pad, guard.unwrap_or_else(|| "true".to_string())).unwrap();
-                    emit_some(out, instr, enum_name, &format!("{}    ", pad), variable_length, word_type, unit_bytes, endian_suffix);
+                    writeln!(
+                        out,
+                        "{}}} else if {} {{",
+                        pad,
+                        guard.unwrap_or_else(|| "true".to_string())
+                    )
+                    .unwrap();
+                    emit_some(
+                        out,
+                        instr,
+                        enum_name,
+                        &format!("{}    ", pad),
+                        variable_length,
+                        word_type,
+                        unit_bytes,
+                        endian_suffix,
+                        &def.type_maps,
+                    );
                 }
             }
         }
@@ -249,14 +349,33 @@ fn emit_tree(
             arms,
             default,
         } => {
-            let extract_expr = extract_expression("opcode", &[*range], word_type, unit_bytes, endian_suffix);
+            let extract_expr =
+                extract_expression("opcode", &[*range], word_type, unit_bytes, endian_suffix);
             writeln!(out, "{}match {} {{", pad, extract_expr).unwrap();
 
             for (value, child) in arms {
-                emit_arm(out, child, def, enum_name, indent + 1, &format!("{:#x}", value), variable_length, word_type);
+                emit_arm(
+                    out,
+                    child,
+                    def,
+                    enum_name,
+                    indent + 1,
+                    &format!("{:#x}", value),
+                    variable_length,
+                    word_type,
+                );
             }
 
-            emit_arm(out, default, def, enum_name, indent + 1, "_", variable_length, word_type);
+            emit_arm(
+                out,
+                default,
+                def,
+                enum_name,
+                indent + 1,
+                "_",
+                variable_length,
+                word_type,
+            );
 
             writeln!(out, "{}}}", pad).unwrap();
         }
@@ -290,15 +409,45 @@ fn emit_arm(
                 if pattern == "_" {
                     // Default arm with guard: emit guarded arm then fallback
                     write!(out, "{}{} if {} => ", pad, pattern, guard).unwrap();
-                    emit_some_inline(out, instr, enum_name, indent, variable_length, word_type, unit_bytes, endian_suffix);
+                    emit_some_inline(
+                        out,
+                        instr,
+                        enum_name,
+                        indent,
+                        variable_length,
+                        word_type,
+                        unit_bytes,
+                        endian_suffix,
+                        &def.type_maps,
+                    );
                     writeln!(out, "{}{} => None,", pad, pattern).unwrap();
                 } else {
                     write!(out, "{}{} if {} => ", pad, pattern, guard).unwrap();
-                    emit_some_inline(out, instr, enum_name, indent, variable_length, word_type, unit_bytes, endian_suffix);
+                    emit_some_inline(
+                        out,
+                        instr,
+                        enum_name,
+                        indent,
+                        variable_length,
+                        word_type,
+                        unit_bytes,
+                        endian_suffix,
+                        &def.type_maps,
+                    );
                 }
             } else {
                 write!(out, "{}{} => ", pad, pattern).unwrap();
-                emit_some_inline(out, instr, enum_name, indent, variable_length, word_type, unit_bytes, endian_suffix);
+                emit_some_inline(
+                    out,
+                    instr,
+                    enum_name,
+                    indent,
+                    variable_length,
+                    word_type,
+                    unit_bytes,
+                    endian_suffix,
+                    &def.type_maps,
+                );
             }
         }
         DecodeNode::PriorityLeaves { candidates } => {
@@ -314,10 +463,30 @@ fn emit_arm(
                     // First candidate
                     if let Some(guard_expr) = guard {
                         writeln!(out, "{}if {} {{", inner_pad, guard_expr).unwrap();
-                        emit_some(out, instr, enum_name, &format!("{}    ", inner_pad), variable_length, word_type, unit_bytes, endian_suffix);
+                        emit_some(
+                            out,
+                            instr,
+                            enum_name,
+                            &format!("{}    ", inner_pad),
+                            variable_length,
+                            word_type,
+                            unit_bytes,
+                            endian_suffix,
+                            &def.type_maps,
+                        );
                     } else {
                         // No guard - matches unconditionally
-                        emit_some(out, instr, enum_name, &inner_pad, variable_length, word_type, unit_bytes, endian_suffix);
+                        emit_some(
+                            out,
+                            instr,
+                            enum_name,
+                            &inner_pad,
+                            variable_length,
+                            word_type,
+                            unit_bytes,
+                            endian_suffix,
+                            &def.type_maps,
+                        );
                         writeln!(out, "{}}}", pad).unwrap();
                         return;
                     }
@@ -326,19 +495,55 @@ fn emit_arm(
                     writeln!(out, "{}}} else {{", inner_pad).unwrap();
                     if let Some(guard_expr) = guard {
                         writeln!(out, "{}    if {} {{", inner_pad, guard_expr).unwrap();
-                        emit_some(out, instr, enum_name, &format!("{}        ", inner_pad), variable_length, word_type, unit_bytes, endian_suffix);
+                        emit_some(
+                            out,
+                            instr,
+                            enum_name,
+                            &format!("{}        ", inner_pad),
+                            variable_length,
+                            word_type,
+                            unit_bytes,
+                            endian_suffix,
+                            &def.type_maps,
+                        );
                         writeln!(out, "{}    }} else {{", inner_pad).unwrap();
                         writeln!(out, "{}        None", inner_pad).unwrap();
                         writeln!(out, "{}    }}", inner_pad).unwrap();
                     } else {
-                        emit_some(out, instr, enum_name, &format!("{}    ", inner_pad), variable_length, word_type, unit_bytes, endian_suffix);
+                        emit_some(
+                            out,
+                            instr,
+                            enum_name,
+                            &format!("{}    ", inner_pad),
+                            variable_length,
+                            word_type,
+                            unit_bytes,
+                            endian_suffix,
+                            &def.type_maps,
+                        );
                     }
                     writeln!(out, "{}}}", inner_pad).unwrap();
                     writeln!(out, "{}}}", pad).unwrap();
                 } else {
                     // Middle candidates
-                    writeln!(out, "{}}} else if {} {{", inner_pad, guard.unwrap_or_else(|| "true".to_string())).unwrap();
-                    emit_some(out, instr, enum_name, &format!("{}    ", inner_pad), variable_length, word_type, unit_bytes, endian_suffix);
+                    writeln!(
+                        out,
+                        "{}}} else if {} {{",
+                        inner_pad,
+                        guard.unwrap_or_else(|| "true".to_string())
+                    )
+                    .unwrap();
+                    emit_some(
+                        out,
+                        instr,
+                        enum_name,
+                        &format!("{}    ", inner_pad),
+                        variable_length,
+                        word_type,
+                        unit_bytes,
+                        endian_suffix,
+                        &def.type_maps,
+                    );
                 }
             }
         }
@@ -348,15 +553,34 @@ fn emit_arm(
             default,
         } => {
             writeln!(out, "{}{} => {{", pad, pattern).unwrap();
-            let extract_expr = extract_expression("opcode", &[*range], word_type, unit_bytes, endian_suffix);
+            let extract_expr =
+                extract_expression("opcode", &[*range], word_type, unit_bytes, endian_suffix);
             let inner_pad = "    ".repeat(indent + 1);
             writeln!(out, "{}match {} {{", inner_pad, extract_expr).unwrap();
 
             for (value, child) in arms {
-                emit_arm(out, child, def, enum_name, indent + 2, &format!("{:#x}", value), variable_length, word_type);
+                emit_arm(
+                    out,
+                    child,
+                    def,
+                    enum_name,
+                    indent + 2,
+                    &format!("{:#x}", value),
+                    variable_length,
+                    word_type,
+                );
             }
 
-            emit_arm(out, default, def, enum_name, indent + 2, "_", variable_length, word_type);
+            emit_arm(
+                out,
+                default,
+                def,
+                enum_name,
+                indent + 2,
+                "_",
+                variable_length,
+                word_type,
+            );
 
             writeln!(out, "{}}}", inner_pad).unwrap();
             writeln!(out, "{}}}", pad).unwrap();
@@ -367,14 +591,20 @@ fn emit_arm(
 /// Compute the guard condition string for a leaf instruction, if needed.
 /// Returns `None` if all fixed bits were already fully dispatched by the tree.
 /// For multi-unit instructions, generates guards for ALL units (unit 0 and unit 1+).
-fn leaf_guard(instr: &ValidatedInstruction, word_type: &str, unit_bytes: u32, endian_suffix: &str) -> Option<String> {
+fn leaf_guard(
+    instr: &ValidatedInstruction,
+    word_type: &str,
+    unit_bytes: u32,
+    endian_suffix: &str,
+) -> Option<String> {
     let fixed_bits = instr.fixed_bits();
     if fixed_bits.is_empty() {
         return None;
     }
 
     // Group fixed bits by unit
-    let mut units_map: std::collections::HashMap<u32, Vec<(u32, Bit)>> = std::collections::HashMap::new();
+    let mut units_map: std::collections::HashMap<u32, Vec<(u32, Bit)>> =
+        std::collections::HashMap::new();
     for (unit, hw_bit, bit) in fixed_bits {
         units_map.entry(unit).or_default().push((hw_bit, bit));
     }
@@ -406,6 +636,7 @@ fn emit_some_inline(
     word_type: &str,
     unit_bytes: u32,
     endian_suffix: &str,
+    type_maps: &HashMap<String, String>,
 ) {
     let variant_name = to_pascal_case(&instr.name);
     let unit_count = instr.unit_count();
@@ -418,14 +649,20 @@ fn emit_some_inline(
     }
 
     if instr.resolved_fields.is_empty() {
-        write!(out, "Some(({}::{}, {}))", enum_name, variant_name, bytes_consumed).unwrap();
+        write!(
+            out,
+            "Some(({}::{}, {}))",
+            enum_name, variant_name, bytes_consumed
+        )
+        .unwrap();
     } else {
         let fields: Vec<String> = instr
             .resolved_fields
             .iter()
             .map(|f| {
-                let extract = extract_expression("opcode", &f.ranges, word_type, unit_bytes, endian_suffix);
-                let expr = apply_transforms(&extract, &f.resolved_type);
+                let extract =
+                    extract_expression("opcode", &f.ranges, word_type, unit_bytes, endian_suffix);
+                let expr = apply_transforms_with_maps(&extract, &f.resolved_type, type_maps);
                 format!("{}: {}", f.name, expr)
             })
             .collect();
@@ -456,6 +693,7 @@ fn emit_some(
     word_type: &str,
     unit_bytes: u32,
     endian_suffix: &str,
+    type_maps: &HashMap<String, String>,
 ) {
     let unit_count = instr.unit_count();
     let bytes_consumed = unit_count * unit_bytes;
@@ -463,12 +701,32 @@ fn emit_some(
     if variable_length && unit_count > 1 {
         writeln!(out, "{}if data.len() >= {} {{", pad, bytes_consumed).unwrap();
         let inner_pad = format!("{}    ", pad);
-        emit_some_inner(out, instr, enum_name, &inner_pad, word_type, unit_bytes, endian_suffix, bytes_consumed);
+        emit_some_inner(
+            out,
+            instr,
+            enum_name,
+            &inner_pad,
+            word_type,
+            unit_bytes,
+            endian_suffix,
+            bytes_consumed,
+            type_maps,
+        );
         writeln!(out, "{}}} else {{", pad).unwrap();
         writeln!(out, "{}    None", pad).unwrap();
         writeln!(out, "{}}}", pad).unwrap();
     } else {
-        emit_some_inner(out, instr, enum_name, pad, word_type, unit_bytes, endian_suffix, bytes_consumed);
+        emit_some_inner(
+            out,
+            instr,
+            enum_name,
+            pad,
+            word_type,
+            unit_bytes,
+            endian_suffix,
+            bytes_consumed,
+            type_maps,
+        );
     }
 }
 
@@ -482,15 +740,27 @@ fn emit_some_inner(
     unit_bytes: u32,
     endian_suffix: &str,
     bytes_consumed: u32,
+    type_maps: &HashMap<String, String>,
 ) {
     let variant_name = to_pascal_case(&instr.name);
     if instr.resolved_fields.is_empty() {
-        writeln!(out, "{}Some(({}::{}, {}))", pad, enum_name, variant_name, bytes_consumed).unwrap();
+        writeln!(
+            out,
+            "{}Some(({}::{}, {}))",
+            pad, enum_name, variant_name, bytes_consumed
+        )
+        .unwrap();
     } else {
         writeln!(out, "{}Some(({}::{} {{", pad, enum_name, variant_name).unwrap();
         for field in &instr.resolved_fields {
-            let extract = extract_expression("opcode", &field.ranges, word_type, unit_bytes, endian_suffix);
-            let expr = apply_transforms(&extract, &field.resolved_type);
+            let extract = extract_expression(
+                "opcode",
+                &field.ranges,
+                word_type,
+                unit_bytes,
+                endian_suffix,
+            );
+            let expr = apply_transforms_with_maps(&extract, &field.resolved_type, type_maps);
             writeln!(out, "{}    {}: {},", pad, field.name, expr).unwrap();
         }
         writeln!(out, "{}}}, {}))", pad, bytes_consumed).unwrap();
@@ -532,7 +802,13 @@ fn unit_read_expr(unit: u32, word_type: &str, unit_bytes: u32, endian_suffix: &s
 }
 
 /// Generate an expression to extract bits from multiple ranges (potentially cross-unit).
-fn extract_expression(var: &str, ranges: &[BitRange], word_type: &str, unit_bytes: u32, endian_suffix: &str) -> String {
+fn extract_expression(
+    var: &str,
+    ranges: &[BitRange],
+    word_type: &str,
+    unit_bytes: u32,
+    endian_suffix: &str,
+) -> String {
     if ranges.is_empty() {
         return "0".to_string();
     }
@@ -594,6 +870,15 @@ fn extract_expression(var: &str, ranges: &[BitRange], word_type: &str, unit_byte
 
 /// Apply transforms and type conversions to extracted field values.
 fn apply_transforms(extract_expr: &str, resolved: &ResolvedFieldType) -> String {
+    apply_transforms_with_maps(extract_expr, resolved, &HashMap::new())
+}
+
+/// Apply transforms with type map support.
+fn apply_transforms_with_maps(
+    extract_expr: &str,
+    resolved: &ResolvedFieldType,
+    type_maps: &HashMap<String, String>,
+) -> String {
     let mut expr = extract_expr.to_string();
 
     for transform in &resolved.transforms {
@@ -615,8 +900,22 @@ fn apply_transforms(extract_expr: &str, resolved: &ResolvedFieldType) -> String 
         }
     }
 
-    if let Some(ref wrapper) = resolved.wrapper_type {
-        expr = format!("{}::from(({}) as {})", wrapper, expr, resolved.base_type);
+    // Handle sub-decoder fields: call the sub-decoder dispatch function
+    if let Some(ref sd_name) = resolved.sub_decoder {
+        let decode_fn = format!("decode_{}", to_snake_case(sd_name));
+        // The field value is extracted and cast to the sub-decoder's word type, then dispatched
+        return format!(
+            "{}(({}) as {}).unwrap()",
+            decode_fn, expr, resolved.base_type
+        );
+    }
+
+    // Check if there's a type map for the wrapper type
+    let wrapper_type = resolved.alias_name.as_ref().and_then(|a| type_maps.get(a));
+
+    if let Some(wrapper) = wrapper_type {
+        let short_name = wrapper.rsplit("::").next().unwrap_or(wrapper);
+        expr = format!("{}::from(({}) as {})", short_name, expr, resolved.base_type);
     } else if resolved.base_type == "bool" {
         expr = format!("({}) != 0", expr);
     } else {
@@ -647,10 +946,22 @@ fn generate_display_helpers(out: &mut String, def: &ValidatedDef) {
 
         for ty in &["i8", "i16", "i32"] {
             writeln!(out, "impl fmt::Display for SignedHex<{}> {{", ty).unwrap();
-            writeln!(out, "    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {{").unwrap();
+            writeln!(
+                out,
+                "    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {{"
+            )
+            .unwrap();
             writeln!(out, "        if self.0 == 0 {{ write!(f, \"0\") }}").unwrap();
-            writeln!(out, "        else if self.0 > 0 {{ write!(f, \"0x{{:X}}\", self.0) }}").unwrap();
-            writeln!(out, "        else {{ write!(f, \"-0x{{:X}}\", (self.0 as i64).wrapping_neg()) }}").unwrap();
+            writeln!(
+                out,
+                "        else if self.0 > 0 {{ write!(f, \"0x{{:X}}\", self.0) }}"
+            )
+            .unwrap();
+            writeln!(
+                out,
+                "        else {{ write!(f, \"-0x{{:X}}\", (self.0 as i64).wrapping_neg()) }}"
+            )
+            .unwrap();
             writeln!(out, "    }}").unwrap();
             writeln!(out, "}}").unwrap();
             writeln!(out).unwrap();
@@ -665,7 +976,11 @@ fn generate_display_helpers(out: &mut String, def: &ValidatedDef) {
 
         for ty in &["u8", "u16", "u32"] {
             writeln!(out, "impl fmt::Display for SignedHex<{}> {{", ty).unwrap();
-            writeln!(out, "    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {{").unwrap();
+            writeln!(
+                out,
+                "    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {{"
+            )
+            .unwrap();
             writeln!(out, "        if self.0 == 0 {{ write!(f, \"0\") }}").unwrap();
             writeln!(out, "        else {{ write!(f, \"0x{{:X}}\", self.0) }}").unwrap();
             writeln!(out, "    }}").unwrap();
@@ -718,7 +1033,14 @@ fn generate_map_functions(out: &mut String, def: &ValidatedDef) {
             .map(|(name, ty)| format!("{}: {}", name, ty))
             .collect();
 
-        writeln!(out, "fn {}({}) -> {} {{", map.name, params.join(", "), return_type).unwrap();
+        writeln!(
+            out,
+            "fn {}({}) -> {} {{",
+            map.name,
+            params.join(", "),
+            return_type
+        )
+        .unwrap();
 
         if map.params.len() == 1 {
             writeln!(out, "    match {} {{", map.params[0]).unwrap();
@@ -849,13 +1171,9 @@ fn infer_expr_type(
     field_types: &HashMap<&str, &ResolvedFieldType>,
 ) -> Option<String> {
     match expr {
-        FormatExpr::Field(name) => field_types.get(name.as_str()).map(|ft| {
-            if let Some(ref wrapper) = ft.wrapper_type {
-                wrapper.clone()
-            } else {
-                ft.base_type.clone()
-            }
-        }),
+        FormatExpr::Field(name) => field_types
+            .get(name.as_str())
+            .map(|ft| ft.base_type.clone()),
         FormatExpr::Arithmetic { left, .. } => infer_expr_type(left, field_types),
         FormatExpr::IntLiteral(_) => Some("i64".to_string()),
         _ => None,
@@ -895,22 +1213,20 @@ fn collect_map_call_types(
                 collect_map_call_types(arg, field_types, result);
             }
         }
-        _ => {}
+        FormatExpr::SubDecoderAccess { .. }
+        | FormatExpr::Field(_)
+        | FormatExpr::Ternary { .. }
+        | FormatExpr::IntLiteral(_) => {}
     }
 }
 
 /// Generate the formatting trait with one method per instruction variant.
-fn generate_format_trait(
-    out: &mut String,
-    def: &ValidatedDef,
-    _enum_name: &str,
-    trait_name: &str,
-) {
+fn generate_format_trait(out: &mut String, def: &ValidatedDef, _enum_name: &str, trait_name: &str) {
     writeln!(out, "pub trait {} {{", trait_name).unwrap();
 
     for instr in &def.instructions {
         let method_name = format!("fmt_{}", instr.name);
-        let params = trait_method_params(&instr.resolved_fields);
+        let params = trait_method_params(&instr.resolved_fields, &def.type_maps);
 
         if params.is_empty() {
             writeln!(
@@ -928,7 +1244,7 @@ fn generate_format_trait(
             .unwrap();
         }
 
-        generate_format_body(out, instr, 2);
+        generate_format_body(out, instr, 2, &def.type_maps);
 
         writeln!(out, "    }}").unwrap();
     }
@@ -938,21 +1254,22 @@ fn generate_format_trait(
 }
 
 /// Generate parameters for a trait method.
-fn trait_method_params(fields: &[ResolvedField]) -> String {
+fn trait_method_params(fields: &[ResolvedField], type_maps: &HashMap<String, String>) -> String {
     let mut params = Vec::new();
     for field in fields {
-        let rust_type = field_rust_type(field);
-        if field.resolved_type.wrapper_type.is_some() {
-            params.push(format!("{}: &{}", field.name, rust_type));
-        } else {
-            params.push(format!("{}: {}", field.name, rust_type));
-        }
+        let rust_type = field_rust_type_with_maps(field, type_maps);
+        params.push(format!("{}: {}", field.name, rust_type));
     }
     params.join(", ")
 }
 
 /// Generate the body of a format trait method from format lines.
-fn generate_format_body(out: &mut String, instr: &ValidatedInstruction, indent: usize) {
+fn generate_format_body(
+    out: &mut String,
+    instr: &ValidatedInstruction,
+    indent: usize,
+    type_maps: &HashMap<String, String>,
+) {
     let pad = "    ".repeat(indent);
 
     if instr.format_lines.is_empty() {
@@ -975,7 +1292,9 @@ fn generate_format_body(out: &mut String, instr: &ValidatedInstruction, indent: 
             writeln!(
                 out,
                 "{}write!(f, \"{}\", {})",
-                pad, fmt_str, args.join(", ")
+                pad,
+                fmt_str,
+                args.join(", ")
             )
             .unwrap();
         }
@@ -984,43 +1303,56 @@ fn generate_format_body(out: &mut String, instr: &ValidatedInstruction, indent: 
 
     if instr.format_lines.len() == 1 && instr.format_lines[0].guard.is_none() {
         // Single format line, no guard
-        emit_write_call(out, &instr.format_lines[0].pieces, &instr.resolved_fields, &pad);
+        emit_write_call(
+            out,
+            &instr.format_lines[0].pieces,
+            &instr.resolved_fields,
+            &pad,
+        );
         return;
     }
 
     // Multiple format lines with guards
     for (i, fl) in instr.format_lines.iter().enumerate() {
         if let Some(guard) = &fl.guard {
-            let guard_code = generate_guard_code(guard, &instr.resolved_fields);
+            let guard_code = generate_guard_code(guard, &instr.resolved_fields, type_maps);
             if i == 0 {
                 writeln!(out, "{}if {} {{", pad, guard_code).unwrap();
             } else {
                 writeln!(out, "{}}} else if {} {{", pad, guard_code).unwrap();
             }
-            emit_write_call(out, &fl.pieces, &instr.resolved_fields, &format!("{}    ", pad));
+            emit_write_call(
+                out,
+                &fl.pieces,
+                &instr.resolved_fields,
+                &format!("{}    ", pad),
+            );
         } else {
             // Last line without guard = else
             if i > 0 {
                 writeln!(out, "{}}} else {{", pad).unwrap();
             }
-            emit_write_call(out, &fl.pieces, &instr.resolved_fields, &format!("{}    ", pad));
+            emit_write_call(
+                out,
+                &fl.pieces,
+                &instr.resolved_fields,
+                &format!("{}    ", pad),
+            );
         }
     }
 
     if instr.format_lines.len() > 1
-        || instr.format_lines.first().map_or(false, |fl| fl.guard.is_some())
+        || instr
+            .format_lines
+            .first()
+            .map_or(false, |fl| fl.guard.is_some())
     {
         writeln!(out, "{}}}", pad).unwrap();
     }
 }
 
 /// Emit a `write!(f, ...)` call for a set of format pieces.
-fn emit_write_call(
-    out: &mut String,
-    pieces: &[FormatPiece],
-    fields: &[ResolvedField],
-    pad: &str,
-) {
+fn emit_write_call(out: &mut String, pieces: &[FormatPiece], fields: &[ResolvedField], pad: &str) {
     let mut fmt_str = String::new();
     let mut args = Vec::new();
 
@@ -1105,8 +1437,6 @@ fn expr_to_rust(expr: &FormatExpr, fields: &[ResolvedField]) -> String {
             let cond = if let Some(f) = f {
                 if f.resolved_type.base_type == "bool" {
                     field.clone()
-                } else if f.resolved_type.wrapper_type.is_some() {
-                    format!("Into::<{}>::into(*{}) != 0", f.resolved_type.base_type, field)
                 } else {
                     format!("{} != 0", field)
                 }
@@ -1119,7 +1449,10 @@ fn expr_to_rust(expr: &FormatExpr, fields: &[ResolvedField]) -> String {
                 .map(|s| format!("\"{}\"", s))
                 .unwrap_or_else(|| "\"\"".to_string());
 
-            format!("if {} {{ \"{}\" }} else {{ {} }}", cond, if_nonzero, else_val)
+            format!(
+                "if {} {{ \"{}\" }} else {{ {} }}",
+                cond, if_nonzero, else_val
+            )
         }
         FormatExpr::Arithmetic { left, op, right } => {
             let l = expr_to_rust(left, fields);
@@ -1157,11 +1490,18 @@ fn expr_to_rust(expr: &FormatExpr, fields: &[ResolvedField]) -> String {
                 }
             }
         }
+        FormatExpr::SubDecoderAccess { field, fragment } => {
+            format!("{}.{}", field, fragment)
+        }
     }
 }
 
 /// Generate Rust code for a guard condition.
-fn generate_guard_code(guard: &Guard, fields: &[ResolvedField]) -> String {
+fn generate_guard_code(
+    guard: &Guard,
+    fields: &[ResolvedField],
+    type_maps: &HashMap<String, String>,
+) -> String {
     let conditions: Vec<String> = guard
         .conditions
         .iter()
@@ -1177,24 +1517,26 @@ fn generate_guard_code(guard: &Guard, fields: &[ResolvedField]) -> String {
                 CompareOp::Ge => ">=",
             };
 
-            // Check if we need Into conversion for wrapper types
             let left_field = match &cond.left {
                 GuardOperand::Field(name) => fields.iter().find(|f| f.name == *name),
                 _ => None,
             };
 
             if let Some(f) = left_field {
-                if let Some(ref wrapper) = f.resolved_type.wrapper_type {
-                    // Convert the literal to the wrapper type instead of unwrapping the field.
-                    // This only requires From<base> + PartialEq on the wrapper.
+                // Check for type-mapped wrapper types
+                let wrapper = f
+                    .resolved_type
+                    .alias_name
+                    .as_ref()
+                    .and_then(|a| type_maps.get(a));
+                if let Some(wrapper_path) = wrapper {
+                    let short_name = wrapper_path.rsplit("::").next().unwrap_or(wrapper_path);
                     if let GuardOperand::Literal(val) = &cond.right {
                         return format!(
-                            "*{} {} {}::from({}{})",
-                            left, op, wrapper, val, f.resolved_type.base_type
+                            "{} {} {}::from({}{})",
+                            left, op, short_name, val, f.resolved_type.base_type
                         );
                     }
-                    // field-to-field comparison with wrapper types
-                    return format!("*{} {} *{}", left, op, right);
                 } else if f.resolved_type.base_type == "bool" {
                     // For bool fields, generate simpler comparisons
                     if let GuardOperand::Literal(val) = &cond.right {
@@ -1218,18 +1560,7 @@ fn generate_guard_code(guard: &Guard, fields: &[ResolvedField]) -> String {
 
 fn guard_operand_to_rust(operand: &GuardOperand, fields: &[ResolvedField]) -> String {
     match operand {
-        GuardOperand::Field(name) => {
-            let field = fields.iter().find(|f| f.name == *name);
-            if let Some(f) = field {
-                if f.resolved_type.wrapper_type.is_some() {
-                    name.clone()
-                } else {
-                    name.clone()
-                }
-            } else {
-                name.clone()
-            }
-        }
+        GuardOperand::Field(name) => name.clone(),
         GuardOperand::Literal(val) => format!("{}", val),
         GuardOperand::Expr { left, op, right } => {
             let l = guard_operand_to_rust(left, fields);
@@ -1247,12 +1578,7 @@ fn guard_operand_to_rust(operand: &GuardOperand, fields: &[ResolvedField]) -> St
 }
 
 /// Generate the `write_asm` method.
-fn generate_write_asm(
-    out: &mut String,
-    def: &ValidatedDef,
-    enum_name: &str,
-    trait_name: &str,
-) {
+fn generate_write_asm(out: &mut String, def: &ValidatedDef, enum_name: &str, trait_name: &str) {
     writeln!(
         out,
         "    pub fn write_asm<F: {}>(&self, f: &mut fmt::Formatter) -> fmt::Result {{",
@@ -1273,8 +1599,11 @@ fn generate_write_asm(
             )
             .unwrap();
         } else {
-            let field_names: Vec<String> =
-                instr.resolved_fields.iter().map(|f| f.name.clone()).collect();
+            let field_names: Vec<String> = instr
+                .resolved_fields
+                .iter()
+                .map(|f| f.name.clone())
+                .collect();
             let destructure = format!(
                 "{}::{} {{ {} }}",
                 enum_name,
@@ -1285,13 +1614,7 @@ fn generate_write_asm(
             let args: Vec<String> = instr
                 .resolved_fields
                 .iter()
-                .map(|f| {
-                    if f.resolved_type.wrapper_type.is_some() {
-                        f.name.clone()
-                    } else {
-                        format!("*{}", f.name)
-                    }
-                })
+                .map(|f| format!("*{}", f.name))
                 .collect();
 
             writeln!(
@@ -1336,9 +1659,21 @@ pub(crate) fn type_bits(base: &str) -> u32 {
     }
 }
 
-fn field_rust_type(field: &ResolvedField) -> String {
-    if let Some(ref wrapper) = field.resolved_type.wrapper_type {
-        wrapper.clone()
+fn field_rust_type_with_maps(field: &ResolvedField, type_maps: &HashMap<String, String>) -> String {
+    if field.resolved_type.sub_decoder.is_some() {
+        let sd_name = field.resolved_type.sub_decoder.as_ref().unwrap();
+        format!("{}Insn", sd_name)
+    } else if let Some(ref alias) = field.resolved_type.alias_name {
+        if let Some(rust_type) = type_maps.get(alias) {
+            // Use the last segment of the Rust path as the type name
+            rust_type
+                .rsplit("::")
+                .next()
+                .unwrap_or(rust_type)
+                .to_string()
+        } else {
+            field.resolved_type.base_type.clone()
+        }
     } else {
         field.resolved_type.base_type.clone()
     }
@@ -1366,6 +1701,508 @@ pub fn to_pascal_case(name: &str) -> String {
     result
 }
 
+/// Generate sub-decoder types, pre-baked string arrays, and inline dispatch function.
+fn generate_subdecoder(out: &mut String, sd: &ValidatedSubDecoder, dispatch: crate::Dispatch) {
+    let opcode_enum = format!("{}Opcode", sd.name);
+    let insn_struct = format!("{}Insn", sd.name);
+    let decode_fn = format!("decode_{}", to_snake_case(&sd.name));
+    let word_type = word_type_for_width(sd.width);
+    let lut_size = 1usize << sd.width;
+    let use_inline = dispatch == crate::Dispatch::JumpTable;
+
+    // Generate map functions for sub-decoder maps
+    if !sd.maps.is_empty() {
+        for map in &sd.maps {
+            let has_interpolation = map.entries.iter().any(|entry| {
+                entry
+                    .output
+                    .iter()
+                    .any(|p| matches!(p, FormatPiece::FieldRef { .. }))
+            });
+            let return_type = if has_interpolation {
+                "String"
+            } else {
+                "&'static str"
+            };
+            let params: Vec<String> = map
+                .params
+                .iter()
+                .map(|name| format!("{}: {}", name, word_type))
+                .collect();
+            writeln!(
+                out,
+                "fn {}({}) -> {} {{",
+                map.name,
+                params.join(", "),
+                return_type
+            )
+            .unwrap();
+            if map.params.len() == 1 {
+                writeln!(out, "    match {} {{", map.params[0]).unwrap();
+            } else {
+                let tuple: Vec<&str> = map.params.iter().map(|s| s.as_str()).collect();
+                writeln!(out, "    match ({}) {{", tuple.join(", ")).unwrap();
+            }
+            let mut default_entry = None;
+            for entry in &map.entries {
+                let is_all_wildcard = entry.keys.iter().all(|k| matches!(k, MapKey::Wildcard));
+                if is_all_wildcard {
+                    default_entry = Some(entry);
+                    continue;
+                }
+                let pattern = if map.params.len() == 1 {
+                    format_map_key(&entry.keys[0])
+                } else {
+                    let keys: Vec<String> = entry.keys.iter().map(|k| format_map_key(k)).collect();
+                    format!("({})", keys.join(", "))
+                };
+                let output = format_map_output(&entry.output, has_interpolation);
+                writeln!(out, "        {} => {},", pattern, output).unwrap();
+            }
+            if let Some(entry) = default_entry {
+                let output = format_map_output(&entry.output, has_interpolation);
+                writeln!(out, "        _ => {},", output).unwrap();
+            } else if has_interpolation {
+                writeln!(out, "        _ => String::from(\"???\"),").unwrap();
+            } else {
+                writeln!(out, "        _ => \"???\",").unwrap();
+            }
+            writeln!(out, "    }}").unwrap();
+            writeln!(out, "}}").unwrap();
+            writeln!(out).unwrap();
+        }
+    }
+
+    // Opcode enum
+    writeln!(out, "#[derive(Debug, Clone, Copy, PartialEq, Eq)]").unwrap();
+    writeln!(out, "pub enum {} {{", opcode_enum).unwrap();
+    for instr in &sd.instructions {
+        writeln!(out, "    {},", to_pascal_case(&instr.name)).unwrap();
+    }
+    writeln!(out, "}}").unwrap();
+    writeln!(out).unwrap();
+
+    // Instruction struct
+    writeln!(out, "#[derive(Debug, Clone, Copy, PartialEq, Eq)]").unwrap();
+    writeln!(out, "pub struct {} {{", insn_struct).unwrap();
+    writeln!(out, "    pub opcode: {},", opcode_enum).unwrap();
+    for frag_name in &sd.fragment_names {
+        writeln!(out, "    pub {}: &'static str,", frag_name).unwrap();
+    }
+    writeln!(out, "}}").unwrap();
+    writeln!(out).unwrap();
+
+    // Pre-baked static string arrays and handler functions for each instruction
+    for instr in &sd.instructions {
+        let handler_name = format!("_sd_{}", instr.name);
+
+        // For each fragment, check if it has interpolation
+        // If it does, we need to pre-compute all possible strings
+        let has_fields = !instr.resolved_fields.is_empty();
+
+        if has_fields {
+            // Generate static arrays for fragments that reference fields
+            for frag in &instr.fragments {
+                let has_field_refs = frag
+                    .pieces
+                    .iter()
+                    .any(|p| matches!(p, FormatPiece::FieldRef { .. }));
+                if has_field_refs {
+                    // Compute all possible string values
+                    generate_prebaked_fragment_array(out, sd, instr, frag);
+                }
+            }
+        }
+
+        // Generate handler function
+        if use_inline {
+            writeln!(out, "#[inline(always)]").unwrap();
+        }
+        writeln!(
+            out,
+            "fn {}(val: {}) -> {} {{",
+            handler_name, word_type, insn_struct
+        )
+        .unwrap();
+
+        // Extract fields
+        for field in &instr.resolved_fields {
+            let extract = extract_expression("val", &field.ranges, word_type, sd.width / 8, "be");
+            let expr = apply_transforms(&extract, &field.resolved_type);
+            writeln!(out, "    let {} = {};", field.name, expr).unwrap();
+        }
+
+        // Build the struct
+        writeln!(out, "    {} {{", insn_struct).unwrap();
+        writeln!(
+            out,
+            "        opcode: {}::{},",
+            opcode_enum,
+            to_pascal_case(&instr.name)
+        )
+        .unwrap();
+
+        for frag in &instr.fragments {
+            let has_field_refs = frag
+                .pieces
+                .iter()
+                .any(|p| matches!(p, FormatPiece::FieldRef { .. }));
+            if has_field_refs {
+                // Use pre-baked array lookup
+                let array_name = prebaked_array_name(&instr.name, &frag.name);
+                let index_expr = prebaked_index_expr(instr, sd.width);
+                writeln!(
+                    out,
+                    "        {}: {}[{} as usize],",
+                    frag.name, array_name, index_expr
+                )
+                .unwrap();
+            } else {
+                // Static literal string
+                let literal = pieces_to_static_str(&frag.pieces);
+                writeln!(out, "        {}: \"{}\",", frag.name, literal).unwrap();
+            }
+        }
+
+        writeln!(out, "    }}").unwrap();
+        writeln!(out, "}}").unwrap();
+        writeln!(out).unwrap();
+    }
+
+    // Build the dispatch match table
+    // First, build a mapping from each value 0..2^width to the instruction that matches it
+    let mut dispatch_table: Vec<Option<usize>> = vec![None; lut_size];
+
+    for (instr_idx, instr) in sd.instructions.iter().enumerate() {
+        // For each possible value, check if this instruction's fixed bits match
+        for val in 0..lut_size {
+            let matches = instr.segments.iter().all(|seg| {
+                if let Segment::Fixed {
+                    ranges, pattern, ..
+                } = seg
+                {
+                    let mut bit_idx = 0;
+                    for range in ranges {
+                        for i in 0..range.width() as usize {
+                            if bit_idx < pattern.len() {
+                                let hw_bit = range.start - i as u32;
+                                let bit_val = (val >> hw_bit) & 1;
+                                match pattern[bit_idx] {
+                                    Bit::Zero if bit_val != 0 => return false,
+                                    Bit::One if bit_val != 1 => return false,
+                                    _ => {}
+                                }
+                                bit_idx += 1;
+                            }
+                        }
+                    }
+                    true
+                } else {
+                    true
+                }
+            });
+            if matches && dispatch_table[val].is_none() {
+                dispatch_table[val] = Some(instr_idx);
+            }
+        }
+    }
+
+    match dispatch {
+        crate::Dispatch::JumpTable => {
+            // Generate a match statement with #[inline(always)]
+            writeln!(out, "#[inline(always)]").unwrap();
+            writeln!(
+                out,
+                "pub fn {}(val: {}) -> Option<{}> {{",
+                decode_fn, word_type, insn_struct
+            )
+            .unwrap();
+            writeln!(out, "    match val {{").unwrap();
+
+            let mut i = 0;
+            while i < lut_size {
+                let current = dispatch_table[i];
+                let start = i;
+                while i < lut_size && dispatch_table[i] == current {
+                    i += 1;
+                }
+                let end = i - 1;
+
+                let handler_name = current.map(|idx| format!("_sd_{}", sd.instructions[idx].name));
+
+                let pattern = if start == end {
+                    format!("{:#x}", start)
+                } else {
+                    format!("{:#x}..={:#x}", start, end)
+                };
+
+                match handler_name {
+                    Some(h) => writeln!(out, "        {} => Some({}(val)),", pattern, h).unwrap(),
+                    None => writeln!(out, "        {} => None,", pattern).unwrap(),
+                }
+            }
+
+            writeln!(out, "    }}").unwrap();
+            writeln!(out, "}}").unwrap();
+            writeln!(out).unwrap();
+        }
+        crate::Dispatch::FnPtrLut => {
+            // Generate a static fn ptr array and a dispatch function that indexes into it
+            let handler_type = format!("fn({}) -> {}", word_type, insn_struct);
+            let table_name = format!("_SD_{}_LUT", sd.name.to_uppercase());
+
+            writeln!(
+                out,
+                "static {}: [Option<{}>; {}] = [",
+                table_name, handler_type, lut_size
+            )
+            .unwrap();
+            for val in 0..lut_size {
+                match dispatch_table[val] {
+                    Some(idx) => {
+                        writeln!(out, "    Some(_sd_{}),", sd.instructions[idx].name).unwrap()
+                    }
+                    None => writeln!(out, "    None,").unwrap(),
+                }
+            }
+            writeln!(out, "];").unwrap();
+            writeln!(out).unwrap();
+
+            writeln!(
+                out,
+                "pub fn {}(val: {}) -> Option<{}> {{",
+                decode_fn, word_type, insn_struct
+            )
+            .unwrap();
+            writeln!(out, "    {}[val as usize].map(|f| f(val))", table_name).unwrap();
+            writeln!(out, "}}").unwrap();
+            writeln!(out).unwrap();
+        }
+    }
+}
+
+/// Generate a pre-baked static string array for a fragment that contains field interpolation.
+fn generate_prebaked_fragment_array(
+    out: &mut String,
+    sd: &ValidatedSubDecoder,
+    instr: &ValidatedSubInstruction,
+    frag: &FragmentLine,
+) {
+    let array_name = prebaked_array_name(&instr.name, &frag.name);
+    // Total combinations = product of all field value counts
+    let total = prebaked_total_entries(instr, sd.width);
+
+    writeln!(out, "static {}: [&str; {}] = [", array_name, total).unwrap();
+
+    for combo_idx in 0..total {
+        // Compute field values for this combination
+        let field_values = prebaked_field_values(instr, sd.width, combo_idx);
+        let s = evaluate_fragment_pieces(&frag.pieces, &field_values, &sd.maps);
+        writeln!(out, "    \"{}\",", s).unwrap();
+    }
+
+    writeln!(out, "];").unwrap();
+    writeln!(out).unwrap();
+}
+
+/// Evaluate fragment pieces with concrete field values to produce a string.
+fn evaluate_fragment_pieces(
+    pieces: &[FormatPiece],
+    field_values: &HashMap<String, i64>,
+    maps: &[MapDef],
+) -> String {
+    evaluate_fragment_pieces_str(pieces, field_values, maps)
+}
+
+/// Evaluate a format expression with concrete field values.
+fn evaluate_format_expr(
+    expr: &FormatExpr,
+    field_values: &HashMap<String, i64>,
+    maps: &[MapDef],
+) -> i64 {
+    match expr {
+        FormatExpr::Field(name) => *field_values.get(name).unwrap_or(&0),
+        FormatExpr::IntLiteral(v) => *v,
+        FormatExpr::Arithmetic { left, op, right } => {
+            let l = evaluate_format_expr(left, field_values, maps);
+            let r = evaluate_format_expr(right, field_values, maps);
+            match op {
+                ArithOp::Add => l + r,
+                ArithOp::Sub => l - r,
+                ArithOp::Mul => l * r,
+                ArithOp::Div => {
+                    if r != 0 {
+                        l / r
+                    } else {
+                        0
+                    }
+                }
+                ArithOp::Mod => {
+                    if r != 0 {
+                        l % r
+                    } else {
+                        0
+                    }
+                }
+            }
+        }
+        _ => 0,
+    }
+}
+
+/// Evaluate a format expression that produces a string (for map calls in fragments).
+fn evaluate_fragment_pieces_str(
+    pieces: &[FormatPiece],
+    field_values: &HashMap<String, i64>,
+    maps: &[MapDef],
+) -> String {
+    let mut result = String::new();
+    for piece in pieces {
+        match piece {
+            FormatPiece::Literal(s) => result.push_str(s),
+            FormatPiece::FieldRef { expr, spec } => {
+                match expr {
+                    FormatExpr::MapCall { map_name, args } => {
+                        // Evaluate map call
+                        if let Some(map) = maps.iter().find(|m| m.name == *map_name) {
+                            let arg_vals: Vec<i64> = args
+                                .iter()
+                                .map(|a| evaluate_format_expr(a, field_values, maps))
+                                .collect();
+                            let map_result = evaluate_map(map, &arg_vals);
+                            result.push_str(&map_result);
+                        }
+                    }
+                    FormatExpr::Field(name) => {
+                        let val = *field_values.get(name).unwrap_or(&0);
+                        match spec {
+                            Some(s) if s.contains('x') || s.contains('X') => {
+                                result.push_str(&format!("{:x}", val));
+                            }
+                            _ => result.push_str(&val.to_string()),
+                        }
+                    }
+                    _ => {
+                        let val = evaluate_format_expr(expr, field_values, maps);
+                        result.push_str(&val.to_string());
+                    }
+                }
+            }
+        }
+    }
+    result
+}
+
+/// Evaluate a map lookup with concrete key values.
+fn evaluate_map(map: &MapDef, keys: &[i64]) -> String {
+    for entry in &map.entries {
+        let matches = entry.keys.iter().zip(keys.iter()).all(|(k, v)| match k {
+            MapKey::Value(expected) => *expected == *v,
+            MapKey::Wildcard => true,
+        });
+        if matches {
+            // Entry output is Vec<FormatPiece>, for static maps it should be all literals
+            let mut s = String::new();
+            for piece in &entry.output {
+                if let FormatPiece::Literal(lit) = piece {
+                    s.push_str(lit);
+                }
+            }
+            return s;
+        }
+    }
+    "???".to_string()
+}
+
+/// Get total number of pre-baked entries (product of all field ranges).
+fn prebaked_total_entries(instr: &ValidatedSubInstruction, _width: u32) -> usize {
+    let mut total = 1usize;
+    for field in &instr.resolved_fields {
+        let field_bits: u32 = field.ranges.iter().map(|r| r.width()).sum();
+        total *= 1 << field_bits;
+    }
+    total
+}
+
+/// Compute field values for a given combination index.
+fn prebaked_field_values(
+    instr: &ValidatedSubInstruction,
+    _width: u32,
+    combo_idx: usize,
+) -> HashMap<String, i64> {
+    let mut values = HashMap::new();
+    let mut remaining = combo_idx;
+
+    for field in instr.resolved_fields.iter().rev() {
+        let field_bits: u32 = field.ranges.iter().map(|r| r.width()).sum();
+        let field_range = 1 << field_bits;
+        let val = remaining % field_range;
+        remaining /= field_range;
+        values.insert(field.name.clone(), val as i64);
+    }
+
+    values
+}
+
+/// Generate the index expression for looking up in the pre-baked array.
+fn prebaked_index_expr(instr: &ValidatedSubInstruction, _width: u32) -> String {
+    if instr.resolved_fields.len() == 1 {
+        return instr.resolved_fields[0].name.clone();
+    }
+
+    // Multi-field: combine into a single index
+    let mut parts = Vec::new();
+    let mut accumulated_bits = 0u32;
+
+    for field in instr.resolved_fields.iter().rev() {
+        let field_bits: u32 = field.ranges.iter().map(|r| r.width()).sum();
+        if accumulated_bits > 0 {
+            parts.push(format!(
+                "(({} as usize) << {})",
+                field.name, accumulated_bits
+            ));
+        } else {
+            parts.push(format!("({} as usize)", field.name));
+        }
+        accumulated_bits += field_bits;
+    }
+
+    parts.reverse();
+    parts.join(" | ")
+}
+
+/// Get the name of a pre-baked array for a specific instruction and fragment.
+fn prebaked_array_name(instr_name: &str, frag_name: &str) -> String {
+    format!(
+        "_SD_{}_{}",
+        instr_name.to_uppercase(),
+        frag_name.to_uppercase()
+    )
+}
+
+/// Convert pieces that are all literals into a single string.
+fn pieces_to_static_str(pieces: &[FormatPiece]) -> String {
+    let mut s = String::new();
+    for piece in pieces {
+        if let FormatPiece::Literal(lit) = piece {
+            s.push_str(lit);
+        }
+    }
+    s
+}
+
+/// Convert a name to snake_case (for function names).
+fn to_snake_case(name: &str) -> String {
+    let mut result = String::new();
+    for (i, ch) in name.chars().enumerate() {
+        if ch.is_ascii_uppercase() && i > 0 {
+            result.push('_');
+        }
+        result.push(ch.to_ascii_lowercase());
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1382,7 +2219,10 @@ mod tests {
     fn test_extract_expression() {
         // Extract bits [5:0] (6 bits from position 5 down to 0)
         let range = BitRange::new(5, 0);
-        assert_eq!(extract_expression("opcode", &[range], "u32", 4, "be"), "opcode & 0x3f");
+        assert_eq!(
+            extract_expression("opcode", &[range], "u32", 4, "be"),
+            "opcode & 0x3f"
+        );
 
         // Extract bits [31:26] (6 bits from position 31 down to 26)
         let range = BitRange::new(31, 26);

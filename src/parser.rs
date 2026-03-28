@@ -9,6 +9,9 @@
 //! Bit ranges are converted from DSL notation (where the order depends on bit_order config)
 //! to hardware notation (LSB=0) during validation.
 
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+
 use crate::error::{Error, ErrorKind, Span};
 use crate::format_parser::parse_format_string;
 use crate::types::*;
@@ -26,6 +29,73 @@ use crate::types::*;
 pub fn parse(source: &str, filename: &str) -> Result<DecoderDef, Vec<Error>> {
     let mut parser = Parser::new(source, filename);
     parser.parse_file()
+}
+
+/// Parse a `.chipi` file from a path, resolving `include` directives relative to its directory.
+pub fn parse_file(path: &Path) -> Result<DecoderDef, Vec<Error>> {
+    let mut include_guard = HashSet::new();
+    parse_file_with_includes(path, &mut include_guard)
+}
+
+fn parse_file_with_includes(
+    path: &Path,
+    include_guard: &mut HashSet<PathBuf>,
+) -> Result<DecoderDef, Vec<Error>> {
+    let canonical = path.canonicalize().map_err(|_| {
+        vec![Error::new(
+            ErrorKind::IncludeNotFound(path.display().to_string()),
+            Span::new(&path.display().to_string(), 1, 1, 0),
+        )]
+    })?;
+
+    if !include_guard.insert(canonical.clone()) {
+        return Err(vec![Error::new(
+            ErrorKind::CircularInclude(path.display().to_string()),
+            Span::new(&path.display().to_string(), 1, 1, 0),
+        )]);
+    }
+
+    let source = std::fs::read_to_string(&canonical).map_err(|_| {
+        vec![Error::new(
+            ErrorKind::IncludeNotFound(path.display().to_string()),
+            Span::new(&path.display().to_string(), 1, 1, 0),
+        )]
+    })?;
+
+    let filename = path
+        .file_name()
+        .and_then(|f| f.to_str())
+        .unwrap_or("unknown");
+
+    let base_dir = canonical.parent().unwrap_or(Path::new("."));
+
+    // First pass: find and resolve includes
+    let mut included_sub_decoders = Vec::new();
+    let mut included_maps = Vec::new();
+    let mut included_type_aliases = Vec::new();
+
+    for line in source.lines() {
+        let trimmed = line.trim();
+        if let Some(rest) = trimmed.strip_prefix("include ") {
+            let rest = rest.trim();
+            if let Some(inc_path_str) = extract_quoted_string(rest) {
+                let inc_path = base_dir.join(inc_path_str);
+                let inc_def = parse_file_with_includes(&inc_path, include_guard)?;
+                included_sub_decoders.extend(inc_def.sub_decoders);
+                included_maps.extend(inc_def.maps);
+                included_type_aliases.extend(inc_def.type_aliases);
+            }
+        }
+    }
+
+    // Second pass: parse this file
+    let mut def = parse(&source, filename)?;
+    // Merge included content
+    def.sub_decoders.extend(included_sub_decoders);
+    def.maps.extend(included_maps);
+    def.type_aliases.extend(included_type_aliases);
+
+    Ok(def)
 }
 
 struct Parser<'a> {
@@ -57,11 +127,13 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_file(&mut self) -> Result<DecoderDef, Vec<Error>> {
-        let mut imports = Vec::new();
         let mut config: Option<DecoderConfig> = None;
         let mut type_aliases = Vec::new();
         let mut maps = Vec::new();
         let mut instructions = Vec::new();
+        let mut sub_decoders = Vec::new();
+        // Which sub-decoder are we currently collecting instructions for (None = main decoder)
+        let mut current_subdecoder: Option<usize> = None;
 
         while self.line_idx < self.lines.len() {
             let line = self.lines[self.line_idx];
@@ -72,15 +144,24 @@ impl<'a> Parser<'a> {
                 continue;
             }
 
-            if trimmed.starts_with("import ") {
-                match self.parse_import(trimmed) {
-                    Ok(imp) => imports.push(imp),
-                    Err(e) => self.errors.push(e),
-                }
+            // Skip include lines (handled in parse_file_with_includes)
+            if trimmed.starts_with("include ") {
                 self.advance();
-            } else if trimmed.starts_with("decoder ") {
+                continue;
+            }
+
+            if trimmed.starts_with("decoder ") {
+                current_subdecoder = None;
                 match self.parse_decoder_block() {
                     Ok(cfg) => config = Some(cfg),
+                    Err(e) => self.errors.push(e),
+                }
+            } else if trimmed.starts_with("subdecoder ") {
+                match self.parse_subdecoder_block() {
+                    Ok(sd) => {
+                        sub_decoders.push(sd);
+                        current_subdecoder = Some(sub_decoders.len() - 1);
+                    }
                     Err(e) => self.errors.push(e),
                 }
             } else if trimmed.starts_with("type ") {
@@ -91,21 +172,47 @@ impl<'a> Parser<'a> {
                 self.advance();
             } else if trimmed.starts_with("map ") {
                 match self.parse_map_block() {
-                    Ok(map) => maps.push(map),
+                    Ok(map) => {
+                        if let Some(sd_idx) = current_subdecoder {
+                            sub_decoders[sd_idx].maps.push(map);
+                        } else {
+                            maps.push(map);
+                        }
+                    }
                     Err(e) => self.errors.push(e),
                 }
             } else {
                 // Instruction line
                 match self.parse_instruction(trimmed) {
-                    Ok(instr) => instructions.push(instr),
-                    Err(e) => self.errors.push(e),
+                    Ok(instr) => {
+                        if let Some(sd_idx) = current_subdecoder {
+                            // Sub-decoder instruction: parse fragment lines
+                            let sub_instr_name = instr.name.clone();
+                            let sub_instr_segments = instr.segments.clone();
+                            let sub_instr_span = instr.span.clone();
+                            self.advance();
+                            let fragments = self.parse_fragment_lines();
+                            sub_decoders[sd_idx].instructions.push(SubInstructionDef {
+                                name: sub_instr_name,
+                                segments: sub_instr_segments,
+                                fragments,
+                                span: sub_instr_span,
+                            });
+                        } else {
+                            instructions.push(instr);
+                            self.advance();
+                            let format_lines = self.parse_format_lines();
+                            if let Some(last) = instructions.last_mut() {
+                                last.format_lines = format_lines;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        self.errors.push(e);
+                        self.advance();
+                    }
                 }
-                self.advance();
-                // Consume format lines (| ...)
-                let format_lines = self.parse_format_lines();
-                if let Some(last) = instructions.last_mut() {
-                    last.format_lines = format_lines;
-                }
+                continue; // already advanced
             }
         }
 
@@ -116,33 +223,31 @@ impl<'a> Parser<'a> {
         let config = match config {
             Some(c) => c,
             None => {
-                return Err(vec![Error::new(
-                    ErrorKind::MissingDecoderBlock,
-                    Span::new(&self.filename, 1, 1, 0),
-                )]);
+                // If we only have sub-decoders (included file), create a dummy config
+                if !sub_decoders.is_empty() && instructions.is_empty() {
+                    DecoderConfig {
+                        name: String::new(),
+                        width: 0,
+                        bit_order: BitOrder::Msb0,
+                        endian: ByteEndian::Big,
+                        max_units: None,
+                        span: Span::new(&self.filename, 1, 1, 0),
+                    }
+                } else {
+                    return Err(vec![Error::new(
+                        ErrorKind::MissingDecoderBlock,
+                        Span::new(&self.filename, 1, 1, 0),
+                    )]);
+                }
             }
         };
 
         Ok(DecoderDef {
-            imports,
             config,
             type_aliases,
             maps,
             instructions,
-        })
-    }
-
-    fn parse_import(&self, line: &str) -> Result<Import, Error> {
-        let rest = line.strip_prefix("import ").unwrap().trim();
-        if rest.is_empty() {
-            return Err(Error::new(
-                ErrorKind::ExpectedToken("import path".to_string()),
-                self.span(7, 1),
-            ));
-        }
-        Ok(Import {
-            path: rest.to_string(),
-            span: self.span(0, line.len()),
+            sub_decoders,
         })
     }
 
@@ -150,10 +255,7 @@ impl<'a> Parser<'a> {
         let first_line = self.lines[self.line_idx].trim();
         let block_start_line = self.line_idx;
 
-        let rest = first_line
-            .strip_prefix("decoder ")
-            .unwrap()
-            .trim();
+        let rest = first_line.strip_prefix("decoder ").unwrap().trim();
         let name = rest
             .strip_suffix('{')
             .map(|s| s.trim())
@@ -189,7 +291,11 @@ impl<'a> Parser<'a> {
             }
 
             if let Some(val) = line.strip_prefix("width") {
-                let val = val.trim().strip_prefix('=').map(|s| s.trim()).unwrap_or(val.trim());
+                let val = val
+                    .trim()
+                    .strip_prefix('=')
+                    .map(|s| s.trim())
+                    .unwrap_or(val.trim());
                 match val.parse::<u32>() {
                     Ok(w) if w == 8 || w == 16 || w == 32 => width = Some(w),
                     Ok(w) => {
@@ -206,7 +312,11 @@ impl<'a> Parser<'a> {
                     }
                 }
             } else if let Some(val) = line.strip_prefix("bit_order") {
-                let val = val.trim().strip_prefix('=').map(|s| s.trim()).unwrap_or(val.trim());
+                let val = val
+                    .trim()
+                    .strip_prefix('=')
+                    .map(|s| s.trim())
+                    .unwrap_or(val.trim());
                 match val {
                     "msb0" => bit_order = Some(BitOrder::Msb0),
                     "lsb0" => bit_order = Some(BitOrder::Lsb0),
@@ -218,7 +328,11 @@ impl<'a> Parser<'a> {
                     }
                 }
             } else if let Some(val) = line.strip_prefix("endian") {
-                let val = val.trim().strip_prefix('=').map(|s| s.trim()).unwrap_or(val.trim());
+                let val = val
+                    .trim()
+                    .strip_prefix('=')
+                    .map(|s| s.trim())
+                    .unwrap_or(val.trim());
                 match val {
                     "big" => endian = Some(ByteEndian::Big),
                     "little" => endian = Some(ByteEndian::Little),
@@ -230,7 +344,11 @@ impl<'a> Parser<'a> {
                     }
                 }
             } else if let Some(val) = line.strip_prefix("max_units") {
-                let val = val.trim().strip_prefix('=').map(|s| s.trim()).unwrap_or(val.trim());
+                let val = val
+                    .trim()
+                    .strip_prefix('=')
+                    .map(|s| s.trim())
+                    .unwrap_or(val.trim());
                 match val.parse::<u32>() {
                     Ok(m) if m > 0 => max_units = Some(m),
                     Ok(_) => {
@@ -265,6 +383,169 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parse a `subdecoder Name { ... }` block.
+    fn parse_subdecoder_block(&mut self) -> Result<SubDecoderDef, Error> {
+        let first_line = self.lines[self.line_idx].trim();
+        let block_start_line = self.line_idx;
+
+        let rest = first_line.strip_prefix("subdecoder ").unwrap().trim();
+        let name = rest
+            .strip_suffix('{')
+            .map(|s| s.trim())
+            .unwrap_or(rest)
+            .to_string();
+
+        if name.is_empty() {
+            return Err(Error::new(
+                ErrorKind::ExpectedToken("subdecoder name".to_string()),
+                self.span(12, 1),
+            ));
+        }
+
+        self.advance();
+
+        let mut width: Option<u32> = None;
+        let mut bit_order: Option<BitOrder> = None;
+
+        while self.line_idx < self.lines.len() {
+            let line = self.lines[self.line_idx].trim();
+
+            if line == "}" {
+                self.advance();
+                break;
+            }
+
+            if line.is_empty() || line.starts_with('#') {
+                self.advance();
+                continue;
+            }
+
+            if let Some(val) = line.strip_prefix("width") {
+                let val = val
+                    .trim()
+                    .strip_prefix('=')
+                    .map(|s| s.trim())
+                    .unwrap_or(val.trim());
+                match val.parse::<u32>() {
+                    Ok(w) if w == 8 || w == 16 || w == 32 => width = Some(w),
+                    Ok(w) => {
+                        return Err(Error::new(
+                            ErrorKind::InvalidWidth(w),
+                            self.span(0, line.len()),
+                        ));
+                    }
+                    Err(_) => {
+                        return Err(Error::new(
+                            ErrorKind::ExpectedToken("integer width (8, 16, or 32)".to_string()),
+                            self.span(0, line.len()),
+                        ));
+                    }
+                }
+            } else if let Some(val) = line.strip_prefix("bit_order") {
+                let val = val
+                    .trim()
+                    .strip_prefix('=')
+                    .map(|s| s.trim())
+                    .unwrap_or(val.trim());
+                match val {
+                    "msb0" => bit_order = Some(BitOrder::Msb0),
+                    "lsb0" => bit_order = Some(BitOrder::Lsb0),
+                    _ => {
+                        return Err(Error::new(
+                            ErrorKind::ExpectedToken("msb0 or lsb0".to_string()),
+                            self.span(0, line.len()),
+                        ));
+                    }
+                }
+            }
+
+            self.advance();
+        }
+
+        let width = width.unwrap_or(8);
+        let bit_order = bit_order.unwrap_or(BitOrder::Msb0);
+
+        Ok(SubDecoderDef {
+            name,
+            width,
+            bit_order,
+            maps: Vec::new(),
+            instructions: Vec::new(),
+            span: Span::new(&self.filename, block_start_line + 1, 1, 0),
+        })
+    }
+
+    /// Parse fragment lines (`| .name = "template"`) following a sub-decoder instruction.
+    fn parse_fragment_lines(&mut self) -> Vec<FragmentLine> {
+        let mut fragments = Vec::new();
+
+        while self.line_idx < self.lines.len() {
+            let line = self.lines[self.line_idx];
+            let trimmed = line.trim();
+
+            if !trimmed.starts_with('|') {
+                break;
+            }
+
+            let content = trimmed[1..].trim();
+            let span = self.span(0, line.len());
+
+            match self.parse_single_fragment_line(content, &span) {
+                Ok(fl) => fragments.push(fl),
+                Err(e) => self.errors.push(e),
+            }
+
+            self.advance();
+        }
+
+        fragments
+    }
+
+    /// Parse a single fragment line: `.name = "template"`
+    fn parse_single_fragment_line(
+        &self,
+        content: &str,
+        span: &Span,
+    ) -> Result<FragmentLine, Error> {
+        // Expect: .name = "template"
+        if !content.starts_with('.') {
+            return Err(Error::new(
+                ErrorKind::InvalidFormatString(
+                    "sub-decoder format line must start with '.name = \"...\"'".to_string(),
+                ),
+                span.clone(),
+            ));
+        }
+
+        let rest = &content[1..]; // skip '.'
+        let eq_pos = rest.find('=').ok_or_else(|| {
+            Error::new(
+                ErrorKind::ExpectedToken("'=' in fragment line".to_string()),
+                span.clone(),
+            )
+        })?;
+
+        let name = rest[..eq_pos].trim().to_string();
+        let rhs = rest[eq_pos + 1..].trim();
+
+        let fmt_str = extract_quoted_string(rhs).ok_or_else(|| {
+            Error::new(
+                ErrorKind::InvalidFormatString(
+                    "fragment line must contain a quoted string".to_string(),
+                ),
+                span.clone(),
+            )
+        })?;
+
+        let pieces = parse_format_string(fmt_str, span)?;
+
+        Ok(FragmentLine {
+            name,
+            pieces,
+            span: span.clone(),
+        })
+    }
+
     fn parse_type_alias(&self, line: &str) -> Result<TypeAlias, Error> {
         let rest = line.strip_prefix("type ").unwrap().trim();
 
@@ -278,7 +559,7 @@ impl<'a> Parser<'a> {
         let name = rest[..eq_pos].trim().to_string();
         let rhs = rest[eq_pos + 1..].trim();
 
-        let (base_and_wrapper, transforms, display_format) = if let Some(brace_pos) = rhs.find('{') {
+        let (base_str, transforms, display_format) = if let Some(brace_pos) = rhs.find('{') {
             let close = rhs.rfind('}').ok_or_else(|| {
                 Error::new(
                     ErrorKind::ExpectedToken("closing '}'".to_string()),
@@ -292,18 +573,11 @@ impl<'a> Parser<'a> {
             (rhs, Vec::new(), None)
         };
 
-        let (base_type, wrapper_type) = if let Some(as_pos) = base_and_wrapper.find(" as ") {
-            let base = base_and_wrapper[..as_pos].trim().to_string();
-            let wrapper = base_and_wrapper[as_pos + 4..].trim().to_string();
-            (base, Some(wrapper))
-        } else {
-            (base_and_wrapper.to_string(), None)
-        };
+        let base_type = base_str.to_string();
 
         Ok(TypeAlias {
             name,
             base_type,
-            wrapper_type,
             transforms,
             display_format,
             span: self.span(0, line.len()),
@@ -318,7 +592,9 @@ impl<'a> Parser<'a> {
             if part.is_empty() {
                 continue;
             }
-            if let Some(inner) = part.strip_prefix("sign_extend(").and_then(|s| s.strip_suffix(')'))
+            if let Some(inner) = part
+                .strip_prefix("sign_extend(")
+                .and_then(|s| s.strip_suffix(')'))
             {
                 let n: u32 = inner.trim().parse().map_err(|_| {
                     Error::new(
@@ -327,8 +603,9 @@ impl<'a> Parser<'a> {
                     )
                 })?;
                 transforms.push(Transform::SignExtend(n));
-            } else if let Some(inner) =
-                part.strip_prefix("zero_extend(").and_then(|s| s.strip_suffix(')'))
+            } else if let Some(inner) = part
+                .strip_prefix("zero_extend(")
+                .and_then(|s| s.strip_suffix(')'))
             {
                 let n: u32 = inner.trim().parse().map_err(|_| {
                     Error::new(
@@ -337,8 +614,9 @@ impl<'a> Parser<'a> {
                     )
                 })?;
                 transforms.push(Transform::ZeroExtend(n));
-            } else if let Some(inner) =
-                part.strip_prefix("shift_left(").and_then(|s| s.strip_suffix(')'))
+            } else if let Some(inner) = part
+                .strip_prefix("shift_left(")
+                .and_then(|s| s.strip_suffix(')'))
             {
                 let n: u32 = inner.trim().parse().map_err(|_| {
                     Error::new(
@@ -347,15 +625,19 @@ impl<'a> Parser<'a> {
                     )
                 })?;
                 transforms.push(Transform::ShiftLeft(n));
-            } else if let Some(inner) =
-                part.strip_prefix("display(").and_then(|s| s.strip_suffix(')'))
+            } else if let Some(inner) = part
+                .strip_prefix("display(")
+                .and_then(|s| s.strip_suffix(')'))
             {
                 let fmt = match inner.trim() {
                     "signed_hex" => DisplayFormat::SignedHex,
                     "hex" => DisplayFormat::Hex,
                     other => {
                         return Err(Error::new(
-                            ErrorKind::UnexpectedToken(format!("unknown display format: {}", other)),
+                            ErrorKind::UnexpectedToken(format!(
+                                "unknown display format: {}",
+                                other
+                            )),
                             self.span(0, part.len()),
                         ));
                     }
@@ -374,9 +656,7 @@ impl<'a> Parser<'a> {
     fn parse_instruction(&self, line: &str) -> Result<InstructionDef, Error> {
         // Example: add rd:reg[6:10] ra:reg[11:15] rb:reg[16:20] [21:30]=0100001010 rc:u1[31]
         // First token is the instruction name
-        let name_end = line
-            .find(|c: char| c.is_whitespace())
-            .unwrap_or(line.len());
+        let name_end = line.find(|c: char| c.is_whitespace()).unwrap_or(line.len());
         let name = line[..name_end].to_string();
         let rest = line[name_end..].trim();
 
@@ -430,7 +710,10 @@ impl<'a> Parser<'a> {
 
         // Parse binary pattern (0, 1, or ?)
         let start = *pos;
-        while *pos < input.len() && (input.as_bytes()[*pos] == b'0' || input.as_bytes()[*pos] == b'1' || input.as_bytes()[*pos] == b'?')
+        while *pos < input.len()
+            && (input.as_bytes()[*pos] == b'0'
+                || input.as_bytes()[*pos] == b'1'
+                || input.as_bytes()[*pos] == b'?')
         {
             *pos += 1;
         }
@@ -453,7 +736,7 @@ impl<'a> Parser<'a> {
             .collect();
 
         Ok(Segment::Fixed {
-            ranges: vec![range],  // Single-unit range for now
+            ranges: vec![range], // Single-unit range for now
             pattern,
             span: self.span(start, pattern_str.len()),
         })
@@ -479,9 +762,7 @@ impl<'a> Parser<'a> {
 
         // Parse type (up to '[' or '{')
         let type_start = *pos;
-        while *pos < input.len()
-            && input.as_bytes()[*pos] != b'['
-            && input.as_bytes()[*pos] != b'{'
+        while *pos < input.len() && input.as_bytes()[*pos] != b'[' && input.as_bytes()[*pos] != b'{'
         {
             *pos += 1;
         }
@@ -527,7 +808,7 @@ impl<'a> Parser<'a> {
         Ok(Segment::Field {
             name,
             field_type,
-            ranges: vec![range],  // Single-unit range for now
+            ranges: vec![range], // Single-unit range for now
             span: self.span(name_start, *pos - name_start),
         })
     }
@@ -705,7 +986,11 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse `[start:end]` or `[N]` bit range notation.
-    fn parse_bit_range(&self, input: &str, pos: &mut usize) -> Result<(BitRange, (u32, u32)), Error> {
+    fn parse_bit_range(
+        &self,
+        input: &str,
+        pos: &mut usize,
+    ) -> Result<(BitRange, (u32, u32)), Error> {
         if *pos >= input.len() || input.as_bytes()[*pos] != b'[' {
             return Err(Error::new(
                 ErrorKind::ExpectedToken("'[' for bit range".to_string()),
@@ -715,9 +1000,7 @@ impl<'a> Parser<'a> {
         *pos += 1;
 
         let num1_start = *pos;
-        while *pos < input.len()
-            && input.as_bytes()[*pos] != b':'
-            && input.as_bytes()[*pos] != b']'
+        while *pos < input.len() && input.as_bytes()[*pos] != b':' && input.as_bytes()[*pos] != b']'
         {
             *pos += 1;
         }
@@ -772,7 +1055,11 @@ fn extract_quoted_string(s: &str) -> Option<&str> {
             if chars[i] == '\\' {
                 i += 2;
             } else if chars[i] == '"' {
-                let byte_pos: usize = inner[..].char_indices().nth(i).map(|(p, _)| p).unwrap_or(inner.len());
+                let byte_pos: usize = inner[..]
+                    .char_indices()
+                    .nth(i)
+                    .map(|(p, _)| p)
+                    .unwrap_or(inner.len());
                 return Some(&inner[..byte_pos]);
             } else {
                 i += 1;
@@ -916,7 +1203,19 @@ fn find_guard_arith_op(s: &str, ops: &[char]) -> Option<usize> {
 fn is_builtin_type(name: &str) -> bool {
     matches!(
         name,
-        "u1" | "u2" | "u3" | "u4" | "u5" | "u6" | "u7" | "u8" | "u16" | "u32" | "i8" | "i16" | "i32" | "bool"
+        "u1" | "u2"
+            | "u3"
+            | "u4"
+            | "u5"
+            | "u6"
+            | "u7"
+            | "u8"
+            | "u16"
+            | "u32"
+            | "i8"
+            | "i16"
+            | "i32"
+            | "bool"
     )
 }
 
@@ -942,8 +1241,16 @@ pub fn dsl_to_hardware(dsl_start: u32, dsl_end: u32, width: u32, order: BitOrder
         let unit_dsl_end = (unit + 1) * width - 1;
 
         // Calculate which bits from this unit are included
-        let range_start_in_unit = if unit == start_unit { dsl_lo } else { unit_dsl_start };
-        let range_end_in_unit = if unit == end_unit { dsl_hi } else { unit_dsl_end };
+        let range_start_in_unit = if unit == start_unit {
+            dsl_lo
+        } else {
+            unit_dsl_start
+        };
+        let range_end_in_unit = if unit == end_unit {
+            dsl_hi
+        } else {
+            unit_dsl_end
+        };
 
         // Convert to local positions within the unit
         let local_start = range_start_in_unit % width;
@@ -956,9 +1263,10 @@ pub fn dsl_to_hardware(dsl_start: u32, dsl_end: u32, width: u32, order: BitOrder
                 let hw_b = width - 1 - local_end;
                 (std::cmp::max(hw_a, hw_b), std::cmp::min(hw_a, hw_b))
             }
-            BitOrder::Lsb0 => {
-                (std::cmp::max(local_start, local_end), std::cmp::min(local_start, local_end))
-            }
+            BitOrder::Lsb0 => (
+                std::cmp::max(local_start, local_end),
+                std::cmp::min(local_start, local_end),
+            ),
         };
 
         ranges.push(BitRange::new_in_unit(unit, hw_start, hw_end));

@@ -1,6 +1,6 @@
 # chipi
 
-A declarative instruction decoder generator using a custom DSL. Define your CPUs instruction encoding in a `.chipi` file, and chipi generates a decoder and disassembler for you. Seemless interaction with Rust types. 
+A declarative instruction decoder generator using a custom DSL. Define your CPU's instruction encoding in a `.chipi` file, and chipi generates a decoder and disassembler for you.
 
 An example disassembler for GameCube CPU and DSP can be found [here](https://github.com/ioncodes/chipi-gekko).
 
@@ -10,7 +10,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [build-dependencies]
-chipi = "0.5.3"
+chipi = "0.6.0"
 ```
 
 In `build.rs`:
@@ -67,15 +67,12 @@ println!("{}", instr.display::<MyFormat>());
 Create a `.chipi` file describing your instruction set:
 
 ```chipi
-import crate::cpu::Register
-
 decoder Ppc {
     width = 32
     bit_order = msb0
     endian = big
 }
 
-type reg = u8 as Register
 type simm16 = i32 { sign_extend(16) }
 type simm24 = i32 { sign_extend(24), shift_left(2) }
 
@@ -84,7 +81,7 @@ bx      [0:5]=010010 li:simm24[6:29] aa:bool[30] lk:bool[31]
         | "b{lk ? l}{aa ? a} {li:#x}"
 
 # Arithmetic
-addi    [0:5]=001110 rd:reg[6:10] ra:reg[11:15] simm:simm16[16:31]
+addi    [0:5]=001110 rd:u8[6:10] ra:u8[11:15] simm:simm16[16:31]
         | "addi {rd}, {ra}, {simm}"
 ```
 
@@ -161,7 +158,7 @@ It ensures at compile-time that bitranges do not exceed `max_units * width`. Hel
 
 ### Custom types
 
-Use `type` to create type aliases with optional transformations or wrappers:
+Use `type` to create type aliases with optional transformations:
 
 ```chipi
 # Simple alias
@@ -170,15 +167,22 @@ type byte = u8
 # With transformation
 type simm16 = i32 { sign_extend(16) }
 
-# With custom wrapper (must be imported)
-type reg = u8 as Register
-
 # Multiple transformations (comma-separated)
 type addr = u32 { shift_left(2), zero_extend(32) }
 
 # With display format hint
 type simm16 = i32 { sign_extend(16), display(signed_hex) }
 type uimm = u16 { display(hex) }
+```
+
+To map a chipi type to a Rust wrapper type (e.g. a newtype for registers), use `CodegenBuilder::type_map()` in `build.rs` instead of declaring it in the DSL. This keeps the `.chipi` file language-agnostic:
+
+```rs
+chipi::CodegenBuilder::new("cpu.chipi")
+    .type_map("gpr", "crate::cpu::Gpr")    // gpr fields -> Gpr in generated code
+    .type_map("fpr", "crate::cpu::Fpr")
+    .output(out_dir.join("cpu.rs").to_str().unwrap())
+    .run()?;
 ```
 
 **Builtin types:**
@@ -195,6 +199,79 @@ type uimm = u16 { display(hex) }
 **Display formats:**
 - `display(signed_hex)`: Formats as signed hex (`0x1A`, `-0x1A`, `0`)
 - `display(hex)`: Formats as unsigned hex (`0x1A`, `0`)
+
+### Includes
+
+Use `include` to pull in definitions from other `.chipi` files:
+
+```chipi
+include "dsp_ext.chipi"
+
+decoder GcDsp {
+    width = 16
+    bit_order = msb0
+    max_units = 2
+}
+```
+
+Includes are resolved relative to the including file's directory. The included file can contain `subdecoder` declarations, maps, types, or any other top-level construct. Circular includes are detected and rejected.
+
+### Sub-decoders
+
+Sub-decoders let one decoder reference another inline, so that a bit-field within an instruction is decoded by a separate dispatch table and its result is embedded into the parent's output.
+
+This is useful when an ISA packs multiple operations into a single instruction word (e.g., the GameCube DSP packs a main opcode and an extension opcode into one 16-bit word).
+
+#### Declaring a sub-decoder
+
+Use `subdecoder` (instead of `decoder`) to define a sub-decoder. Sub-decoders only support `width` and `bit_order`:
+
+```chipi
+subdecoder GcDspExt {
+    width = 8
+    bit_order = msb0
+}
+```
+
+#### Sub-decoder instructions
+
+Instructions within a sub-decoder use **named fragment lines** instead of regular format strings. Each fragment is a `| .name = "template"` line:
+
+```chipi
+ext_dr      [0:5]=000001 r:u8[6:7]
+            | .mnemonic = "'DR"
+            | .operands = " : $ar{r}"
+
+ext_nop     [0:5]=000000 [6:7]=??
+            | .mnemonic = ""
+            | .operands = ""
+```
+
+All instructions in a sub-decoder must declare the **same set of fragment names**. The names are arbitrary and chosen by the DSL author.
+
+#### Referencing a sub-decoder
+
+In a parent instruction, use the sub-decoder name as the field type:
+
+```chipi
+addr  [0:3]=0100 [4]=0 ss:u8[5:6] d:u8[7] ext:GcDspExt[8:15]
+      | "ADDR{ext.mnemonic} $ac{d}, ${ax2_name(ss)}{ext.operands}"
+```
+
+Access fragment values with dotted syntax: `{ext.mnemonic}`, `{ext.operands}`. Interpolation is pure verbatim string substitution.
+
+When the field bit-range is narrower than the sub-decoder's declared width (e.g., 7 bits for an 8-bit sub-decoder), the extracted value is zero-extended before dispatch.
+
+#### Sub-decoder dispatch strategy
+
+By default, sub-decoders use `Dispatch::FnPtrLut` (no inlining). For emulator hot paths, opt into `Dispatch::JumpTable` (`#[inline(always)]`) via `build.rs`:
+
+```rs
+chipi::CodegenBuilder::new("dsp.chipi")
+    .decoder_dispatch("GcDspExt", chipi::Dispatch::JumpTable)
+    .output(out_dir.join("dsp.rs").to_str().unwrap())
+    .run()?;
+```
 
 ### Format lines
 
@@ -216,17 +293,19 @@ This produces `b 0x100`, `bl 0x100`, `ba 0x100`, or `bla 0x100` depending on the
 **Unary negation:** `{-field}` negates a field value.
 
 ```chipi
-addi  [0:5]=001110 rd:reg[6:10] ra:reg[11:15] simm:simm16[16:31]
+addi  [0:5]=001110 rd:u8[6:10] ra:u8[11:15] simm:simm16[16:31]
       | simm < 0 : "subi {rd}, {ra}, {-simm}"
       | "addi {rd}, {ra}, {simm}"
 ```
 
 **Builtin functions:** `{rotate_right(val, amt)}` and `{rotate_left(val, amt)}`.
 
+**Sub-decoder fragment access:** `{ext.mnemonic}` inserts a named fragment from a sub-decoder field verbatim.
+
 **Guards:** Multiple format lines can be used with guard conditions to select different output based on field values:
 
 ```chipi
-addi  [0:5]=001110 rd:reg[6:10] ra:reg[11:15] simm:simm16[16:31]
+addi  [0:5]=001110 rd:u8[6:10] ra:u8[11:15] simm:simm16[16:31]
       | ra == 0: "li {rd}, {simm}"
       | "addi {rd}, {ra}, {simm}"
 ```
@@ -247,7 +326,7 @@ map spr_name(spr) {
     _ => "???"
 }
 
-mtspr  [0:5]=011111 rs:reg[6:10] spr:u16[11:20] [21:30]=0111010011 [31]=0
+mtspr  [0:5]=011111 rs:u8[6:10] spr:u16[11:20] [21:30]=0111010011 [31]=0
        | "mtspr {spr_name(spr)}, {rs}"
 ```
 
@@ -261,6 +340,8 @@ map ea(mode, reg) {
 }
 ```
 
+Maps can be declared inside a `subdecoder` block to scope them to that sub-decoder.
+
 ### Formatting trait
 
 chipi generates a trait (e.g. `PpcFormat`) with one method per instruction. Each method has a default implementation from the format lines. To override specific instructions, implement the trait on your own struct:
@@ -269,7 +350,7 @@ chipi generates a trait (e.g. `PpcFormat`) with one method per instruction. Each
 struct MyFormat;
 impl ppc::PpcFormat for MyFormat {
     // Override just this one; all others keep their defaults
-    fn fmt_addi(rd: &Register, ra: &Register, simm: i32,
+    fn fmt_addi(rd: u8, ra: u8, simm: i32,
                 f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "ADDI r{}, r{}, {}", rd, ra, simm)
     }
@@ -279,6 +360,29 @@ println!("{}", instr.display::<MyFormat>());
 ```
 
 Instructions without format lines get a raw fallback: `instr_name field1, field2, ...`.
+
+## CodegenBuilder
+
+`CodegenBuilder` provides fine-grained control over code generation, including type mappings and dispatch strategies:
+
+```rs
+chipi::CodegenBuilder::new("dsp.chipi")
+    .type_map("reg5", "crate::dsp::DspReg")          // map chipi type -> Rust type
+    .decoder_dispatch("GcDspExt", chipi::Dispatch::JumpTable)  // inline sub-decoder
+    .output(out_dir.join("dsp.rs").to_str().unwrap())
+    .run()?;
+```
+
+### Type mappings
+
+`.type_map(chipi_type, rust_path)` maps a chipi type alias to a Rust wrapper type. The generated code emits `use` statements for paths containing `::` and wraps extracted values with `Type::from(val)`.
+
+### Dispatch strategies
+
+`.decoder_dispatch(name, strategy)` controls how a sub-decoder dispatches:
+
+- `Dispatch::FnPtrLut` (default): `static [Option<fn>; N]` array with indirect calls. Fast to compile.
+- `Dispatch::JumpTable`: `#[inline(always)]` match statement. The compiler can inline the entire decode chain. Good for emulator hot paths, but can cause slow compilation with large sub-decoders.
 
 ## Instruction Type Generation
 
@@ -338,13 +442,18 @@ impl Instruction {
 }
 ```
 
-## Emulator LUT
+## Emulator Dispatch
 
-In addition to the decoder/disassembler output, chipi can generate a function-pointer lookup table (LUT) suited for emulator dispatch. Each opcode is routed directly to a handler function via static `[Handler; N]` arrays, one per tree level. Recommended to use along with the newtype generator.
+In addition to the decoder/disassembler output, chipi can generate dispatch code for emulator interpreters. Two strategies are available:
+
+- `Dispatch::FnPtrLut` (default): Static `[Handler; N]` function pointer arrays, one per tree level. Each opcode is routed via indirect call. Good general-purpose default.
+- `Dispatch::JumpTable`: A single `#[inline(always)]` function with nested match statements that call handlers directly by name. When handlers are also `#[inline(always)]`, the compiler can flatten the entire dispatch + execution chain (hyperinlining).
+
+Recommended to use along with the newtype generator.
 
 ### build.rs
 
-Use `LutBuilder` to configure the LUT and stubs together:
+Use `LutBuilder` to configure dispatch and stubs together:
 
 ```rs
 use std::env;
@@ -357,7 +466,9 @@ fn main() {
 
     let builder = chipi::LutBuilder::new(spec)
         .handler_mod("crate::cpu::interpreter")
-        .ctx_type("crate::Cpu");
+        .ctx_type("crate::Cpu")
+        // .dispatch(chipi::Dispatch::JumpTable)  // opt into hyperinlining
+        ;
 
     // Always regenerate the LUT tables from the spec.
     builder

@@ -143,11 +143,7 @@ fn format_chipi_type(field: &ResolvedField, width: u32, bit_order: BitOrder) -> 
         .collect::<Vec<_>>()
         .join("");
 
-    let type_str = if let Some(ref wrapper) = field.resolved_type.wrapper_type {
-        format!("{} as {}", field.resolved_type.base_type, wrapper)
-    } else {
-        field.resolved_type.base_type.clone()
-    };
+    let type_str = field.resolved_type.base_type.clone();
 
     format!("{}: {}{}", field.name, type_str, ranges_str)
 }
@@ -287,7 +283,10 @@ mod tests {
     fn test_basic_field_generation() {
         let def = validated(
             r#"
-            decoder Test { width = 32  bit_order = msb0 }
+            decoder Test {
+            width = 32
+            bit_order = msb0
+        }
             addi [0:5]=001110 rd:u8[6:10] ra:u8[11:15] simm:i32[16:31]
         "#,
         );
@@ -304,7 +303,10 @@ mod tests {
     fn test_deduplication() {
         let def = validated(
             r#"
-            decoder Test { width = 32  bit_order = msb0 }
+            decoder Test {
+            width = 32
+            bit_order = msb0
+        }
             addi  [0:5]=001110 rd:u8[6:10] ra:u8[11:15] simm:i32[16:31]
             addis [0:5]=001111 rd:u8[6:10] ra:u8[11:15] simm:i32[16:31]
         "#,
@@ -320,7 +322,10 @@ mod tests {
     fn test_bool_field() {
         let def = validated(
             r#"
-            decoder Test { width = 32  bit_order = msb0 }
+            decoder Test {
+            width = 32
+            bit_order = msb0
+        }
             bx [0:5]=010010 li:i32[6:29] aa:bool[30] lk:bool[31]
         "#,
         );
@@ -333,27 +338,33 @@ mod tests {
     fn test_conflicting_fields_generate_variants() {
         let def = validated(
             r#"
-            decoder Test { width = 32  bit_order = msb0 }
-            foo [0:5]=000001 rd:u8[6:10]
-            bar [0:5]=000010 rd:u8[11:15]
+            decoder Test {
+            width = 32
+            bit_order = msb0
+        }
+            foo [0:5]=000001 rd:u8[6:10] [11:31]=?????????????????????
+            bar [0:5]=000010 [6:10]=????? rd:u8[11:15] [16:31]=????????????????
         "#,
         );
         let (code, warnings) = generate_instr_type(&def, "Instruction");
         assert!(!warnings.is_empty());
         assert!(warnings[0].contains("rd"));
         assert!(warnings[0].contains("conflicting"));
-        // Should generate both variants with bit range suffixes
-        assert!(code.contains("rd_25_21") || code.contains("rd_21_25")); // May vary based on range order
-        assert!(code.contains("rd_20_16") || code.contains("rd_16_20"));
+        // Should generate both variants with bit range suffixes (DSL positions)
+        assert!(code.contains("rd_6_10"));
+        assert!(code.contains("rd_11_15"));
     }
 
     #[test]
     fn test_sign_extend_transform() {
         let def = validated(
             r#"
-            decoder Test { width = 32  bit_order = msb0 }
+            decoder Test {
+            width = 32
+            bit_order = msb0
+        }
             type simm16 = i32 { sign_extend(16) }
-            addi [0:5]=001110 rd:u8[6:10] simm:simm16[16:31]
+            addi [0:5]=001110 rd:u8[6:10] [11:15]=????? simm:simm16[16:31]
         "#,
         );
         let (code, _warnings) = generate_instr_type(&def, "Instruction");
@@ -366,9 +377,12 @@ mod tests {
     fn test_shift_left_transform() {
         let def = validated(
             r#"
-            decoder Test { width = 32  bit_order = msb0 }
+            decoder Test {
+            width = 32
+            bit_order = msb0
+        }
             type addr = i32 { shift_left(2) }
-            bx [0:5]=010010 li:addr[6:29]
+            bx [0:5]=010010 li:addr[6:29] [30:31]=??
         "#,
         );
         let (code, _warnings) = generate_instr_type(&def, "Instruction");

@@ -52,7 +52,8 @@ fn build_node(
             if groups.is_empty() {
                 // No bits can distinguish candidates.
                 // Separate specific patterns from wildcards and preserve both.
-                let (specifics, wildcards) = separate_specific_and_wildcards(instructions, candidates, width);
+                let (specifics, wildcards) =
+                    separate_specific_and_wildcards(instructions, candidates, width);
 
                 if !specifics.is_empty() && !wildcards.is_empty() {
                     // Both specific and wildcard patterns exist
@@ -128,7 +129,8 @@ fn build_node(
                 Some(r) => r,
                 None => {
                     // Can't split further, separate specifics from wildcards
-                    let (specifics, wildcards) = separate_specific_and_wildcards(instructions, candidates, width);
+                    let (specifics, wildcards) =
+                        separate_specific_and_wildcards(instructions, candidates, width);
 
                     if !specifics.is_empty() && !wildcards.is_empty() {
                         let mut priority_order = specifics;
@@ -174,33 +176,49 @@ fn build_node(
                 // Guard: if partition didn't reduce candidate count, avoid infinite recursion
                 if sub_candidates.len() >= candidates.len() {
                     // No progress, separate specifics from wildcards
-                    let (specifics, wildcards) = separate_specific_and_wildcards(instructions, &sub_candidates, width);
+                    let (specifics, wildcards) =
+                        separate_specific_and_wildcards(instructions, &sub_candidates, width);
 
                     if !specifics.is_empty() && !wildcards.is_empty() {
                         let mut priority_order = specifics;
                         priority_order.extend(wildcards);
-                        arms.insert(value, DecodeNode::PriorityLeaves {
-                            candidates: priority_order,
-                        });
+                        arms.insert(
+                            value,
+                            DecodeNode::PriorityLeaves {
+                                candidates: priority_order,
+                            },
+                        );
                     } else if !specifics.is_empty() {
                         if specifics.len() == 1 {
-                            arms.insert(value, DecodeNode::Leaf {
-                                instruction_index: specifics[0],
-                            });
+                            arms.insert(
+                                value,
+                                DecodeNode::Leaf {
+                                    instruction_index: specifics[0],
+                                },
+                            );
                         } else {
-                            arms.insert(value, DecodeNode::PriorityLeaves {
-                                candidates: specifics,
-                            });
+                            arms.insert(
+                                value,
+                                DecodeNode::PriorityLeaves {
+                                    candidates: specifics,
+                                },
+                            );
                         }
                     } else {
                         if wildcards.len() == 1 {
-                            arms.insert(value, DecodeNode::Leaf {
-                                instruction_index: wildcards[0],
-                            });
+                            arms.insert(
+                                value,
+                                DecodeNode::Leaf {
+                                    instruction_index: wildcards[0],
+                                },
+                            );
                         } else {
-                            arms.insert(value, DecodeNode::PriorityLeaves {
-                                candidates: wildcards,
-                            });
+                            arms.insert(
+                                value,
+                                DecodeNode::PriorityLeaves {
+                                    candidates: wildcards,
+                                },
+                            );
                         }
                     }
                 } else {

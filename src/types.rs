@@ -7,18 +7,11 @@ use crate::error::Span;
 /// A complete decoder definition from a `.chipi` file.
 #[derive(Debug, Clone)]
 pub struct DecoderDef {
-    pub imports: Vec<Import>,
     pub config: DecoderConfig,
     pub type_aliases: Vec<TypeAlias>,
     pub maps: Vec<MapDef>,
     pub instructions: Vec<InstructionDef>,
-}
-
-/// An import statement for custom types or modules.
-#[derive(Debug, Clone)]
-pub struct Import {
-    pub path: String,
-    pub span: Span,
+    pub sub_decoders: Vec<SubDecoderDef>,
 }
 
 /// Decoder configuration from the decoder block.
@@ -56,7 +49,6 @@ pub enum ByteEndian {
 pub struct TypeAlias {
     pub name: String,
     pub base_type: String,
-    pub wrapper_type: Option<String>,
     pub transforms: Vec<Transform>,
     pub display_format: Option<DisplayFormat>,
     pub span: Span,
@@ -179,6 +171,11 @@ pub enum FormatExpr {
         func: BuiltinFunc,
         args: Vec<FormatExpr>,
     },
+    /// Dotted access to a sub-decoder field's fragment, e.g. `ext.mnemonic`.
+    SubDecoderAccess {
+        field: String,
+        fragment: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -202,6 +199,36 @@ pub struct InstructionDef {
     pub name: String,
     pub segments: Vec<Segment>,
     pub format_lines: Vec<FormatLine>,
+    pub span: Span,
+}
+
+/// A sub-decoder definition from a `subdecoder Name { ... }` block.
+#[derive(Debug, Clone)]
+pub struct SubDecoderDef {
+    pub name: String,
+    pub width: u32,
+    pub bit_order: BitOrder,
+    pub maps: Vec<MapDef>,
+    pub instructions: Vec<SubInstructionDef>,
+    pub span: Span,
+}
+
+/// An instruction definition within a sub-decoder.
+/// Uses named fragment lines instead of regular format lines.
+#[derive(Debug, Clone)]
+pub struct SubInstructionDef {
+    pub name: String,
+    pub segments: Vec<Segment>,
+    pub fragments: Vec<FragmentLine>,
+    pub span: Span,
+}
+
+/// A named output fragment within a sub-decoder instruction.
+/// e.g., `| .mnemonic = "'DR"` produces `FragmentLine { name: "mnemonic", ... }`.
+#[derive(Debug, Clone)]
+pub struct FragmentLine {
+    pub name: String,
+    pub pieces: Vec<FormatPiece>,
     pub span: Span,
 }
 
@@ -245,13 +272,22 @@ impl BitRange {
     /// Note: During parsing, DSL notation is used (may have start < end).
     /// After validation, hardware notation is used (start >= end).
     pub fn new(start: u32, end: u32) -> Self {
-        BitRange { unit: 0, start, end }
+        BitRange {
+            unit: 0,
+            start,
+            end,
+        }
     }
 
     /// Create a new bit range in a specific unit.
     /// Asserts that start >= end (hardware notation).
     pub fn new_in_unit(unit: u32, start: u32, end: u32) -> Self {
-        debug_assert!(start >= end, "BitRange: start ({}) must be >= end ({})", start, end);
+        debug_assert!(
+            start >= end,
+            "BitRange: start ({}) must be >= end ({})",
+            start,
+            end
+        );
         BitRange { unit, start, end }
     }
 
@@ -297,19 +333,47 @@ pub enum FieldType {
 #[derive(Debug, Clone)]
 pub struct ResolvedFieldType {
     pub base_type: String,
-    pub wrapper_type: Option<String>,
+    /// Original chipi type alias name (e.g., "reg5"), used to match against type_maps.
+    pub alias_name: Option<String>,
     pub transforms: Vec<Transform>,
     pub display_format: Option<DisplayFormat>,
+    /// If this field references a sub-decoder, stores the sub-decoder name.
+    pub sub_decoder: Option<String>,
 }
 
 /// A fully validated decoder definition, ready for tree building and code generation.
 #[derive(Debug, Clone)]
 pub struct ValidatedDef {
-    pub imports: Vec<Import>,
     pub config: DecoderConfig,
     pub type_aliases: Vec<TypeAlias>,
     pub maps: Vec<MapDef>,
     pub instructions: Vec<ValidatedInstruction>,
+    pub sub_decoders: Vec<ValidatedSubDecoder>,
+    /// Type mappings from build.rs: chipi type name -> Rust type path.
+    pub type_maps: std::collections::HashMap<String, String>,
+    /// Dispatch strategy overrides: decoder name -> strategy.
+    pub dispatch_overrides: std::collections::HashMap<String, crate::Dispatch>,
+}
+
+/// A validated sub-decoder, ready for code generation.
+#[derive(Debug, Clone)]
+pub struct ValidatedSubDecoder {
+    pub name: String,
+    pub width: u32,
+    pub bit_order: BitOrder,
+    pub fragment_names: Vec<String>,
+    pub maps: Vec<MapDef>,
+    pub instructions: Vec<ValidatedSubInstruction>,
+}
+
+/// A sub-decoder instruction after validation and field resolution.
+#[derive(Debug, Clone)]
+pub struct ValidatedSubInstruction {
+    pub name: String,
+    pub segments: Vec<Segment>,
+    pub resolved_fields: Vec<ResolvedField>,
+    pub fragments: Vec<FragmentLine>,
+    pub span: Span,
 }
 
 /// An instruction after validation and field resolution.
@@ -352,7 +416,10 @@ impl ValidatedInstruction {
     pub fn fixed_bits(&self) -> Vec<(u32, u32, Bit)> {
         let mut result = Vec::new();
         for seg in &self.segments {
-            if let Segment::Fixed { ranges, pattern, .. } = seg {
+            if let Segment::Fixed {
+                ranges, pattern, ..
+            } = seg
+            {
                 let mut bit_idx = 0;
                 for range in ranges {
                     let range_width = range.width() as usize;
@@ -378,7 +445,10 @@ impl ValidatedInstruction {
     /// Returns None for wildcard bits (treating them as not fixed).
     pub fn fixed_bit_at(&self, hw_bit: u32) -> Option<Bit> {
         for seg in &self.segments {
-            if let Segment::Fixed { ranges, pattern, .. } = seg {
+            if let Segment::Fixed {
+                ranges, pattern, ..
+            } = seg
+            {
                 let mut bit_idx = 0;
                 for range in ranges {
                     // Only consider unit 0 bits for decision tree purposes

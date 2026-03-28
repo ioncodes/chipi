@@ -7,35 +7,24 @@
 //!
 //! ## Usage
 //!
-//! Add to `Cargo.toml`:
+//! ```ignore
+//! // build.rs
+//! chipi::generate("cpu.chipi", out_dir.join("cpu.rs").to_str().unwrap())?;
 //!
-//! ```toml
-//! [build-dependencies]
-//! chipi = "0.5.3"
+//! // Or with type mappings and sub-decoder control:
+//! chipi::CodegenBuilder::new("dsp.chipi")
+//!     .type_map("reg5", "crate::dsp::DspReg")
+//!     .decoder_dispatch("GcDspExt", chipi::Dispatch::JumpTable)
+//!     .output(out_dir.join("dsp.rs").to_str().unwrap())
+//!     .run()?;
 //! ```
 //!
-//! Create `build.rs`:
-//!
 //! ```ignore
-//! use std::env;
-//! use std::path::PathBuf;
-//!
-//! fn main() {
-//!     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-//!     chipi::generate("cpu.chipi", out_dir.join("cpu.rs").to_str().unwrap())
-//!         .expect("failed to generate decoder");
-//!     println!("cargo:rerun-if-changed=cpu.chipi");
-//! }
-//! ```
-//!
-//! Use the generated decoder:
-//!
-//! ```ignore
+//! // Use the generated decoder
 //! mod cpu {
 //!     include!(concat!(env!("OUT_DIR"), "/cpu.rs"));
 //! }
 //!
-//! // decode() always takes &[u8] and returns (instruction, bytes_consumed)
 //! match cpu::CpuInstruction::decode(&data[offset..]) {
 //!     Some((instr, bytes)) => {
 //!         println!("{}", instr);
@@ -55,376 +44,104 @@
 //! }
 //!
 //! type simm16 = i32 { sign_extend(16) }
-//! type simm24 = i32 { sign_extend(24), shift_left(2) }
-//!
-//! bx   [0:5]=010010 li:simm24[6:29] aa:bool[30] lk:bool[31]
-//!      | "b{lk ? l}{aa ? a} {li:#x}"
 //!
 //! addi [0:5]=001110 rd:u8[6:10] ra:u8[11:15] simm:simm16[16:31]
 //!      | ra == 0: "li {rd}, {simm}"
 //!      | "addi {rd}, {ra}, {simm}"
 //! ```
 //!
-//! ## Syntax
+//! ## DSL Features
 //!
-//! ### Decoder block
+//! - **Variable-length instructions**: bit positions beyond `width-1` reference subsequent units
+//! - **Custom types**: `type simm16 = i32 { sign_extend(16) }` with transforms and display hints
+//! - **Type mappings**: [`CodegenBuilder::type_map`] maps chipi types to Rust wrapper types
+//! - **Includes**: `include "other.chipi"` pulls in definitions from other files
+//! - **Sub-decoders**: `subdecoder Name { ... }` for inline decoding of bit-fields
+//! - **Wildcard bits**: `?` in patterns for wildcard bits
+//! - **Overlapping patterns**: more specific patterns are checked first
+//! - **Format strings**: `{field}`, `{field ? yes : no}`, `{a + b}`, `{map(arg)}`
+//! - **Sub-decoder fragments**: `{ext.mnemonic}` accesses named output fragments
+//! - **Guards**: `| ra == 0: "li {rd}, {simm}"` for conditional formatting
+//! - **Maps**: lookup tables for format strings
+//! - **Formatting trait**: override per-instruction display via a generated trait
+//!
+//! ## Sub-decoders
+//!
+//! Sub-decoders decode a bit-field within a parent instruction using a separate
+//! dispatch table, producing named string fragments that merge into the parent's output.
 //!
 //! ```text
-//! decoder Name {
-//!     width = 32        # 8, 16, or 32 bits
-//!     bit_order = msb0  # msb0 or lsb0
-//!     endian = big      # big or little (default: big)
-//!     max_units = 4     # optional: safety guard (validates bit ranges)
+//! # ext.chipi
+//! subdecoder Ext {
+//!     width = 8
+//!     bit_order = msb0
 //! }
+//!
+//! ext_dr  [0:5]=000001 r:u8[6:7]
+//!         | .mnemonic = "'DR"
+//!         | .operands = " : $ar{r}"
+//!
+//! ext_nop [0:5]=000000 [6:7]=??
+//!         | .mnemonic = ""
+//!         | .operands = ""
 //! ```
 //!
-//! #### Variable-Length Instructions
-//!
-//! chipi automatically generates variable-length decoders when you use bit positions
-//! beyond `width-1`. Simply reference subsequent units in your bit ranges:
-//!
 //! ```text
-//! decoder Dsp {
+//! # main.chipi
+//! include "ext.chipi"
+//!
+//! decoder Main {
 //!     width = 16
 //!     bit_order = msb0
-//!     endian = big
-//!     max_units = 2     # Optional safety check: ensures bits don't exceed 32 (width * max_units)
 //! }
 //!
-//! nop    [0:15]=0000000000000000        # 1 unit (16 bits)
-//! lri    [0:10]=00000010000 rd:u5[11:15] imm:u16[16:31]  # 2 units (32 bits)
+//! addr [0:7]=01000000 ext:Ext[8:15]
+//!      | "ADDR{ext.mnemonic}{ext.operands}"
 //! ```
 //!
-//! The generated `decode` always has the signature:
-//! `pub fn decode(data: &[u8]) -> Option<(Self, usize)>`
+//! ## Dispatch Strategies
 //!
-//! It accepts raw bytes and returns the decoded instruction along with the
-//! number of bytes consumed.
+//! Both [`CodegenBuilder::decoder_dispatch`] (for sub-decoders) and
+//! [`LutBuilder::dispatch`] (for emulator interpreters) accept a [`Dispatch`] strategy:
 //!
-//! ### Instructions
+//! - [`Dispatch::FnPtrLut`] (default): `static [fn; N]` arrays with indirect calls.
+//!   Fast to compile, good general-purpose default.
+//! - [`Dispatch::JumpTable`]: `#[inline(always)]` nested match statements that call
+//!   handlers directly. When handlers are also `#[inline(always)]`, the compiler can
+//!   flatten the entire dispatch + execution chain (hyperinlining).
 //!
-//! Each instruction is one line with a name, fixed bit patterns, and fields:
+//! ## Emulator Dispatch
 //!
-//! ```text
-//! add [0:5]=011111 rd:u8[6:10] ra:u8[11:15]
-//! ```
-//!
-//! Fixed bits use `[range]=pattern`. Fields use `name:type[range]`.
-//!
-//! #### Wildcard Bits
-//!
-//! Use `?` in bit patterns for bits that can be any value:
-//!
-//! ```text
-//! # Match when bits [15:8] are 0x8c, bits [7:0] can be anything
-//! clr15   [15:0]=10001100????????
-//!         | "CLR15"
-//!
-//! # Mix wildcards with specific bits
-//! nop     [7:4]=0000 [3:0]=????
-//!         | "nop"
-//! ```
-//!
-//! Wildcard bits are excluded from the matching mask, so instructions match
-//! regardless of the values in those positions. This is useful for reserved or
-//! architecturally undefined bits.
-//!
-//! #### Overlapping Patterns
-//!
-//! chipi supports overlapping instruction patterns where one pattern is a subset of another.
-//! More specific patterns (with more fixed bits) are checked first:
-//!
-//! ```text
-//! # Generic instruction - matches 0x1X (any value in bits 4-7)
-//! load  [0:3]=0001 reg:u4[4:7]
-//!       | "load r{reg}"
-//!
-//! # Specific instruction - matches only 0x1F
-//! load_max [0:3]=0001 [4:7]=1111
-//!          | "load rmax"
-//! ```
-//!
-//! The decoder will check `load_max` first (all bits fixed), then fall back to `load`
-//! (bits 4-7 are wildcards). This works across all units in variable-length decoders.
-//!
-//! ### Types
-//!
-//! Builtin types:
-//! * `bool` (converts bit to true/false)
-//! * `u1` to `u7` (maps to u8)
-//! * `u8`, `u16`, `u32`
-//! * `i8`, `i16`, `i32`
-//!
-//! Custom types:
-//!
-//! ```text
-//! type simm = i32 { sign_extend(16) }
-//! type reg = u8 as Register
-//! ```
-//!
-//! Available transformations:
-//! * `sign_extend(n)` - sign extend from n bits
-//! * `zero_extend(n)` - zero extend from n bits
-//! * `shift_left(n)` - shift left by n bits
-//!
-//! Display format hints (controls how the field is printed in format strings):
-//! * `display(signed_hex)` - signed hex: `0x1A`, `-0x1A`, `0`
-//! * `display(hex)` - unsigned hex: `0x1A`, `0`
-//!
-//! ### Imports
-//!
-//! Import Rust types to wrap extracted values:
-//!
-//! ```text
-//! import crate::cpu::Register
-//! import std::num::Wrapping
-//! ```
-//!
-//! ### Format lines
-//!
-//! Format lines follow an instruction and define its disassembly output:
-//!
-//! ```text
-//! bx [0:5]=010010 li:simm24[6:29] aa:bool[30] lk:bool[31]
-//!    | "b{lk ? l}{aa ? a} {li:#x}"
-//! ```
-//!
-//! Features:
-//! * `{field}` - insert field value, with optional format spec: `{field:#x}`
-//! * `{field ? text}` - emit `text` if nonzero, `{field ? yes : no}` for else
-//! * `{a + b * 4}` - inline arithmetic (`+`, `-`, `*`, `/`, `%`)
-//! * `{-field}` - unary negation
-//! * `{map_name(arg)}` - call a map lookup
-//! * `{rotate_right(val, amt)}` - builtin functions
-//! * Guards: `| ra == 0: "li {rd}, {simm}"` - conditional format selection
-//! * Guard arithmetic: `| sh == 32 - mb : "srwi ..."` - arithmetic in guard operands
-//!
-//! ### Maps
-//!
-//! Lookup tables for use in format strings:
-//!
-//! ```text
-//! map spr_name(spr) {
-//!     1 => "xer"
-//!     8 => "lr"
-//!     9 => "ctr"
-//!     _ => "???"
-//! }
-//! ```
-//!
-//! ### Formatting trait
-//!
-//! chipi generates a `{Name}Format` trait with one method per instruction.
-//! Default implementations come from format lines. Override selectively:
-//!
-//! ```ignore
-//! struct MyFormat;
-//! impl cpu::CpuFormat for MyFormat {
-//!     fn fmt_bx(li: i32, aa: bool, lk: bool,
-//!               f: &mut std::fmt::Formatter) -> std::fmt::Result {
-//!         write!(f, "BRANCH {:#x}", li)
-//!     }
-//! }
-//!
-//! println!("{}", instr.display::<MyFormat>());
-//! ```
-//!
-//! ## Emulator LUT
-//!
-//! chipi can generate a function-pointer **lookup table** for emulator dispatch.
-//! Each opcode is routed directly to a handler function via static `[Handler; N]`
-//! arrays derived from the same decision tree.
-//!
-//! ### build.rs
-//!
-//! Use [`LutBuilder`] to configure and emit both the LUT and the handler stubs:
-//!
-//! ```ignore
-//! use std::env;
-//! use std::path::PathBuf;
-//!
-//! fn main() {
-//!     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-//!     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-//!     let spec = "cpu.chipi";
-//!
-//!     let builder = chipi::LutBuilder::new(spec)
-//!         .handler_mod("crate::cpu::interpreter")
-//!         .ctx_type("crate::Cpu");
-//!
-//!     // Regenerated every build, stays in sync with the spec
-//!     builder
-//!         .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())
-//!         .expect("failed to generate LUT");
-//!
-//!     // Written once, hand-edits are never overwritten
-//!     let stubs = manifest.join("src/cpu/interpreter.rs");
-//!     if !stubs.exists() {
-//!         builder.build_stubs(stubs.to_str().unwrap())
-//!             .expect("failed to generate stubs");
-//!     }
-//!
-//!     println!("cargo:rerun-if-changed={spec}");
-//! }
-//! ```
-//!
-//! ### Include and dispatch
-//!
-//! ```ignore
-//! // src/cpu.rs
-//! #[allow(dead_code, non_upper_case_globals)]
-//! pub mod lut {
-//!     include!(concat!(env!("OUT_DIR"), "/cpu_lut.rs"));
-//! }
-//!
-//! // fetch-decode-execute
-//! let opcode = mem.read_u32(cpu.pc);
-//! cpu.pc = cpu.pc.wrapping_add(4);
-//! crate::cpu::lut::dispatch(&mut ctx, opcode);
-//! ```
-//!
-//! ### Handler stubs
-//!
-//! On the first build, `build_stubs` writes `src/cpu/interpreter.rs` with
-//! `todo!()` bodies. Replace each `todo!()` as you go; the file is never
-//! regenerated so hand-edits are safe.
-//!
-//! The second parameter type is derived from the spec's `width`:
-//! `u8` (8-bit), `u16` (16-bit), or `u32` (32-bit).
-//!
-//! ```ignore
-//! pub fn addi(_ctx: &mut crate::Cpu, _opcode: u32) { todo!("addi") }
-//! pub fn lwz(_ctx: &mut crate::Cpu, _opcode: u32) { todo!("lwz")  }
-//! // ... one fn per instruction
-//! ```
-//!
-//! ### Grouped handlers with const generics
-//!
-//! Use `.group()` to fold multiple instructions into one handler via a
-//! `const OP: u32` generic parameter. Each LUT entry is a separate
-//! monomorphization.
-//!
-//! Provide `.lut_mod()` so that generated stubs can `use` the `OP_*` constants:
-//!
-//! ```ignore
-//! chipi::LutBuilder::new("cpu.chipi")
-//!     .handler_mod("crate::cpu::interpreter")
-//!     .ctx_type("crate::Cpu")
-//!     .lut_mod("crate::cpu::lut")
-//!     .group("alu", ["addi", "addis", "ori", "oris"])
-//!     .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())?;
-//! ```
-//!
-//! ### Custom instruction wrapper type
-//!
-//! Use `.instr_type()` to replace the raw integer with a richer type.
-//! chipi uses it in the generated `Handler` alias and all stub signatures.
-//! `.raw_expr()` tells chipi how to extract the underlying integer for table
-//! indexing; it defaults to `"instr.0"` for newtype wrappers.
-//!
-//! ```ignore
-//! chipi::LutBuilder::new("cpu.chipi")
-//!     .handler_mod("crate::cpu::interpreter")
-//!     .ctx_type("crate::Cpu")
-//!     .instr_type("crate::cpu::Instruction")  // struct Instruction(pub u32)
-//!     // .raw_expr("instr.0")                 // default for newtype wrappers
-//!     .build_lut(out_dir.join("cpu_lut.rs").to_str().unwrap())?;
-//! ```
-//!
-//! Generated `Handler` type and stub signature:
-//! ```ignore
-//! pub type Handler = fn(&mut crate::Cpu, crate::cpu::Instruction);
-//!
-//! pub fn addi(_ctx: &mut crate::Cpu, _instr: crate::cpu::Instruction) { todo!("addi") }
-//! ```
-//!
-//! ## Instruction Type Generation
-//!
-//! chipi can auto-generate the instruction newtype with field accessor methods,
-//! eliminating the need to hand-write bit extraction code. This is useful in
-//! cases where a thin wrapper for decoding is prefered (e.g. emulation).
-//!
-//! ### build.rs
-//!
-//! Add `.build_instr_type()` to your `LutBuilder` chain:
-//!
-//! ```ignore
-//! chipi::LutBuilder::new("cpu.chipi")
-//!     .instr_type("crate::cpu::Instruction")
-//!     .build_instr_type(out_dir.join("instruction.rs").to_str().unwrap())?;
-//! ```
-//!
-//! ### Generated output
-//!
-//! Creates a newtype with `#[inline]` accessor methods for every unique field:
-//!
-//! ```ignore
-//! pub struct Instruction(pub u32);
-//!
-//! #[rustfmt::skip]
-//! impl Instruction {
-//!     #[inline] pub fn rd(&self) -> u8 { ((self.0 >> 21) & 0x1f) as u8 }
-//!     #[inline] pub fn ra(&self) -> u8 { ((self.0 >> 16) & 0x1f) as u8 }
-//!     #[inline] pub fn simm(&self) -> i32 { ((((self.0 >> 0) & 0xffff) as i32) << 16) >> 16 }
-//!     #[inline] pub fn rc(&self) -> bool { (self.0 & 0x1) != 0 }
-//!     // ... one accessor per unique field across all instructions
-//! }
-//! ```
-//!
-//! ### Usage
-//!
-//! Include the generated file and optionally add custom methods:
-//!
-//! ```ignore
-//! // src/cpu/semantics.rs
-//! include!(concat!(env!("OUT_DIR"), "/instruction.rs"));
-//!
-//! // Add custom accessors not derivable from the spec
-//! impl Instruction {
-//!     /// SPR field with swapped halves (PowerPC)
-//!     pub fn spr_decoded(&self) -> u32 {
-//!         let raw = self.spr();
-//!         (raw >> 5) | ((raw & 0x1f) << 5)
-//!     }
-//! }
-//! ```
-//!
-//! ### Conflict handling
-//!
-//! Fields with the same name but different bit ranges across instructions generate
-//! separate accessors with bit range suffixes (e.g., `d_15_0()` and `d_11_0()`).
-//! You can add convenience aliases in a separate `impl` block if needed.
+//! [`LutBuilder`] generates dispatch code for emulator interpreters.
+//! Use `.dispatch(Dispatch::JumpTable)` for hyperinlining.
+//! See the crate-level README for the full pattern.
 //!
 //! ## API
 //!
 //! ```ignore
-//! // Parse and generate decoder from file
+//! // Simple: parse and generate
 //! chipi::generate("cpu.chipi", "out.rs")?;
 //!
-//! // Generate decoder from source string
-//! let code = chipi::generate_from_str(source, "cpu.chipi")?;
+//! // With type maps and dispatch control
+//! chipi::CodegenBuilder::new("dsp.chipi")
+//!     .type_map("reg5", "crate::dsp::DspReg")
+//!     .decoder_dispatch("Ext", chipi::Dispatch::JumpTable)
+//!     .output("out.rs")
+//!     .run()?;
 //!
-//! // Step-by-step
-//! let def = chipi::parse("cpu.chipi")?;
-//! chipi::emit(&def, "out.rs")?;
-//!
-//! // Emulator LUT, simple
-//! // (instr type auto-derived from spec width: u8 / u16 / u32)
-//! chipi::generate_lut("cpu.chipi", "out/lut.rs", "crate::interp", "crate::Cpu")?;
-//! chipi::generate_stubs("cpu.chipi", "src/interp.rs", "crate::Cpu")?; // once only
-//!
-//! // Instruction type generation
-//! chipi::generate_instr_type("cpu.chipi", "out/instruction.rs", "Instruction")?;
-//!
-//! // Emulator LUT, full control via LutBuilder
+//! // Emulator dispatch (fn ptr LUT, default)
 //! chipi::LutBuilder::new("cpu.chipi")
 //!     .handler_mod("crate::cpu::interpreter")
 //!     .ctx_type("crate::Cpu")
-//!     .lut_mod("crate::cpu::lut")              // needed when using groups
-//!     .group("alu", ["addi", "addis"])         // const-generic shared handler
-//!     .instr_type("crate::cpu::Instruction")   // optional wrapper type
-//!     .build_lut("out/lut.rs")?
-//!     .build_instr_type("out/instruction.rs")?;  // generate instruction type
+//!     .group("alu", ["addi", "addis"])
+//!     .build_lut("out/lut.rs")?;
+//!
+//! // Emulator dispatch (jump table, hyperinlining)
+//! chipi::LutBuilder::new("cpu.chipi")
+//!     .handler_mod("crate::cpu::interpreter")
+//!     .ctx_type("crate::Cpu")
+//!     .dispatch(chipi::Dispatch::JumpTable)
+//!     .build_lut("out/lut.rs")?;
 //! ```
 
 pub mod codegen;
@@ -457,13 +174,8 @@ use types::DecoderDef;
 /// ```
 pub fn parse(input: &str) -> Result<DecoderDef, Box<dyn std::error::Error>> {
     let path = Path::new(input);
-    let source = fs::read_to_string(path)?;
-    let filename = path
-        .file_name()
-        .and_then(|f| f.to_str())
-        .unwrap_or(input);
-
-    parser::parse(&source, filename).map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)
+    // Use include-aware parsing from file path
+    parser::parse_file(path).map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)
 }
 
 /// Parse source text directly without reading from a file.
@@ -539,7 +251,16 @@ pub fn generate_lut(
     let validated = validate::validate(&def)
         .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
     let t = tree::build_tree(&validated);
-    let code = lut_gen::generate_lut_code(&validated, &t, handler_mod, ctx_type, &HashMap::new(), None, None);
+    let code = lut_gen::generate_lut_code(
+        &validated,
+        &t,
+        handler_mod,
+        ctx_type,
+        &HashMap::new(),
+        None,
+        None,
+        Dispatch::FnPtrLut,
+    );
     fs::write(output, code)?;
     Ok(())
 }
@@ -649,6 +370,8 @@ pub struct LutBuilder {
     /// Expression to extract the raw `u32` from the instr local (default: `"instr.0"`
     /// when `instr_type` is set, `"opcode"` otherwise).
     raw_expr: Option<String>,
+    /// Dispatch strategy (default: `FnPtrLut`).
+    dispatch: Dispatch,
 }
 
 impl LutBuilder {
@@ -701,6 +424,18 @@ impl LutBuilder {
         self
     }
 
+    /// Set the dispatch strategy.
+    ///
+    /// - [`Dispatch::FnPtrLut`] (default): static `[Handler; N]` arrays with indirect
+    ///   calls. Each tree level gets its own table.
+    /// - [`Dispatch::JumpTable`]: a single `#[inline(always)]` function with nested
+    ///   match statements. The compiler can inline handler calls for zero-overhead
+    ///   dispatch when handlers are also `#[inline(always)]`.
+    pub fn dispatch(mut self, strategy: Dispatch) -> Self {
+        self.dispatch = strategy;
+        self
+    }
+
     /// Register a group: `name` is the shared handler function name (e.g. `"alu"`),
     /// `instrs` lists the instruction names that route to it.
     ///
@@ -735,6 +470,7 @@ impl LutBuilder {
             &self.instr_to_group,
             self.instr_type.as_deref(),
             self.raw_expr.as_deref(),
+            self.dispatch,
         );
         fs::write(output, code)?;
         Ok(())
@@ -819,4 +555,104 @@ pub fn generate_from_str(
     let code = codegen::generate_code(&validated, &tree);
 
     Ok(code)
+}
+
+/// Dispatch strategy for code generation.
+///
+/// Controls how decoders, sub-decoders, and emulator LUTs dispatch to handlers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Dispatch {
+    /// Generate an `#[inline(always)]` match statement and `#[inline(always)]`
+    /// handler functions. The compiler can inline the entire sub-decoder dispatch
+    /// into the parent, producing optimal code for emulator hot paths.
+    /// Can cause slow compilation when the sub-decoder is referenced by many
+    /// parent instructions.
+    JumpTable,
+    /// Generate a `static [Option<fn>; N]` array indexed by the raw field value.
+    /// Each handler is a regular (non-inlined) function. Fast to compile, good
+    /// default for disassemblers and large dispatch tables.
+    #[default]
+    FnPtrLut,
+}
+
+/// Builder for generating a decoder with type mappings and dispatch strategy control.
+///
+/// Use this when you need to map chipi type names to Rust wrapper types (replacing
+/// the removed `import`/`as` syntax) or control the dispatch strategy per decoder.
+///
+/// # Example (build.rs)
+///
+/// ```ignore
+/// chipi::CodegenBuilder::new("src/gcdsp.chipi")
+///     .type_map("reg5", "crate::dsp::DspReg")
+///     .decoder_dispatch("GcDsp", chipi::Dispatch::FnPtrLut)
+///     .decoder_dispatch("GcDspExt", chipi::Dispatch::JumpTable)
+///     .output("src/generated/gcdsp.rs")
+///     .run();
+/// ```
+#[derive(Default)]
+pub struct CodegenBuilder {
+    input: String,
+    type_maps: HashMap<String, String>,
+    dispatch_overrides: HashMap<String, Dispatch>,
+    output: Option<String>,
+}
+
+impl CodegenBuilder {
+    /// Create a new builder targeting the given `.chipi` spec file.
+    pub fn new(input: impl Into<String>) -> Self {
+        Self {
+            input: input.into(),
+            ..Default::default()
+        }
+    }
+
+    /// Map a chipi type name to a Rust type path.
+    ///
+    /// Fields declared with this type name in the `.chipi` file will use the
+    /// given Rust type in generated code. The codegen emits a `use` statement
+    /// for paths containing `::`.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// .type_map("reg5", "crate::dsp::DspReg")
+    /// ```
+    pub fn type_map(mut self, chipi_type: &str, rust_path: &str) -> Self {
+        self.type_maps
+            .insert(chipi_type.to_string(), rust_path.to_string());
+        self
+    }
+
+    /// Set the dispatch strategy for a specific decoder or sub-decoder.
+    ///
+    /// Defaults: `JumpTable` for sub-decoders, decision tree for main decoders.
+    pub fn decoder_dispatch(mut self, decoder_name: &str, strategy: Dispatch) -> Self {
+        self.dispatch_overrides
+            .insert(decoder_name.to_string(), strategy);
+        self
+    }
+
+    /// Set the output file path.
+    pub fn output(mut self, path: &str) -> Self {
+        self.output = Some(path.to_string());
+        self
+    }
+
+    /// Run the full pipeline: parse, validate, and generate code.
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let def = parse(&self.input)?;
+        let validated =
+            validate::validate_with_options(&def, &self.type_maps, &self.dispatch_overrides)
+                .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
+
+        let tree = tree::build_tree(&validated);
+        let code = codegen::generate_code(&validated, &tree);
+
+        if let Some(ref output) = self.output {
+            fs::write(output, code)?;
+        }
+
+        Ok(())
+    }
 }

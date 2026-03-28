@@ -55,17 +55,11 @@ pub enum ErrorKind {
         missing_bits: Vec<u32>,
     },
     /// Instruction specifies overlapping bits
-    OverlappingBits {
-        instruction: String,
-        bit: u32,
-    },
+    OverlappingBits { instruction: String, bit: u32 },
     /// Field references an undefined type
     UnresolvedType(String),
     /// Two instructions have the same fixed bit pattern
-    PatternConflict {
-        a: String,
-        b: String,
-    },
+    PatternConflict { a: String, b: String },
     /// Fixed bit pattern length doesn't match range width
     PatternLengthMismatch {
         instruction: String,
@@ -87,7 +81,11 @@ pub enum ErrorKind {
     /// Map call references undefined map
     UndefinedMap(String),
     /// Map call has wrong number of arguments
-    MapArgCountMismatch { map: String, expected: usize, got: usize },
+    MapArgCountMismatch {
+        map: String,
+        expected: usize,
+        got: usize,
+    },
     /// Duplicate entry in a map
     DuplicateMapEntry { map: String },
     /// Duplicate map name
@@ -111,6 +109,33 @@ pub enum ErrorKind {
         required: u32,
         max_units: u32,
     },
+
+    // Sub-decoder errors
+    /// Fragment names differ between instructions in the same sub-decoder
+    InconsistentFragmentNames {
+        subdecoder: String,
+        instruction: String,
+        expected: Vec<String>,
+        got: Vec<String>,
+    },
+    /// Field bit-width exceeds sub-decoder's declared width
+    SubDecoderFieldTooWide {
+        field: String,
+        field_width: u32,
+        subdecoder: String,
+        subdecoder_width: u32,
+    },
+    /// Referenced sub-decoder doesn't exist
+    UndefinedSubDecoder(String),
+    /// Dotted access to a non-existent fragment name
+    UndefinedFragment {
+        subdecoder: String,
+        fragment: String,
+    },
+    /// Circular include detected
+    CircularInclude(String),
+    /// Included file not found
+    IncludeNotFound(String),
 }
 
 /// An error with location and optional help text.
@@ -240,14 +265,50 @@ impl fmt::Display for Error {
                     instruction, required, max_units
                 )
             }
+            ErrorKind::InconsistentFragmentNames {
+                subdecoder,
+                instruction,
+                expected,
+                got,
+            } => {
+                format!(
+                    "sub-decoder '{}': instruction '{}' has fragments {:?} but expected {:?}",
+                    subdecoder, instruction, got, expected
+                )
+            }
+            ErrorKind::SubDecoderFieldTooWide {
+                field,
+                field_width,
+                subdecoder,
+                subdecoder_width,
+            } => {
+                format!(
+                    "field '{}' is {} bits wide but sub-decoder '{}' is only {} bits",
+                    field, field_width, subdecoder, subdecoder_width
+                )
+            }
+            ErrorKind::UndefinedSubDecoder(name) => {
+                format!("undefined sub-decoder '{}'", name)
+            }
+            ErrorKind::UndefinedFragment {
+                subdecoder,
+                fragment,
+            } => {
+                format!(
+                    "sub-decoder '{}' has no fragment named '{}'",
+                    subdecoder, fragment
+                )
+            }
+            ErrorKind::CircularInclude(path) => {
+                format!("circular include detected: '{}'", path)
+            }
+            ErrorKind::IncludeNotFound(path) => {
+                format!("included file not found: '{}'", path)
+            }
         };
 
         write!(f, "error: {}", msg)?;
-        write!(
-            f,
-            "\n --> {}:{}",
-            self.span.file, self.span.line
-        )?;
+        write!(f, "\n --> {}:{}", self.span.file, self.span.line)?;
 
         if let Some(help) = &self.help {
             write!(f, "\n = help: {}", help)?;

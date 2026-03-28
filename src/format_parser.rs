@@ -17,19 +17,17 @@ pub fn parse_format_string(input: &str, span: &Span) -> Result<Vec<FormatPiece>,
 
     while pos < chars.len() {
         match chars[pos] {
-            '\\' if pos + 1 < chars.len() => {
-                match chars[pos + 1] {
-                    '{' | '}' | '?' | ':' | '\\' => {
-                        literal.push(chars[pos + 1]);
-                        pos += 2;
-                    }
-                    _ => {
-                        literal.push('\\');
-                        literal.push(chars[pos + 1]);
-                        pos += 2;
-                    }
+            '\\' if pos + 1 < chars.len() => match chars[pos + 1] {
+                '{' | '}' | '?' | ':' | '\\' => {
+                    literal.push(chars[pos + 1]);
+                    pos += 2;
                 }
-            }
+                _ => {
+                    literal.push('\\');
+                    literal.push(chars[pos + 1]);
+                    pos += 2;
+                }
+            },
             '{' => {
                 if !literal.is_empty() {
                     pieces.push(FormatPiece::Literal(std::mem::take(&mut literal)));
@@ -221,6 +219,18 @@ fn parse_expression(input: &str, span: &Span) -> Result<FormatExpr, Error> {
         return Ok(FormatExpr::IntLiteral(val));
     }
 
+    // Dotted access: field.fragment (sub-decoder access)
+    if let Some(dot_pos) = input.find('.') {
+        let field = &input[..dot_pos];
+        let fragment = &input[dot_pos + 1..];
+        if is_valid_identifier(field) && is_valid_identifier(fragment) {
+            return Ok(FormatExpr::SubDecoderAccess {
+                field: field.to_string(),
+                fragment: fragment.to_string(),
+            });
+        }
+    }
+
     // Must be a field reference
     if is_valid_identifier(input) {
         return Ok(FormatExpr::Field(input.to_string()));
@@ -341,8 +351,16 @@ fn is_format_spec(s: &str) -> bool {
     }
     // Common format specs: #x, #X, #o, #b, #04x, 04x, x, b, etc.
     let first = s.chars().next().unwrap();
-    first == '#' || first == '0' || first == 'x' || first == 'X' || first == 'o' || first == 'b'
-        || first == '?' || first == 'e' || first == 'E' || first.is_ascii_digit()
+    first == '#'
+        || first == '0'
+        || first == 'x'
+        || first == 'X'
+        || first == 'o'
+        || first == 'b'
+        || first == '?'
+        || first == 'e'
+        || first == 'E'
+        || first.is_ascii_digit()
 }
 
 /// Find a top-level binary operator (not inside parens), scanning right-to-left for left-associativity.
@@ -563,8 +581,7 @@ mod tests {
 
     #[test]
     fn test_mixed() {
-        let pieces =
-            parse_format_string("b{lk ? l}{aa ? a} {li:#x}", &test_span()).unwrap();
+        let pieces = parse_format_string("b{lk ? l}{aa ? a} {li:#x}", &test_span()).unwrap();
         assert_eq!(pieces.len(), 5);
     }
 }
