@@ -1,4 +1,4 @@
-use chipi::*;
+use chipi_core::*;
 
 #[test]
 fn test_variable_length_dsp() {

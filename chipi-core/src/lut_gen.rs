@@ -291,12 +291,13 @@ fn emit_node(node: &DecodeNode, ctx: &mut Ctx) -> String {
         DecodeNode::Fail => "_unimpl".to_string(),
 
         DecodeNode::Leaf { instruction_index } => {
-            ctx.handler_for(&ctx.def.instructions[*instruction_index].name.clone())
+            ctx.handler_for(&ctx.def.instructions[*instruction_index].name)
         }
 
         DecodeNode::PriorityLeaves { candidates } => {
             let id = ctx.uid();
             let fn_name = format!("_priority_{id}");
+            // Clone these strings before the loop so we can mutably borrow ctx.buf below.
             let ct = ctx.ctx_type.to_string();
             let it = ctx.instr_type.to_string();
             let pn = ctx.param_name();
@@ -308,8 +309,7 @@ fn emit_node(node: &DecodeNode, ctx: &mut Ctx) -> String {
 
             let mut has_open_branch = false;
             for (i, &idx) in candidates.iter().enumerate() {
-                let name = ctx.def.instructions[idx].name.clone();
-                let handler = ctx.handler_for(&name);
+                let handler = ctx.handler_for(&ctx.def.instructions[idx].name);
                 let guard = full_guard_expr(&ctx.def.instructions[idx], &re);
 
                 match (i, guard) {
@@ -354,6 +354,7 @@ fn emit_node(node: &DecodeNode, ctx: &mut Ctx) -> String {
             let table = format!("_T{id}");
             let dispatch = format!("_d{id}");
             let size = 1usize << range.width();
+            // Clone these strings before emitting so we can mutably borrow ctx.buf below.
             let ct = ctx.ctx_type.to_string();
             let it = ctx.instr_type.to_string();
             let pn = ctx.param_name();
@@ -390,6 +391,7 @@ fn emit_node(node: &DecodeNode, ctx: &mut Ctx) -> String {
 fn emit_jump_table_node(out: &mut String, node: &DecodeNode, ctx: &mut Ctx, indent: usize) {
     let pad = "    ".repeat(indent);
     let pn = ctx.param_name();
+    // Clone raw_expr so we can pass `ctx` mutably to recursive calls below.
     let re = ctx.raw_expr.to_string();
 
     match node {
@@ -401,12 +403,12 @@ fn emit_jump_table_node(out: &mut String, node: &DecodeNode, ctx: &mut Ctx, inde
             .unwrap();
         }
         DecodeNode::Leaf { instruction_index } => {
-            let handler = ctx.handler_for(&ctx.def.instructions[*instruction_index].name.clone());
+            let handler = ctx.handler_for(&ctx.def.instructions[*instruction_index].name);
             writeln!(out, "{pad}{handler}(ctx, {pn});").unwrap();
         }
         DecodeNode::PriorityLeaves { candidates } => {
             for (i, &idx) in candidates.iter().enumerate() {
-                let handler = ctx.handler_for(&ctx.def.instructions[idx].name.clone());
+                let handler = ctx.handler_for(&ctx.def.instructions[idx].name);
                 let guard = full_guard_expr(&ctx.def.instructions[idx], &re);
 
                 match (i, guard) {

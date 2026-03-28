@@ -19,22 +19,10 @@ use crate::types::*;
 /// - Checks for duplicate names
 /// - Resolves field types
 /// - Validates bit coverage and patterns
+///
+/// The result is language-agnostic. Language-specific configuration
+/// (type mappings, dispatch strategies) is supplied separately to backends.
 pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
-    validate_with_options(def, &HashMap::new(), &HashMap::new())
-}
-
-pub fn validate_with_type_maps(
-    def: &DecoderDef,
-    type_maps: &HashMap<String, String>,
-) -> Result<ValidatedDef, Vec<Error>> {
-    validate_with_options(def, type_maps, &HashMap::new())
-}
-
-pub fn validate_with_options(
-    def: &DecoderDef,
-    type_maps: &HashMap<String, String>,
-    dispatch_overrides: &HashMap<String, crate::Dispatch>,
-) -> Result<ValidatedDef, Vec<Error>> {
     let mut errors = Vec::new();
 
     // Collect sub-decoder names for type resolution
@@ -42,7 +30,7 @@ pub fn validate_with_options(
         def.sub_decoders.iter().map(|sd| sd.name.clone()).collect();
 
     // Phase 0: Convert all bit ranges from DSL notation to hardware notation
-    let instructions = convert_bit_ranges(def, &mut errors);
+    let instructions = convert_bit_ranges(def);
 
     // Phase 1: Name uniqueness
     check_name_uniqueness(&instructions, &def.type_aliases, &mut errors);
@@ -73,8 +61,6 @@ pub fn validate_with_options(
     check_formats(
         &instructions,
         &def.maps,
-        &sub_decoder_names,
-        &def.sub_decoders,
         &mut errors,
     );
 
@@ -141,14 +127,12 @@ pub fn validate_with_options(
         maps: def.maps.clone(),
         instructions: validated_instructions,
         sub_decoders: validated_sub_decoders,
-        type_maps: type_maps.clone(),
-        dispatch_overrides: dispatch_overrides.clone(),
     })
 }
 
 /// Convert all DSL bit ranges to hardware (LSB=0) notation.
 /// Now supports cross-unit fields by splitting them into multiple BitRange objects.
-fn convert_bit_ranges(def: &DecoderDef, _errors: &mut Vec<Error>) -> Vec<InstructionDef> {
+fn convert_bit_ranges(def: &DecoderDef) -> Vec<InstructionDef> {
     let width = def.config.width;
     let order = def.config.bit_order;
 
@@ -411,7 +395,7 @@ fn check_max_units(
 }
 
 fn check_pattern_conflicts(instructions: &[InstructionDef], errors: &mut Vec<Error>) {
-    // O(n²) check: two instructions conflict if all their shared fixed bit positions
+    // O(n^2) check: two instructions conflict if all their shared fixed bit positions
     // have compatible (identical) values.
     for i in 0..instructions.len() {
         for j in (i + 1)..instructions.len() {
@@ -523,8 +507,6 @@ fn check_maps(maps: &[MapDef], errors: &mut Vec<Error>) {
 fn check_formats(
     instructions: &[InstructionDef],
     maps: &[MapDef],
-    _sub_decoder_names: &HashSet<String>,
-    _sub_decoders: &[SubDecoderDef],
     errors: &mut Vec<Error>,
 ) {
     let map_names: HashMap<&str, &MapDef> = maps.iter().map(|m| (m.name.as_str(), m)).collect();

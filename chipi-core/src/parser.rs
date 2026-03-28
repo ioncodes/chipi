@@ -37,6 +37,15 @@ pub fn parse_file(path: &Path) -> Result<DecoderDef, Vec<Error>> {
     parse_file_with_includes(path, &mut include_guard)
 }
 
+/// Parse a `.chipi` file and return both the definition and the set of all
+/// resolved file paths (input + includes). Useful for `cargo:rerun-if-changed`.
+pub fn parse_file_with_deps(path: &Path) -> Result<(DecoderDef, Vec<PathBuf>), Vec<Error>> {
+    let mut include_guard = HashSet::new();
+    let def = parse_file_with_includes(path, &mut include_guard)?;
+    let deps: Vec<PathBuf> = include_guard.into_iter().collect();
+    Ok((def, deps))
+}
+
 fn parse_file_with_includes(
     path: &Path,
     include_guard: &mut HashSet<PathBuf>,
@@ -99,7 +108,6 @@ fn parse_file_with_includes(
 }
 
 struct Parser<'a> {
-    _source: &'a str,
     filename: String,
     lines: Vec<&'a str>,
     line_idx: usize,
@@ -110,7 +118,6 @@ impl<'a> Parser<'a> {
     fn new(source: &'a str, filename: &str) -> Self {
         let lines: Vec<&str> = source.lines().collect();
         Parser {
-            _source: source,
             filename: filename.to_string(),
             lines,
             line_idx: 0,
@@ -660,7 +667,7 @@ impl<'a> Parser<'a> {
         let name = line[..name_end].to_string();
         let rest = line[name_end..].trim();
 
-        let segments = self.parse_segments(rest, line)?;
+        let segments = self.parse_segments(rest)?;
 
         Ok(InstructionDef {
             name,
@@ -670,7 +677,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_segments(&self, input: &str, _full_line: &str) -> Result<Vec<Segment>, Error> {
+    fn parse_segments(&self, input: &str) -> Result<Vec<Segment>, Error> {
         let mut segments = Vec::new();
         let mut pos = 0;
         let bytes = input.as_bytes();

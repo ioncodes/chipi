@@ -1,4 +1,4 @@
-use chipi::*;
+use chipi_core::*;
 
 #[test]
 fn test_overlapping_patterns() {

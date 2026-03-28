@@ -1,0 +1,15 @@
+[package]
+name = "chipi-build"
+version = "0.7.0"
+edition = "2024"
+description = "Build script helper for generating instruction decoders from .chipi files in Rust projects"
+license = "MIT"
+authors = ["Luca Marcelli <contact@layle.dev>"]
+repository = "https://github.com/ioncodes/chipi"
+homepage = "https://github.com/ioncodes/chipi"
+readme = "../README.md"
+keywords = ["decoder", "instruction-set", "code-generation", "dsl", "build-script"]
+categories = ["development-tools", "development-tools::build-utils"]
+
+[dependencies]
+chipi-core = { version = "0.7.0", path = "../chipi-core" }

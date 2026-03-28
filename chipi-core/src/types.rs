@@ -342,6 +342,10 @@ pub struct ResolvedFieldType {
 }
 
 /// A fully validated decoder definition, ready for tree building and code generation.
+///
+/// This is the language-agnostic intermediate representation. It contains no
+/// Rust-specific information. All language-specific configuration (type mappings,
+/// dispatch strategies) is supplied separately via `GenConfig`.
 #[derive(Debug, Clone)]
 pub struct ValidatedDef {
     pub config: DecoderConfig,
@@ -349,10 +353,6 @@ pub struct ValidatedDef {
     pub maps: Vec<MapDef>,
     pub instructions: Vec<ValidatedInstruction>,
     pub sub_decoders: Vec<ValidatedSubDecoder>,
-    /// Type mappings from build.rs: chipi type name -> Rust type path.
-    pub type_maps: std::collections::HashMap<String, String>,
-    /// Dispatch strategy overrides: decoder name -> strategy.
-    pub dispatch_overrides: std::collections::HashMap<String, crate::Dispatch>,
 }
 
 /// A validated sub-decoder, ready for code generation.

@@ -143,7 +143,7 @@ fn format_chipi_type(field: &ResolvedField, width: u32, bit_order: BitOrder) -> 
         .collect::<Vec<_>>()
         .join("");
 
-    let type_str = field.resolved_type.base_type.clone();
+    let type_str = &field.resolved_type.base_type;
 
     format!("{}: {}{}", field.name, type_str, ranges_str)
 }
@@ -253,7 +253,7 @@ pub fn generate_instr_type(def: &ValidatedDef, struct_name: &str) -> (String, Ve
     writeln!(out, "impl {} {{", struct_name).unwrap();
 
     for field in &fields {
-        let body = accessor_body(&field, "self.0");
+        let body = accessor_body(field, "self.0");
         writeln!(out, "    /// Field: `{}`", field.chipi_type).unwrap();
         writeln!(
             out,
