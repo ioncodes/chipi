@@ -1,6 +1,6 @@
 [package]
 name = "chipi-cli"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2024"
 description = "CLI tool for generating instruction decoders from .chipi files"
 license = "MIT"
@@ -16,5 +16,5 @@ name = "chipi"
 path = "src/main.rs"
 
 [dependencies]
-chipi-core = { version = "0.7.1", path = "../chipi-core" }
+chipi-core = { version = "0.7.2", path = "../chipi-core" }
 clap = { version = "4", features = ["derive"] }
