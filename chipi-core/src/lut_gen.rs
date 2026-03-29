@@ -193,7 +193,11 @@ pub fn generate_lut_code(
     // Generate instr_size() for variable-length decoders
     if needs_variable_length(def) {
         writeln!(out).unwrap();
-        writeln!(out, "/// Returns the size of the instruction in units (words).").unwrap();
+        writeln!(
+            out,
+            "/// Returns the size of the instruction in units (words)."
+        )
+        .unwrap();
         writeln!(out, "#[inline(always)]").unwrap();
         writeln!(out, "pub fn instr_size({pn}: {it}) -> u32 {{").unwrap();
         emit_size_node(&mut out, tree, def, &re, 1);

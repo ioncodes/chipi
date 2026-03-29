@@ -61,7 +61,11 @@ pub struct GenTarget {
 
 impl GenTarget {
     /// Create a new `GenTarget` with the given input, lang, and output.
-    pub fn new(input: impl Into<String>, lang: impl Into<String>, output: impl Into<String>) -> Self {
+    pub fn new(
+        input: impl Into<String>,
+        lang: impl Into<String>,
+        output: impl Into<String>,
+    ) -> Self {
         Self {
             input: input.into(),
             lang: lang.into(),
@@ -121,7 +125,6 @@ pub struct LutTarget {
     /// If set, generates a `pub struct Name(pub u32)` with accessor methods.
     #[serde(default)]
     pub instr_type_output: Option<String>,
-
 }
 
 /// Dispatch strategy for code generation.
@@ -141,10 +144,10 @@ pub enum Dispatch {
 
 /// Load a `ChipiConfig` from a TOML file.
 pub fn load_config(path: &Path) -> Result<ChipiConfig, ConfigError> {
-    let content = std::fs::read_to_string(path)
-        .map_err(|e| ConfigError::Io(path.to_path_buf(), e))?;
-    let config: ChipiConfig = toml::from_str(&content)
-        .map_err(|e| ConfigError::Parse(path.to_path_buf(), e))?;
+    let content =
+        std::fs::read_to_string(path).map_err(|e| ConfigError::Io(path.to_path_buf(), e))?;
+    let config: ChipiConfig =
+        toml::from_str(&content).map_err(|e| ConfigError::Parse(path.to_path_buf(), e))?;
     Ok(config)
 }
 

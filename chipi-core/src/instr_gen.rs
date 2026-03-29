@@ -300,11 +300,7 @@ pub fn generate_instr_type(def: &ValidatedDef, struct_name: &str) -> (String, Ve
     )
     .unwrap();
     writeln!(out, "    #[inline]").unwrap();
-    writeln!(
-        out,
-        "    pub fn {fn_name}(bytes: &[u8]) -> Self {{"
-    )
-    .unwrap();
+    writeln!(out, "    pub fn {fn_name}(bytes: &[u8]) -> Self {{").unwrap();
 
     if actual_max_units == 1 {
         // Single unit — just read width/8 bytes as one integer

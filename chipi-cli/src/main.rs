@@ -7,7 +7,11 @@ use chipi_core::config::{self, Dispatch, GenTarget};
 use chipi_core::error::Errors;
 
 #[derive(Parser)]
-#[command(name = "chipi", version, about = "Code generator for .chipi decoder description files")]
+#[command(
+    name = "chipi",
+    version,
+    about = "Code generator for .chipi decoder description files"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -319,7 +323,8 @@ fn run_lut(args: LutArgs) -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let config_path = config_path.ok_or("no config file found (provide --config or create chipi.toml)")?;
+    let config_path =
+        config_path.ok_or("no config file found (provide --config or create chipi.toml)")?;
     let mut cfg = config::load_config(&config_path)?;
     let base_dir = config_path.parent().unwrap_or(Path::new("."));
 
@@ -367,12 +372,28 @@ fn run_stubs(args: StubsArgs) -> Result<(), Box<dyn std::error::Error>> {
     let lut_target = if let Some(ref config_path) = config_path {
         let mut cfg = config::load_config(config_path)?;
         let base_dir = config_path.parent().unwrap_or(Path::new("."));
-        if let Some(target) = cfg.lut.first_mut() {
-            config::resolve_lut_paths(target, base_dir);
-            Some(target.clone())
+
+        // If an input file was given on the CLI, find the [[lut]] entry whose
+        // resolved input path matches it. Fall back to the first entry.
+        let target = if let Some(ref cli_input) = args.input {
+            let cli_path = std::fs::canonicalize(cli_input).ok();
+            let mut found = None;
+            for t in &mut cfg.lut {
+                config::resolve_lut_paths(t, base_dir);
+                let t_path = std::fs::canonicalize(&t.input).ok();
+                if cli_path.is_some() && t_path == cli_path {
+                    found = Some(t.clone());
+                    break;
+                }
+            }
+            found
         } else {
-            None
-        }
+            cfg.lut.first_mut().map(|t| {
+                config::resolve_lut_paths(t, base_dir);
+                t.clone()
+            })
+        };
+        target
     } else {
         None
     };

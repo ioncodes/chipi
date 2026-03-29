@@ -1229,7 +1229,12 @@ fn collect_map_call_types(
 }
 
 /// Generate the formatting trait with one method per instruction variant.
-fn generate_format_trait(out: &mut String, def: &ValidatedDef, trait_name: &str, type_maps: &HashMap<String, String>) {
+fn generate_format_trait(
+    out: &mut String,
+    def: &ValidatedDef,
+    trait_name: &str,
+    type_maps: &HashMap<String, String>,
+) {
     writeln!(out, "pub trait {} {{", trait_name).unwrap();
 
     for instr in &def.instructions {

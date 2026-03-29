@@ -69,7 +69,9 @@ pub fn run_config(path: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
-fn run_gen_target(target: &chipi_core::config::GenTarget) -> Result<(), Box<dyn std::error::Error>> {
+fn run_gen_target(
+    target: &chipi_core::config::GenTarget,
+) -> Result<(), Box<dyn std::error::Error>> {
     let (def, deps) = chipi_core::parser::parse_file_with_deps(Path::new(&target.input))
         .map_err(|errs| Box::new(chipi_core::error::Errors(errs)) as Box<dyn std::error::Error>)?;
 
@@ -93,7 +95,9 @@ fn run_gen_target(target: &chipi_core::config::GenTarget) -> Result<(), Box<dyn 
     Ok(())
 }
 
-fn run_lut_target(target: &chipi_core::config::LutTarget) -> Result<(), Box<dyn std::error::Error>> {
+fn run_lut_target(
+    target: &chipi_core::config::LutTarget,
+) -> Result<(), Box<dyn std::error::Error>> {
     let (_, deps) = chipi_core::parser::parse_file_with_deps(Path::new(&target.input))
         .map_err(|errs| Box::new(chipi_core::error::Errors(errs)) as Box<dyn std::error::Error>)?;
 
@@ -235,8 +239,13 @@ impl LutBuilder {
         self
     }
 
-    pub fn group(mut self, name: impl Into<String>, instrs: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        self.groups.insert(name.into(), instrs.into_iter().map(|s| s.into()).collect());
+    pub fn group(
+        mut self,
+        name: impl Into<String>,
+        instrs: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Self {
+        self.groups
+            .insert(name.into(), instrs.into_iter().map(|s| s.into()).collect());
         self
     }
 

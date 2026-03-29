@@ -1,6 +1,6 @@
 [package]
 name = "chipi-core"
-version = "0.7.2"
+version = "0.7.3"
 edition = "2024"
 description = "Core library for chipi: parser, IR, and code generation backends for instruction decoder generation"
 license = "MIT"
@@ -13,4 +13,4 @@ categories = ["development-tools", "development-tools::build-utils"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-toml = "0.8"
+toml = "1.1.0+spec-1.1.0"

@@ -58,11 +58,7 @@ pub fn validate(def: &DecoderDef) -> Result<ValidatedDef, Vec<Error>> {
     check_maps(&def.maps, &mut errors);
 
     // Phase 6: Format validation
-    check_formats(
-        &instructions,
-        &def.maps,
-        &mut errors,
-    );
+    check_formats(&instructions, &def.maps, &mut errors);
 
     // Phase 7: Validate sub-decoders
     let validated_sub_decoders = validate_sub_decoders(&def.sub_decoders, &mut errors);
@@ -504,11 +500,7 @@ fn check_maps(maps: &[MapDef], errors: &mut Vec<Error>) {
     }
 }
 
-fn check_formats(
-    instructions: &[InstructionDef],
-    maps: &[MapDef],
-    errors: &mut Vec<Error>,
-) {
+fn check_formats(instructions: &[InstructionDef], maps: &[MapDef], errors: &mut Vec<Error>) {
     let map_names: HashMap<&str, &MapDef> = maps.iter().map(|m| (m.name.as_str(), m)).collect();
 
     for instr in instructions {
