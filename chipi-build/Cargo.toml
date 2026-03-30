@@ -1,6 +1,6 @@
 [package]
 name = "chipi-build"
-version = "0.7.3"
+version = "0.8.0"
 edition = "2024"
 description = "Build script helper for generating instruction decoders from .chipi files in Rust projects"
 license = "MIT"
@@ -12,4 +12,4 @@ keywords = ["decoder", "instruction-set", "code-generation", "dsl", "build-scrip
 categories = ["development-tools", "development-tools::build-utils"]
 
 [dependencies]
-chipi-core = { version = "0.7.3", path = "../chipi-core" }
+chipi-core = { version = "0.8.0", path = "../chipi-core" }

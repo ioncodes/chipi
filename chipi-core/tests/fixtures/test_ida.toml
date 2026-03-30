@@ -1,0 +1,26 @@
+[[gen]]
+input = "test_dsp.chipi"
+lang = "ida"
+output = "/dev/null"
+
+[gen.lang_options]
+processor_name = "testdsp"
+processor_long_name = "Test DSP Processor"
+processor_id = 0x8001
+register_names = [
+    "ar0", "ar1", "ar2", "ar3",
+    "r0", "r1", "r2", "r3",
+    "CS", "DS",
+]
+segment_registers = ["CS", "DS"]
+address_size = 16
+
+[gen.lang_options.operand_types]
+rd = "register"
+ar = "register"
+addr = "address"
+mem = "memory"
+
+[gen.lang_options.flow]
+calls = ["call"]
+stops = ["halt"]

@@ -4,10 +4,32 @@
 //! specific target language. Only the Rust backend exists today; the trait
 //! is the extensibility point for future languages.
 
+pub mod binja;
+pub mod cpp;
+pub mod ida;
 pub mod rust;
 
 use crate::config::GenTarget;
 use crate::types::ValidatedDef;
+
+/// Operand classification shared across backends.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OperandKind {
+    Register,
+    Immediate,
+    Address,
+    Memory,
+}
+
+/// Flow analysis configuration shared across backends.
+#[derive(Debug, Clone, Default)]
+pub struct FlowConfig {
+    pub calls: Vec<String>,
+    pub branches: Vec<String>,
+    pub unconditional_branches: Vec<String>,
+    pub returns: Vec<String>,
+    pub stops: Vec<String>,
+}
 
 /// Trait for language-specific code generation backends.
 pub trait CodegenBackend {
@@ -44,6 +66,9 @@ impl std::error::Error for CodegenError {}
 pub fn get_backend(lang: &str) -> Option<Box<dyn CodegenBackend>> {
     match lang {
         "rust" => Some(Box::new(rust::RustBackend)),
+        "ida" => Some(Box::new(ida::IdaBackend)),
+        "binja" => Some(Box::new(binja::BinjaBackend)),
+        "cpp" => Some(Box::new(cpp::CppBackend)),
         _ => None,
     }
 }

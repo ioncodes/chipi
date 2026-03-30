@@ -47,6 +47,10 @@
 
 pub mod backend;
 pub mod codegen;
+pub mod codegen_binja;
+pub mod codegen_cpp;
+pub mod codegen_ida;
+pub mod codegen_python;
 pub mod config;
 pub mod error;
 pub mod format_parser;

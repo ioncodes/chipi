@@ -4,7 +4,27 @@ A declarative instruction decoder generator. Define your CPU's instruction encod
 
 `.chipi` files are language-agnostic: they describe bit patterns, field extractions, and display formats with zero language-specific information. All language-specific configuration (type mappings, output paths, dispatch strategies) lives in a project-level `chipi.toml` or is passed as CLI arguments.
 
-An example disassembler for the GameCube CPU and (partially) DSP can be found [here](https://github.com/ioncodes/chipi-gekko).
+## Backends
+
+| Backend | Lang   | Output                                   | Usage             |
+| ------- | ------ | ---------------------------------------- | ----------------- |
+| `rust`  | Rust   | Decoder enum + `decode()` + `Display`    | `build.rs` or CLI |
+| `cpp`   | C++    | Single-header decoder with `std::format` | CLI or CMake      |
+| `ida`   | Python | IDA Pro 9.x processor module             | CLI               |
+| `binja` | Python | Binary Ninja Architecture plugin         | CLI               |
+
+## Examples
+
+| Project                                                        | Description                                    |
+| -------------------------------------------------------------- | ---------------------------------------------- |
+| [chipi-gekko](https://github.com/ioncodes/chipi-gekko)         | GameCube CPU & DSP disassembler (Rust)         |
+| [chipi-gekko-cpp](https://github.com/ioncodes/chipi-gekko-cpp) | GameCube CPU disassembler (C++)                |
+| [gc-dsp-ida](https://github.com/ioncodes/gc-dsp-ida)           | GameCube DSP processor plugin for IDA Pro 9.x  |
+| [gc-dsp-binja](https://github.com/ioncodes/gc-dsp-binja)       | GameCube DSP processor plugin for Binary Ninja |
+| [chipi-spec](https://github.com/ioncodes/chipi-spec)           | Reusable `.chipi` specs                        |
+| [chipi-vscode](https://github.com/ioncodes/chipi-vscode)       | VS Code syntax highlighting for `.chipi` files |
+
+Note: The IDA and Binary Ninja generators backends are highly experimental and do *not* replace fully fledged processor modules.
 
 ## Architecture
 
@@ -25,16 +45,15 @@ Three crates:
 ## CLI
 
 ```bash
-# Install the chipi CLI tool
+# Install
 cargo install chipi-cli
 
-# Generate decoder/disassembler from a config file
+# Generate decoder/disassembler (Rust, C++, IDA, or Binary Ninja)
 chipi gen --config chipi.toml
+chipi gen --lang cpp --config chipi.toml
+chipi gen --lang ida --config chipi.toml
 
-# Generate decoder from CLI args
-chipi gen --output src/generated/dsp.rs src/dsp.chipi
-
-# Override dispatch for one sub-decoder
+# Override dispatch for a sub-decoder
 chipi gen --config chipi.toml --dispatch-for GcDspExt=jump_table
 
 # Dry run (print to stdout)
@@ -46,20 +65,20 @@ chipi gen --dump-ir src/dsp.chipi
 # Generate emulator dispatch LUT from config
 chipi lut --config chipi.toml
 
-# Generate handler stubs (one-shot, CLI only)
+# Generate handler stubs
 chipi stubs --output src/handlers.rs src/cpu.chipi
 ```
 
 ### `chipi.toml`
 
-A single config file can define both decoder (`[[gen]]`) and emulator LUT (`[[lut]]`) targets.
-Paths support `$VAR` environment variable expansion (e.g. `$OUT_DIR/lut.rs`), useful in `build.rs` contexts.
+A single config file can define multiple targets across backends.
+Paths support `$VAR` environment variable expansion (e.g. `$OUT_DIR/lut.rs`).
 Relative paths are resolved from the TOML file's directory.
 
 ```toml
-# Decoder/disassembler target
+# Rust decoder
 [[gen]]
-input = "../../specs/dsp.chipi"
+input = "specs/dsp.chipi"
 lang = "rust"
 output = "$OUT_DIR/dsp.rs"
 
@@ -69,9 +88,55 @@ GcDspExt = "jump_table"
 [gen.type_map]
 reg5 = "crate::dsp::DspReg"
 
-# Emulator dispatch LUT target
+# C++ decoder (single-header)
+[[gen]]
+input = "specs/gekko.chipi"
+lang = "cpp"
+output = "generated/gekko.hpp"
+
+[gen.lang_options]
+includes = ["types.hpp"]
+
+[gen.type_map]
+gpr = "Gpr"
+fpr = "Fpr"
+
+# IDA Pro processor module
+[[gen]]
+input = "specs/dsp.chipi"
+lang = "ida"
+output = "dsp_proc.py"
+
+[gen.lang_options]
+processor_name = "gcdsp"
+processor_long_name = "GameCube DSP"
+processor_id = 0x8002
+address_size = 16
+bytes_per_unit = 2
+register_names = ["ar0", "ar1", "ar2", "ar3", "CS", "DS"]
+segment_registers = ["CS", "DS"]
+
+[gen.lang_options.flow]
+calls = ["callcc"]
+returns = ["retcc"]
+stops = ["halt"]
+
+# Binary Ninja architecture plugin
+[[gen]]
+input = "specs/dsp.chipi"
+lang = "binja"
+output = "dsp_arch.py"
+
+[gen.lang_options]
+architecture_name = "gcdsp"
+address_size = 2
+default_int_size = 2
+endianness = "BigEndian"
+register_names = ["ar0", "ar1", "ar2", "ar3"]
+
+# Emulator dispatch LUT (Rust only)
 [[lut]]
-input = "../../specs/gekko.chipi"
+input = "specs/gekko.chipi"
 output = "$OUT_DIR/gekko_lut.rs"
 handler_mod = "crate::cpu::interpreter"
 ctx_type = "crate::Cpu"
@@ -153,6 +218,46 @@ match dsp::GcDspInstruction::decode(&data[offset..]) {
 }
 ```
 
+## C++ backend
+
+The C++ backend generates a single header with `enum class Opcode`, a tagged `Instruction` struct, `decode()`, and `format()` (using `std::format`).
+
+Type aliases with `display(hex)` or `display(signed_hex)` automatically generate wrapper types (`Hex`, `SignedHex`) with `std::formatter` specializations. Custom types like registers are provided by the user via `type_map` and a user-written header with `std::formatter` specializations.
+
+```toml
+[gen.type_map]
+gpr = "Gpr"    # user provides Gpr type with std::formatter<Gpr>
+fpr = "Fpr"
+
+[gen.lang_options]
+includes = ["types.hpp"]   # user's type definitions
+```
+
+```cpp
+// types.hpp (provided by user)
+struct Gpr {
+    uint8_t value;
+    Gpr() = default;
+    constexpr Gpr(uint8_t v) : value(v) {}
+    bool operator==(const Gpr&) const = default;
+    bool operator==(int other) const { return value == other; }
+};
+
+template <> struct std::formatter<Gpr> : std::formatter<std::string> {
+    auto format(Gpr g, auto& ctx) const {
+        return std::formatter<std::string>::format(std::format("r{}", g.value), ctx);
+    }
+};
+```
+
+## IDA backend
+
+Generates a self-contained IDA Pro 9.x processor module (Python). Requires `lang_options` with processor metadata, register names, and optional flow analysis hints. See the `chipi.toml` example above.
+
+## Binary Ninja backend
+
+Generates a Binary Ninja Architecture plugin (Python). Implements `get_instruction_info`, `get_instruction_text`, and a stub `get_instruction_low_level_il`.
+
 ## DSL
 
 ### Decoder block
@@ -181,9 +286,9 @@ addi [0:5]=001110 rd:u8[6:10] ra:u8[11:15] simm:simm16[16:31]
 ### Custom types
 
 ```chipi
-type simm16 = i32 { sign_extend(16) }
-type addr = u32 { shift_left(2), zero_extend(32) }
 type simm16 = i32 { sign_extend(16), display(signed_hex) }
+type addr = u32 { shift_left(2), zero_extend(32) }
+type gpr = u8
 ```
 
 **Builtin types:** `bool`, `u1`-`u7`, `u8`, `u16`, `u32`, `i8`, `i16`, `i32`
@@ -265,7 +370,7 @@ addr [0:3]=0100 [4]=0 ss:u8[5:6] d:u8[7] ext:GcDspExt[8:15]
      | "ADDR{ext.mnemonic} $ac{d}, ${ax2_name(ss)}{ext.operands}"
 ```
 
-### Formatting trait
+### Formatting trait (Rust)
 
 The generated trait allows per-instruction display overrides:
 
@@ -333,7 +438,3 @@ impl Instruction {
     #[inline] pub fn simm(&self) -> i32 { (((((self.0 & 0xffff) as i32) << 16) >> 16)) as i32 }
 }
 ```
-
-## Syntax highlighting
-
-[VS Code extension](https://github.com/ioncodes/chipi-vscode)
