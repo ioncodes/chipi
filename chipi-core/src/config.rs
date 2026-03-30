@@ -131,6 +131,17 @@ pub struct LutTarget {
     /// If a sub-decoder is listed here, a `dispatch_{snake_name}` function is generated.
     #[serde(default)]
     pub subdecoder_groups: HashMap<String, HashMap<String, Vec<String>>>,
+
+    /// Output paths for sub-decoder instruction newtypes.
+    /// Maps sub-decoder name -> output file path.
+    /// Supports `$VAR` expansion (e.g. `$OUT_DIR/dsp_ext_instr.rs`).
+    #[serde(default)]
+    pub subdecoder_instr_type_outputs: HashMap<String, String>,
+
+    /// Sub-decoder instruction types: sub-decoder name -> Rust type path.
+    /// When set, the generated dispatch function takes this type instead of raw `u8`/`u16`.
+    #[serde(default)]
+    pub subdecoder_instr_types: HashMap<String, String>,
 }
 
 /// Dispatch strategy for code generation.
@@ -227,6 +238,9 @@ pub fn resolve_lut_paths(target: &mut LutTarget, base_dir: &Path) {
     target.input = resolve_path(&target.input, base_dir);
     target.output = resolve_path(&target.output, base_dir);
     if let Some(ref mut p) = target.instr_type_output {
+        *p = resolve_path(p, base_dir);
+    }
+    for p in target.subdecoder_instr_type_outputs.values_mut() {
         *p = resolve_path(p, base_dir);
     }
 }

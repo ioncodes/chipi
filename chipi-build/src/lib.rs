@@ -285,6 +285,8 @@ impl LutBuilder {
             raw_expr: self.raw_expr,
             instr_type_output: self.instr_type_output,
             subdecoder_groups: Default::default(),
+            subdecoder_instr_type_outputs: Default::default(),
+            subdecoder_instr_types: Default::default(),
         };
         run_lut_target(&target)
     }

@@ -540,6 +540,7 @@ pub fn generate_subdecoder_dispatch(
     handler_mod: &str,
     ctx_type: &str,
     groups: &HashMap<String, String>,
+    instr_type: Option<&str>,
 ) -> String {
     let snake_name = sd.name.chars().fold(String::new(), |mut acc, c| {
         if c.is_uppercase() && !acc.is_empty() {
@@ -616,14 +617,20 @@ pub fn generate_subdecoder_dispatch(
     }
 
     // Emit jump table dispatch
+    let param_type = width_to_type(sd.width);
+    let (param_name, param_type_str, raw_expr) = if let Some(it) = instr_type {
+        ("instr", it.to_string(), "instr.0".to_string())
+    } else {
+        ("val", param_type.to_string(), "val".to_string())
+    };
     writeln!(out, "/// Dispatch a sub-decoder extension opcode.").unwrap();
     writeln!(out, "#[inline(always)]").unwrap();
     writeln!(
         out,
-        "pub fn {dispatch_fn}(ctx: &mut {ctx_type}, val: u8) {{"
+        "pub fn {dispatch_fn}(ctx: &mut {ctx_type}, {param_name}: {param_type_str}) {{"
     )
     .unwrap();
-    writeln!(out, "    match val {{").unwrap();
+    writeln!(out, "    match {raw_expr} {{").unwrap();
 
     let mut i = 0;
     while i < lut_size {
@@ -652,7 +659,7 @@ pub fn generate_subdecoder_dispatch(
                 } else {
                     format!("{}::{}", handler_mod, instr_name)
                 };
-                writeln!(out, "        {pattern} => {handler}(ctx, val),").unwrap();
+                writeln!(out, "        {pattern} => {handler}(ctx, {param_name}),").unwrap();
             }
             None => {
                 writeln!(out, "        {pattern} => {{}},").unwrap();

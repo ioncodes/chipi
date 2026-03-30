@@ -251,6 +251,8 @@ pub struct LutBuilder {
     dispatch: Dispatch,
     /// Sub-decoder groups: sub-decoder name -> { instr_name -> group_fn_name }
     subdecoder_groups: HashMap<String, HashMap<String, String>>,
+    /// Sub-decoder instruction types: sub-decoder name -> Rust type path
+    subdecoder_instr_types: HashMap<String, String>,
 }
 
 impl LutBuilder {
@@ -366,6 +368,11 @@ impl LutBuilder {
                 .subdecoder_groups
                 .insert(sd_name.clone(), instr_to_group);
         }
+        for (sd_name, sd_type) in &target.subdecoder_instr_types {
+            builder
+                .subdecoder_instr_types
+                .insert(sd_name.clone(), sd_type.clone());
+        }
         builder
     }
 
@@ -380,6 +387,10 @@ impl LutBuilder {
 
         if let Some(ref instr_output) = target.instr_type_output {
             builder.build_instr_type(instr_output)?;
+        }
+
+        for (sd_name, sd_output) in &target.subdecoder_instr_type_outputs {
+            builder.build_subdecoder_instr_type(sd_name, sd_output)?;
         }
 
         Ok(())
@@ -412,6 +423,9 @@ impl LutBuilder {
                     &self.handler_mod,
                     &self.ctx_type,
                     groups,
+                    self.subdecoder_instr_types
+                        .get(&sd.name)
+                        .map(|s| s.as_str()),
                 ));
             }
         }
@@ -454,6 +468,35 @@ impl LutBuilder {
         let (code, warnings) = instr_gen::generate_instr_type(&validated, struct_name);
 
         // Print warnings to stderr (visible during cargo build)
+        for warning in &warnings {
+            eprintln!("cargo:warning={}", warning);
+        }
+
+        fs::write(output, code)?;
+        Ok(())
+    }
+
+    /// Generate an instruction newtype for a sub-decoder.
+    ///
+    /// Collects all unique fields from the sub-decoder's instructions and generates
+    /// a `pub struct Name(pub u8/u16/u32)` with accessor methods.
+    pub fn build_subdecoder_instr_type(
+        &self,
+        sd_name: &str,
+        output: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let def = parse(&self.input)?;
+        let validated = validate::validate(&def)
+            .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
+
+        let sd = validated
+            .sub_decoders
+            .iter()
+            .find(|sd| sd.name == sd_name)
+            .ok_or_else(|| format!("sub-decoder '{}' not found in spec", sd_name))?;
+
+        let (code, warnings) = instr_gen::generate_subdecoder_instr_type(sd, sd_name);
+
         for warning in &warnings {
             eprintln!("cargo:warning={}", warning);
         }
