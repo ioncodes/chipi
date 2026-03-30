@@ -6,8 +6,8 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 
-use crate::backend::ida::IdaOptions;
 use crate::backend::OperandKind;
+use crate::backend::ida::IdaOptions;
 use crate::codegen_python::{self, DisplayConfig};
 use crate::tree::DecodeNode;
 use crate::types::*;
@@ -328,19 +328,8 @@ fn classify_operand(
     let lower = field_name.to_ascii_lowercase();
     if matches!(
         lower.as_str(),
-        "rd" | "rs"
-            | "rt"
-            | "ra"
-            | "rb"
-            | "rc"
-            | "rn"
-            | "rm"
-            | "rz"
-            | "reg"
-            | "dreg"
-            | "sreg"
-    ) || lower.starts_with("ar")
-        && lower.len() <= 3
+        "rd" | "rs" | "rt" | "ra" | "rb" | "rc" | "rn" | "rm" | "rz" | "reg" | "dreg" | "sreg"
+    ) || lower.starts_with("ar") && lower.len() <= 3
     {
         return OperandKind::Register;
     }
@@ -352,10 +341,7 @@ fn classify_operand(
         return OperandKind::Address;
     }
 
-    if matches!(
-        lower.as_str(),
-        "mem" | "memory" | "disp" | "displacement"
-    ) {
+    if matches!(lower.as_str(), "mem" | "memory" | "disp" | "displacement") {
         return OperandKind::Memory;
     }
 
@@ -446,10 +432,18 @@ fn emit_ana_method(
     writeln!(out, "        for name, value in fields.items():").unwrap();
     writeln!(out, "            if op_idx >= 6:").unwrap();
     writeln!(out, "                break").unwrap();
-    writeln!(out, "            # Skip sub-decoder dicts (extension opcodes) - not operands").unwrap();
+    writeln!(
+        out,
+        "            # Skip sub-decoder dicts (extension opcodes) - not operands"
+    )
+    .unwrap();
     writeln!(out, "            if isinstance(value, dict):").unwrap();
     writeln!(out, "                continue").unwrap();
-    writeln!(out, "            # Ensure value is unsigned for IDA's ea_t fields").unwrap();
+    writeln!(
+        out,
+        "            # Ensure value is unsigned for IDA's ea_t fields"
+    )
+    .unwrap();
     writeln!(out, "            if isinstance(value, int) and value < 0:").unwrap();
     writeln!(out, "                value = value & 0xFFFFFFFF").unwrap();
     writeln!(out, "            op = insn.ops[op_idx]").unwrap();
@@ -473,9 +467,9 @@ fn emit_operand_classification(
     let mut field_kinds: HashMap<String, OperandKind> = HashMap::new();
     for instr in &def.instructions {
         for field in &instr.resolved_fields {
-            field_kinds
-                .entry(field.name.clone())
-                .or_insert_with(|| classify_operand(&field.name, &field.resolved_type, opts, type_map));
+            field_kinds.entry(field.name.clone()).or_insert_with(|| {
+                classify_operand(&field.name, &field.resolved_type, opts, type_map)
+            });
         }
     }
 
@@ -584,7 +578,11 @@ fn emit_out_insn_method(
 ) {
     writeln!(out, "    def ev_out_insn(self, outctx):").unwrap();
     writeln!(out, "        insn = outctx.insn").unwrap();
-    writeln!(out, "        # Re-decode to get full fields (including sub-decoder dicts)").unwrap();
+    writeln!(
+        out,
+        "        # Re-decode to get full fields (including sub-decoder dicts)"
+    )
+    .unwrap();
     writeln!(
         out,
         "        data = ida_bytes.get_bytes(insn.ea, {})",
@@ -615,12 +613,7 @@ fn emit_out_insn_method(
                 .iter()
                 .map(|n| format!("\"{}\"", n))
                 .collect();
-            writeln!(
-                out,
-                "        _ADDR_FIELDS = {{{}}}",
-                names.join(", ")
-            )
-            .unwrap();
+            writeln!(out, "        _ADDR_FIELDS = {{{}}}", names.join(", ")).unwrap();
             writeln!(
                 out,
                 "        fields = {{k: (v * {} if k in _ADDR_FIELDS else v) for k, v in fields.items()}}",
@@ -630,7 +623,11 @@ fn emit_out_insn_method(
         }
     }
 
-    writeln!(out, "        mnemonic, operands = _format_insn(insn.itype, fields)").unwrap();
+    writeln!(
+        out,
+        "        mnemonic, operands = _format_insn(insn.itype, fields)"
+    )
+    .unwrap();
     writeln!(out, "        outctx.out_custom_mnem(mnemonic)").unwrap();
     writeln!(out, "        if operands:").unwrap();
     writeln!(out, "            outctx.out_line(\" \" + operands)").unwrap();
@@ -648,17 +645,21 @@ fn emit_out_operand_method(out: &mut String) {
 
 /// Emit the `ev_emu_insn` method.
 /// Follows the pattern used by IDA's built-in Python processor modules (spu.py).
-fn emit_emu_method(
-    out: &mut String,
-    _def: &ValidatedDef,
-    _opts: &IdaOptions,
-) {
+fn emit_emu_method(out: &mut String, _def: &ValidatedDef, _opts: &IdaOptions) {
     writeln!(out, "    def ev_emu_insn(self, insn):").unwrap();
     writeln!(out, "        feature = insn.get_canon_feature()").unwrap();
     writeln!(out, "        if feature & ida_idp.CF_JUMP:").unwrap();
-    writeln!(out, "            ida_problems.remember_problem(ida_problems.PR_JUMP, insn.ea)").unwrap();
+    writeln!(
+        out,
+        "            ida_problems.remember_problem(ida_problems.PR_JUMP, insn.ea)"
+    )
+    .unwrap();
     writeln!(out, "        if feature & ida_idp.CF_STOP == 0:").unwrap();
-    writeln!(out, "            ida_xref.add_cref(insn.ea, insn.ea + insn.size, ida_xref.fl_F)").unwrap();
+    writeln!(
+        out,
+        "            ida_xref.add_cref(insn.ea, insn.ea + insn.size, ida_xref.fl_F)"
+    )
+    .unwrap();
     writeln!(out, "        # Add xrefs for address operands").unwrap();
     writeln!(out, "        for i in range(6):").unwrap();
     writeln!(out, "            op = insn.ops[i]").unwrap();
@@ -666,11 +667,23 @@ fn emit_emu_method(
     writeln!(out, "                break").unwrap();
     writeln!(out, "            if op.type == ida_ua.o_near:").unwrap();
     writeln!(out, "                if feature & ida_idp.CF_CALL:").unwrap();
-    writeln!(out, "                    insn.add_cref(op.addr, op.offb, ida_xref.fl_CN)").unwrap();
+    writeln!(
+        out,
+        "                    insn.add_cref(op.addr, op.offb, ida_xref.fl_CN)"
+    )
+    .unwrap();
     writeln!(out, "                else:").unwrap();
-    writeln!(out, "                    insn.add_cref(op.addr, op.offb, ida_xref.fl_JN)").unwrap();
+    writeln!(
+        out,
+        "                    insn.add_cref(op.addr, op.offb, ida_xref.fl_JN)"
+    )
+    .unwrap();
     writeln!(out, "            elif op.type == ida_ua.o_mem:").unwrap();
-    writeln!(out, "                insn.add_dref(op.addr, op.offb, ida_xref.dr_R)").unwrap();
+    writeln!(
+        out,
+        "                insn.add_dref(op.addr, op.offb, ida_xref.dr_R)"
+    )
+    .unwrap();
     writeln!(out, "        return True").unwrap();
     writeln!(out).unwrap();
 }

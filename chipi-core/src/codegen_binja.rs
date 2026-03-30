@@ -14,11 +14,7 @@ use crate::types::*;
 const ITYPE_PREFIX: &str = "ITYPE";
 
 /// Generate a complete Binary Ninja Architecture plugin as a Python string.
-pub fn generate_binja_code(
-    def: &ValidatedDef,
-    tree: &DecodeNode,
-    opts: &BinjaOptions,
-) -> String {
+pub fn generate_binja_code(def: &ValidatedDef, tree: &DecodeNode, opts: &BinjaOptions) -> String {
     let mut out = String::new();
 
     let display = DisplayConfig {
@@ -96,11 +92,7 @@ fn emit_itype_constants(out: &mut String, def: &ValidatedDef) {
 }
 
 /// Emit the Architecture subclass.
-fn emit_architecture_class(
-    out: &mut String,
-    def: &ValidatedDef,
-    opts: &BinjaOptions,
-) {
+fn emit_architecture_class(out: &mut String, def: &ValidatedDef, opts: &BinjaOptions) {
     let class_name = format!("{}Architecture", capitalize(&opts.architecture_name));
     let unit_bytes = def.config.width / 8;
     let max_insn_bytes = unit_bytes
@@ -165,12 +157,7 @@ fn emit_get_instruction_info(
     max_insn_bytes: u32,
 ) {
     writeln!(out, "    def get_instruction_info(self, data, addr):").unwrap();
-    writeln!(
-        out,
-        "        if len(data) < {}:",
-        def.config.width / 8
-    )
-    .unwrap();
+    writeln!(out, "        if len(data) < {}:", def.config.width / 8).unwrap();
     writeln!(out, "            return None").unwrap();
     writeln!(
         out,
@@ -231,11 +218,7 @@ fn emit_get_instruction_info(
                     itypes.join(", ")
                 )
                 .unwrap();
-                writeln!(
-                    out,
-                    "            info.add_branch(BranchType.TrueBranch)"
-                )
-                .unwrap();
+                writeln!(out, "            info.add_branch(BranchType.TrueBranch)").unwrap();
                 writeln!(
                     out,
                     "            info.add_branch(BranchType.FalseBranch, addr + size)"
@@ -322,10 +305,18 @@ fn emit_get_instruction_text(out: &mut String, max_insn_bytes: u32) {
     writeln!(out, "        if result is None:").unwrap();
     writeln!(out, "            return None").unwrap();
     writeln!(out, "        itype, fields, size = result").unwrap();
-    writeln!(out, "        mnemonic, operands = _format_insn(itype, fields)").unwrap();
+    writeln!(
+        out,
+        "        mnemonic, operands = _format_insn(itype, fields)"
+    )
+    .unwrap();
     writeln!(out, "        tokens = []").unwrap();
     writeln!(out, "        tokens.append(InstructionTextToken(").unwrap();
-    writeln!(out, "            InstructionTextTokenType.InstructionToken, mnemonic))").unwrap();
+    writeln!(
+        out,
+        "            InstructionTextTokenType.InstructionToken, mnemonic))"
+    )
+    .unwrap();
     writeln!(out, "        if operands:").unwrap();
     writeln!(out, "            tokens.append(InstructionTextToken(").unwrap();
     writeln!(

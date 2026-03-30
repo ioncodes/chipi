@@ -91,7 +91,12 @@ impl CodegenBackend for IdaBackend {
     fn generate(&self, ir: &ValidatedDef, config: &GenTarget) -> Result<String, CodegenError> {
         let tree = tree::build_tree(ir);
         let opts = parse_ida_options(config).map_err(|e| CodegenError::Internal(e))?;
-        Ok(codegen_ida::generate_ida_code(ir, &tree, &opts, &config.type_map))
+        Ok(codegen_ida::generate_ida_code(
+            ir,
+            &tree,
+            &opts,
+            &config.type_map,
+        ))
     }
 
     fn formatter_command(&self) -> Option<&[&str]> {
@@ -122,8 +127,7 @@ fn parse_ida_options(config: &GenTarget) -> Result<IdaOptions, String> {
     let processor_id = table
         .get("processor_id")
         .and_then(|v| v.as_integer())
-        .ok_or("processor_id must be an integer")?
-        as u64;
+        .ok_or("processor_id must be an integer")? as u64;
 
     let register_names = table
         .get("register_names")
@@ -202,7 +206,7 @@ fn parse_ida_options(config: &GenTarget) -> Result<IdaOptions, String> {
                     return Err(format!(
                         "unknown operand type '{}' for field '{}'",
                         kind_str, key
-                    ))
+                    ));
                 }
             };
             map.insert(key.clone(), kind);

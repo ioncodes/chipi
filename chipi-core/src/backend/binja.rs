@@ -189,7 +189,7 @@ fn parse_binja_options(config: &GenTarget) -> Result<BinjaOptions, String> {
                     return Err(format!(
                         "unknown operand type '{}' for field '{}'",
                         kind_str, key
-                    ))
+                    ));
                 }
             };
             map.insert(key.clone(), kind);

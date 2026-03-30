@@ -155,7 +155,7 @@ For Rust projects, use `chipi-build` in `build.rs`:
 
 ```toml
 [build-dependencies]
-chipi-build = { path = "path/to/chipi/chipi-build" }
+chipi-build = "0.8.0" # or whatever is latest
 ```
 
 ### Config-driven

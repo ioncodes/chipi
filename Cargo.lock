@@ -54,14 +54,14 @@ dependencies = [
 
 [[package]]
 name = "chipi-build"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "chipi-core",
 ]
 
 [[package]]
 name = "chipi-cli"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "chipi-core",
  "clap",
@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "chipi-core"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "serde",
  "toml",

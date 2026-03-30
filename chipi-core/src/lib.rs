@@ -249,6 +249,8 @@ pub struct LutBuilder {
     raw_expr: Option<String>,
     /// Dispatch strategy (default: `FnPtrLut`).
     dispatch: Dispatch,
+    /// Sub-decoder groups: sub-decoder name -> { instr_name -> group_fn_name }
+    subdecoder_groups: HashMap<String, HashMap<String, String>>,
 }
 
 impl LutBuilder {
@@ -352,6 +354,18 @@ impl LutBuilder {
         for (name, instrs) in &target.groups {
             builder = builder.group(name, instrs.iter().map(|s| s.as_str()));
         }
+        // Build sub-decoder groups: sd_name -> { instr_name -> group_fn_name }
+        for (sd_name, groups) in &target.subdecoder_groups {
+            let mut instr_to_group = HashMap::new();
+            for (group_name, instrs) in groups {
+                for instr in instrs {
+                    instr_to_group.insert(instr.clone(), group_name.clone());
+                }
+            }
+            builder
+                .subdecoder_groups
+                .insert(sd_name.clone(), instr_to_group);
+        }
         builder
     }
 
@@ -377,7 +391,7 @@ impl LutBuilder {
         let validated = validate::validate(&def)
             .map_err(|errs| Box::new(Errors(errs)) as Box<dyn std::error::Error>)?;
         let t = tree::build_tree(&validated);
-        let code = lut_gen::generate_lut_code(
+        let mut code = lut_gen::generate_lut_code(
             &validated,
             &t,
             &self.handler_mod,
@@ -387,6 +401,21 @@ impl LutBuilder {
             self.raw_expr.as_deref(),
             self.dispatch,
         );
+
+        // Generate dispatch functions for sub-decoders that have groups configured
+        for sd in &validated.sub_decoders {
+            if let Some(groups) = self.subdecoder_groups.get(&sd.name) {
+                code.push('\n');
+                code.push_str(&lut_gen::generate_subdecoder_dispatch(
+                    &validated,
+                    sd,
+                    &self.handler_mod,
+                    &self.ctx_type,
+                    groups,
+                ));
+            }
+        }
+
         fs::write(output, code)?;
         Ok(())
     }

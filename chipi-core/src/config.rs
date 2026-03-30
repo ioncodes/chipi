@@ -125,6 +125,12 @@ pub struct LutTarget {
     /// If set, generates a `pub struct Name(pub u32)` with accessor methods.
     #[serde(default)]
     pub instr_type_output: Option<String>,
+
+    /// Sub-decoder groups: sub-decoder name -> { group name -> [instruction names] }.
+    /// Instructions in a group share one const-generic handler function.
+    /// If a sub-decoder is listed here, a `dispatch_{snake_name}` function is generated.
+    #[serde(default)]
+    pub subdecoder_groups: HashMap<String, HashMap<String, Vec<String>>>,
 }
 
 /// Dispatch strategy for code generation.

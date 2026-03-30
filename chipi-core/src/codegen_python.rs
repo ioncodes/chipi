@@ -68,14 +68,22 @@ pub fn emit_rotate_helpers(out: &mut String) {
     writeln!(out, "    amt = amt % width").unwrap();
     writeln!(out, "    mask = (1 << width) - 1").unwrap();
     writeln!(out, "    val = val & mask").unwrap();
-    writeln!(out, "    return ((val >> amt) | (val << (width - amt))) & mask").unwrap();
+    writeln!(
+        out,
+        "    return ((val >> amt) | (val << (width - amt))) & mask"
+    )
+    .unwrap();
     writeln!(out).unwrap();
     writeln!(out).unwrap();
     writeln!(out, "def _rotate_left(val, amt, width=32):").unwrap();
     writeln!(out, "    amt = amt % width").unwrap();
     writeln!(out, "    mask = (1 << width) - 1").unwrap();
     writeln!(out, "    val = val & mask").unwrap();
-    writeln!(out, "    return ((val << amt) | (val >> (width - amt))) & mask").unwrap();
+    writeln!(
+        out,
+        "    return ((val << amt) | (val >> (width - amt))) & mask"
+    )
+    .unwrap();
     writeln!(out).unwrap();
     writeln!(out).unwrap();
 }
@@ -87,9 +95,10 @@ pub fn emit_map_functions_python(out: &mut String, maps: &[MapDef]) {
         writeln!(out, "def {}({}):", map_def.name, params.join(", ")).unwrap();
 
         // Find the wildcard/default entry
-        let default_entry = map_def.entries.iter().find(|e| {
-            e.keys.len() == 1 && e.keys[0] == MapKey::Wildcard
-        });
+        let default_entry = map_def
+            .entries
+            .iter()
+            .find(|e| e.keys.len() == 1 && e.keys[0] == MapKey::Wildcard);
 
         // Build the lookup dict
         writeln!(out, "    _MAP = {{").unwrap();
@@ -268,12 +277,7 @@ pub fn emit_decode_function(
     let variable_length = def.instructions.iter().any(|i| i.unit_count() > 1);
 
     writeln!(out, "def _decode(data):").unwrap();
-    writeln!(
-        out,
-        "    if len(data) < {}:",
-        unit_bytes
-    )
-    .unwrap();
+    writeln!(out, "    if len(data) < {}:", unit_bytes).unwrap();
     writeln!(out, "        return None").unwrap();
     writeln!(
         out,
@@ -282,7 +286,16 @@ pub fn emit_decode_function(
     )
     .unwrap();
 
-    emit_tree_python(out, tree, def, 1, itype_prefix, variable_length, unit_bytes, endian);
+    emit_tree_python(
+        out,
+        tree,
+        def,
+        1,
+        itype_prefix,
+        variable_length,
+        unit_bytes,
+        endian,
+    );
 
     writeln!(out).unwrap();
     writeln!(out).unwrap();
@@ -748,7 +761,11 @@ fn resolve_display_wrapper(
     // Check type prefix first (e.g., gpr -> "r")
     if let Some(alias) = &alias_name {
         if let Some(prefix) = display.type_prefixes.get(alias) {
-            return Some(format!("\"{}\" + str({})", escape_python_str(prefix), raw_expr));
+            return Some(format!(
+                "\"{}\" + str({})",
+                escape_python_str(prefix),
+                raw_expr
+            ));
         }
     }
 
@@ -782,7 +799,12 @@ fn resolve_display_info(
 }
 
 /// Convert a FormatExpr to a Python expression string.
-pub fn expr_to_python(expr: &FormatExpr, fields: &[ResolvedField], fields_var: &str, display: &DisplayConfig) -> String {
+pub fn expr_to_python(
+    expr: &FormatExpr,
+    fields: &[ResolvedField],
+    fields_var: &str,
+    display: &DisplayConfig,
+) -> String {
     match expr {
         FormatExpr::Field(name) => {
             format!("{}[\"{}\"]", fields_var, name)
@@ -885,10 +907,7 @@ fn guard_operand_to_python(operand: &GuardOperand, fields_var: &str) -> String {
 }
 
 /// Generate a Python sub-decoder dispatch function.
-pub fn emit_subdecoder_python(
-    out: &mut String,
-    sd: &ValidatedSubDecoder,
-) {
+pub fn emit_subdecoder_python(out: &mut String, sd: &ValidatedSubDecoder) {
     let fn_name = format!("_decode_{}", to_snake_case(&sd.name));
     let width = sd.width;
     let _unit_bytes = width / 8;
@@ -915,7 +934,8 @@ pub fn emit_subdecoder_python(
         // Build fragment dict
         let mut frag_entries = Vec::new();
         for frag in &instr.fragments {
-            let frag_expr = format_pieces_to_python_subdecoder_str(&frag.pieces, &instr.resolved_fields);
+            let frag_expr =
+                format_pieces_to_python_subdecoder_str(&frag.pieces, &instr.resolved_fields);
             frag_entries.push(format!("\"{}\": {}", frag.name, frag_expr));
         }
         writeln!(out, "        return {{{}}}", frag_entries.join(", ")).unwrap();
@@ -1134,10 +1154,9 @@ pub fn needs_rotate_helpers(def: &ValidatedDef) -> bool {
 
 fn expr_uses_rotate(expr: &FormatExpr) -> bool {
     match expr {
-        FormatExpr::BuiltinCall { func, .. } => matches!(
-            func,
-            BuiltinFunc::RotateRight | BuiltinFunc::RotateLeft
-        ),
+        FormatExpr::BuiltinCall { func, .. } => {
+            matches!(func, BuiltinFunc::RotateRight | BuiltinFunc::RotateLeft)
+        }
         FormatExpr::Arithmetic { left, right, .. } => {
             expr_uses_rotate(left) || expr_uses_rotate(right)
         }
@@ -1180,7 +1199,11 @@ pub fn emit_format_function(
     display: &DisplayConfig,
 ) {
     writeln!(out, "def _format_insn(itype, fields):").unwrap();
-    writeln!(out, "    \"\"\"Format an instruction. Returns (mnemonic, operands) strings.\"\"\"").unwrap();
+    writeln!(
+        out,
+        "    \"\"\"Format an instruction. Returns (mnemonic, operands) strings.\"\"\""
+    )
+    .unwrap();
 
     for (i, instr) in def.instructions.iter().enumerate() {
         let itype_const = format!("{}_{}", itype_prefix, instr.name.to_ascii_uppercase());
@@ -1250,11 +1273,21 @@ fn emit_format_lines_python(
             } else {
                 writeln!(out, "{}elif {}:", pad, guard_code).unwrap();
             }
-            writeln!(out, "{}    return {}, {}", pad, mnemonic_expr, operands_expr).unwrap();
+            writeln!(
+                out,
+                "{}    return {}, {}",
+                pad, mnemonic_expr, operands_expr
+            )
+            .unwrap();
         } else {
             if i > 0 {
                 writeln!(out, "{}else:", pad).unwrap();
-                writeln!(out, "{}    return {}, {}", pad, mnemonic_expr, operands_expr).unwrap();
+                writeln!(
+                    out,
+                    "{}    return {}, {}",
+                    pad, mnemonic_expr, operands_expr
+                )
+                .unwrap();
             } else {
                 writeln!(out, "{}return {}, {}", pad, mnemonic_expr, operands_expr).unwrap();
             }
