@@ -275,15 +275,29 @@ fn parse_arg_list(input: &str, span: &Span) -> Result<Vec<FormatExpr>, Error> {
 
 /// Find the position of `?` for ternary, not inside parentheses.
 fn find_ternary_question(s: &str) -> Option<usize> {
+    let chars: Vec<char> = s.chars().collect();
+    let mut i = 0;
     let mut depth = 0;
-    for (i, ch) in s.char_indices() {
-        match ch {
+    let mut byte_pos = 0;
+
+    while i < chars.len() {
+        match chars[i] {
             '(' => depth += 1,
             ')' => depth -= 1,
-            '\\' => continue,
-            '?' if depth == 0 => return Some(i),
+            '\\' => {
+                byte_pos += chars[i].len_utf8();
+                i += 1;
+                if i < chars.len() {
+                    byte_pos += chars[i].len_utf8();
+                }
+                i += 1;
+                continue;
+            }
+            '?' if depth == 0 => return Some(byte_pos),
             _ => {}
         }
+        byte_pos += chars[i].len_utf8();
+        i += 1;
     }
     None
 }

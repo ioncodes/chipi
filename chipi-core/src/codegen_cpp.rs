@@ -256,49 +256,47 @@ fn emit_display_types(out: &mut String, def: &ValidatedDef, type_maps: &HashMap<
         writeln!(out).unwrap();
     }
 
-    writeln!(out, "}} // namespace {}", to_snake_case(&def.config.name)).unwrap();
-    writeln!(out).unwrap();
-
-    // std::formatter specializations must be outside the namespace
-    if need_signed_hex {
-        let ns = to_snake_case(&def.config.name);
-        writeln!(
-            out,
-            "template <> struct std::formatter<{}::SignedHex> : std::formatter<std::string> {{",
-            ns
-        )
-        .unwrap();
-        writeln!(
-            out,
-            "    auto format({}::SignedHex v, auto& ctx) const {{",
-            ns
-        )
-        .unwrap();
-        writeln!(out, "        if (v.value < 0)").unwrap();
-        writeln!(out, "            return std::formatter<std::string>::format(std::format(\"-0x{{:x}}\", static_cast<unsigned>(-v.value)), ctx);").unwrap();
-        writeln!(out, "        return std::formatter<std::string>::format(std::format(\"0x{{:x}}\", static_cast<unsigned>(v.value)), ctx);").unwrap();
-        writeln!(out, "    }}").unwrap();
-        writeln!(out, "}};").unwrap();
-        writeln!(out).unwrap();
-    }
-
-    if need_hex {
-        let ns = to_snake_case(&def.config.name);
-        writeln!(
-            out,
-            "template <> struct std::formatter<{}::Hex> : std::formatter<std::string> {{",
-            ns
-        )
-        .unwrap();
-        writeln!(out, "    auto format({}::Hex v, auto& ctx) const {{", ns).unwrap();
-        writeln!(out, "        return std::formatter<std::string>::format(std::format(\"0x{{:x}}\", v.value), ctx);").unwrap();
-        writeln!(out, "    }}").unwrap();
-        writeln!(out, "}};").unwrap();
-        writeln!(out).unwrap();
-    }
-
-    // Re-open the namespace
     if need_signed_hex || need_hex {
+        writeln!(out, "}} // namespace {}", to_snake_case(&def.config.name)).unwrap();
+        writeln!(out).unwrap();
+
+        if need_signed_hex {
+            let ns = to_snake_case(&def.config.name);
+            writeln!(
+                out,
+                "template <> struct std::formatter<{}::SignedHex> : std::formatter<std::string> {{",
+                ns
+            )
+            .unwrap();
+            writeln!(
+                out,
+                "    auto format({}::SignedHex v, auto& ctx) const {{",
+                ns
+            )
+            .unwrap();
+            writeln!(out, "        if (v.value < 0)").unwrap();
+            writeln!(out, "            return std::formatter<std::string>::format(std::format(\"-0x{{:x}}\", static_cast<unsigned>(-v.value)), ctx);").unwrap();
+            writeln!(out, "        return std::formatter<std::string>::format(std::format(\"0x{{:x}}\", static_cast<unsigned>(v.value)), ctx);").unwrap();
+            writeln!(out, "    }}").unwrap();
+            writeln!(out, "}};").unwrap();
+            writeln!(out).unwrap();
+        }
+
+        if need_hex {
+            let ns = to_snake_case(&def.config.name);
+            writeln!(
+                out,
+                "template <> struct std::formatter<{}::Hex> : std::formatter<std::string> {{",
+                ns
+            )
+            .unwrap();
+            writeln!(out, "    auto format({}::Hex v, auto& ctx) const {{", ns).unwrap();
+            writeln!(out, "        return std::formatter<std::string>::format(std::format(\"0x{{:x}}\", v.value), ctx);").unwrap();
+            writeln!(out, "    }}").unwrap();
+            writeln!(out, "}};").unwrap();
+            writeln!(out).unwrap();
+        }
+
         writeln!(out, "namespace {} {{", to_snake_case(&def.config.name)).unwrap();
         writeln!(out).unwrap();
     }
