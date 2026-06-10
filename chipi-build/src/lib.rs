@@ -1,293 +1,86 @@
-//! Build script helper for chipi code generation in Rust projects.
+//! Build-script helper for chipi code generation.
 //!
-//! Provides builder APIs and config-driven generation for use in `build.rs` files.
+//! Drives `*.bindings.chipi` files from a Rust project's `build.rs`.
 //!
-//! # Config-driven usage
+//! # Example
 //!
 //! ```ignore
 //! // build.rs
 //! fn main() {
-//!     chipi_build::run_config("chipi.toml")
+//!     chipi_build::generate_bindings("specs/gekko.bindings.chipi")
 //!         .expect("chipi codegen failed");
 //! }
 //! ```
 //!
-//! # Programmatic usage
+//! To select one target or decoder out of many:
 //!
 //! ```ignore
-//! // Decoder/disassembler generation
-//! chipi_build::generate("src/dsp/gcdsp.chipi")
-//!     .type_map("reg5", "crate::dsp::DspReg")
-//!     .dispatch_default(chipi_build::Dispatch::FnPtrLut)
-//!     .dispatch_for("GcDspExt", chipi_build::Dispatch::JumpTable)
-//!     .output("src/dsp/generated/gcdsp.rs")
-//!     .run()
-//!     .expect("chipi codegen failed");
-//!
-//! // Emulator dispatch LUT generation
-//! chipi_build::lut("cpu.chipi")
-//!     .handler_mod("crate::cpu::interpreter")
-//!     .ctx_type("crate::Cpu")
-//!     .output("out/cpu_lut.rs")
-//!     .run()
-//!     .expect("chipi lut failed");
+//! chipi_build::generate_bindings_target("specs/gekko.bindings.chipi", "rust")?;
+//! chipi_build::generate_bindings_decoder("specs/dsp.bindings.chipi", "rust", "GcDsp")?;
 //! ```
 
-use std::collections::HashMap;
 use std::path::Path;
 
-pub use chipi_core::config::Dispatch;
+use chipi_core::bindings::{self, RunMode, lower_resolved, parse_bindings_file, resolve};
+use chipi_core::error::Errors;
 
-// ---------------------------------------------------------------------------
-// Config-driven entry point
-// ---------------------------------------------------------------------------
+/// Run every target and decoder in the bindings file.
+pub fn generate_bindings(path: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
+    run(path, None, None)
+}
 
-/// Run all targets defined in a `chipi.toml` config file.
-///
-/// Processes all `[[gen]]` and `[[lut]]` targets. Emits `cargo:rerun-if-changed`
-/// for all input files and their includes.
-pub fn run_config(path: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
+/// Run only the named target. Examples: `"rust"`, `"ida"`.
+pub fn generate_bindings_target(
+    path: impl AsRef<Path>,
+    target: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    run(path, Some(target), None)
+}
+
+/// Run only the named decoder under the given target.
+/// Accepts a decoder, dispatch, processor, or architecture name.
+pub fn generate_bindings_decoder(
+    path: impl AsRef<Path>,
+    target: &str,
+    decoder: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    run(path, Some(target), Some(decoder))
+}
+
+fn run(
+    path: impl AsRef<Path>,
+    target: Option<&str>,
+    decoder: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_default();
     let path = manifest_dir.join(path.as_ref());
-    let mut cfg = chipi_core::config::load_config(&path)?;
-    let base_dir = path.parent().unwrap_or(Path::new("."));
 
+    let parsed = parse_bindings_file(&path).map_err(wrap_errs)?;
+    let resolved = resolve(parsed).map_err(wrap_errs)?;
+    bindings::validate::validate(&resolved).map_err(wrap_errs)?;
+    let lowered = lower_resolved(&resolved).map_err(wrap_errs)?;
+
+    // Emit cargo:rerun-if-changed for every file we touched.
     println!("cargo:rerun-if-changed={}", path.display());
-
-    for target in &mut cfg.targets {
-        chipi_core::config::resolve_gen_paths(target, base_dir);
-        run_gen_target(target)?;
+    for f in &resolved.all_files {
+        println!("cargo:rerun-if-changed={}", f.display());
     }
 
-    for target in &mut cfg.lut {
-        chipi_core::config::resolve_lut_paths(target, base_dir);
-        run_lut_target(target)?;
-    }
+    bindings::run::run_lowered(
+        &resolved,
+        &lowered,
+        &path,
+        target,
+        decoder,
+        RunMode::Generate,
+    )
+    .map_err(wrap_errs)?;
 
     Ok(())
 }
 
-fn run_gen_target(
-    target: &chipi_core::config::GenTarget,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let (def, deps) = chipi_core::parser::parse_file_with_deps(Path::new(&target.input))
-        .map_err(|errs| Box::new(chipi_core::error::Errors(errs)) as Box<dyn std::error::Error>)?;
-
-    for dep in &deps {
-        println!("cargo:rerun-if-changed={}", dep.display());
-    }
-
-    let validated = chipi_core::validate::validate(&def)
-        .map_err(|errs| Box::new(chipi_core::error::Errors(errs)) as Box<dyn std::error::Error>)?;
-
-    let backend = chipi_core::backend::get_backend(&target.lang).unwrap();
-    let code = backend.generate(&validated, target)?;
-    std::fs::write(&target.output, code)?;
-
-    if target.format {
-        if let Some(cmd) = backend.formatter_command() {
-            chipi_core::backend::run_formatter(cmd, &target.output);
-        }
-    }
-
-    Ok(())
-}
-
-fn run_lut_target(
-    target: &chipi_core::config::LutTarget,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let (_, deps) = chipi_core::parser::parse_file_with_deps(Path::new(&target.input))
-        .map_err(|errs| Box::new(chipi_core::error::Errors(errs)) as Box<dyn std::error::Error>)?;
-
-    for dep in &deps {
-        println!("cargo:rerun-if-changed={}", dep.display());
-    }
-
-    chipi_core::LutBuilder::run_target(target)
-}
-
-// ---------------------------------------------------------------------------
-// Decoder/disassembler generation builder
-// ---------------------------------------------------------------------------
-
-/// Start building a decoder/disassembler generation target.
-pub fn generate(input: impl Into<String>) -> GenBuilder {
-    GenBuilder {
-        input: input.into(),
-        output: None,
-        type_map: HashMap::new(),
-        dispatch: Dispatch::FnPtrLut,
-        dispatch_overrides: HashMap::new(),
-        format: false,
-    }
-}
-
-/// Builder for decoder/disassembler code generation.
-pub struct GenBuilder {
-    input: String,
-    output: Option<String>,
-    type_map: HashMap<String, String>,
-    dispatch: Dispatch,
-    dispatch_overrides: HashMap<String, Dispatch>,
-    format: bool,
-}
-
-impl GenBuilder {
-    /// Map a chipi type name to a Rust type path.
-    pub fn type_map(mut self, chipi_type: &str, rust_path: &str) -> Self {
-        self.type_map
-            .insert(chipi_type.to_string(), rust_path.to_string());
-        self
-    }
-
-    /// Set the default dispatch strategy.
-    pub fn dispatch_default(mut self, dispatch: Dispatch) -> Self {
-        self.dispatch = dispatch;
-        self
-    }
-
-    /// Set a per-decoder dispatch strategy override.
-    pub fn dispatch_for(mut self, decoder_name: &str, dispatch: Dispatch) -> Self {
-        self.dispatch_overrides
-            .insert(decoder_name.to_string(), dispatch);
-        self
-    }
-
-    /// Enable running `rustfmt` on the generated output.
-    pub fn format(mut self, yes: bool) -> Self {
-        self.format = yes;
-        self
-    }
-
-    /// Set the output file path.
-    pub fn output(mut self, path: impl Into<String>) -> Self {
-        self.output = Some(path.into());
-        self
-    }
-
-    /// Run the code generation pipeline.
-    pub fn run(self) -> Result<(), Box<dyn std::error::Error>> {
-        let output = self.output.as_deref().ok_or("output path not set")?;
-        let target = chipi_core::config::GenTarget {
-            input: self.input,
-            lang: "rust".to_string(),
-            output: output.to_string(),
-            format: self.format,
-            dispatch: self.dispatch,
-            dispatch_overrides: self.dispatch_overrides,
-            type_map: self.type_map,
-            lang_options: None,
-        };
-        run_gen_target(&target)
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Emulator dispatch LUT generation builder
-// ---------------------------------------------------------------------------
-
-/// Start building an emulator dispatch LUT generation target.
-pub fn lut(input: impl Into<String>) -> LutBuilder {
-    LutBuilder {
-        input: input.into(),
-        output: None,
-        handler_mod: String::new(),
-        ctx_type: String::new(),
-        dispatch: Dispatch::FnPtrLut,
-        groups: HashMap::new(),
-        lut_mod: None,
-        instr_type: None,
-        raw_expr: None,
-        instr_type_output: None,
-    }
-}
-
-/// Builder for emulator dispatch LUT generation.
-pub struct LutBuilder {
-    input: String,
-    output: Option<String>,
-    handler_mod: String,
-    ctx_type: String,
-    dispatch: Dispatch,
-    groups: HashMap<String, Vec<String>>,
-    lut_mod: Option<String>,
-    instr_type: Option<String>,
-    raw_expr: Option<String>,
-    instr_type_output: Option<String>,
-}
-
-impl LutBuilder {
-    pub fn output(mut self, path: impl Into<String>) -> Self {
-        self.output = Some(path.into());
-        self
-    }
-
-    pub fn handler_mod(mut self, m: impl Into<String>) -> Self {
-        self.handler_mod = m.into();
-        self
-    }
-
-    pub fn ctx_type(mut self, t: impl Into<String>) -> Self {
-        self.ctx_type = t.into();
-        self
-    }
-
-    pub fn dispatch(mut self, strategy: Dispatch) -> Self {
-        self.dispatch = strategy;
-        self
-    }
-
-    pub fn group(
-        mut self,
-        name: impl Into<String>,
-        instrs: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Self {
-        self.groups
-            .insert(name.into(), instrs.into_iter().map(|s| s.into()).collect());
-        self
-    }
-
-    pub fn lut_mod(mut self, path: impl Into<String>) -> Self {
-        self.lut_mod = Some(path.into());
-        self
-    }
-
-    pub fn instr_type(mut self, t: impl Into<String>) -> Self {
-        self.instr_type = Some(t.into());
-        self
-    }
-
-    pub fn raw_expr(mut self, expr: impl Into<String>) -> Self {
-        self.raw_expr = Some(expr.into());
-        self
-    }
-
-    /// Also generate an instruction newtype with field accessors.
-    pub fn instr_type_output(mut self, path: impl Into<String>) -> Self {
-        self.instr_type_output = Some(path.into());
-        self
-    }
-
-    /// Run the LUT generation pipeline.
-    pub fn run(self) -> Result<(), Box<dyn std::error::Error>> {
-        let output = self.output.as_deref().ok_or("output path not set")?;
-        let target = chipi_core::config::LutTarget {
-            input: self.input,
-            output: output.to_string(),
-            handler_mod: self.handler_mod,
-            ctx_type: self.ctx_type,
-            dispatch: self.dispatch,
-            groups: self.groups,
-            lut_mod: self.lut_mod,
-            instr_type: self.instr_type,
-            raw_expr: self.raw_expr,
-            instr_type_output: self.instr_type_output,
-            subdecoder_groups: Default::default(),
-            subdecoder_instr_type_outputs: Default::default(),
-            subdecoder_instr_types: Default::default(),
-        };
-        run_lut_target(&target)
-    }
+fn wrap_errs(errs: Vec<chipi_core::error::Error>) -> Box<dyn std::error::Error> {
+    Box::new(Errors(errs))
 }

@@ -1,0 +1,70 @@
+include "test_dsp.chipi"
+
+target rust {
+    decoder TestDsp {
+        output "out/test_dsp.rs"
+    }
+
+    dispatch TestDsp {
+        output "out/test_dsp_dispatch.rs"
+
+        context crate::cpu::Cpu
+        handlers crate::cpu::interpreter
+        strategy fn_ptr_lut
+        invalid_handler crate::cpu::interpreter::invalid
+    }
+}
+
+target ida {
+    processor TestDsp {
+        output "out/test_dsp_proc.py"
+
+        name "testdsp"
+        long_name "Test DSP Processor"
+        id 0x8001
+        address_size 16
+        bytes_per_unit 2
+
+        registers {
+            ar0
+            ar1
+            ar2
+            ar3
+            CS
+            DS
+        }
+
+        segment_registers {
+            CS
+            DS
+        }
+
+        flow {
+            calls {
+                call
+            }
+
+            stops {
+                halt
+            }
+        }
+    }
+}
+
+target binja {
+    architecture TestDsp {
+        output "out/test_dsp_arch.py"
+
+        name "testdsp"
+        address_size 2
+        default_int_size 2
+        endianness big
+
+        registers {
+            ar0
+            ar1
+            ar2
+            ar3
+        }
+    }
+}

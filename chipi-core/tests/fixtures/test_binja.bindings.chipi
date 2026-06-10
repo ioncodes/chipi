@@ -1,0 +1,20 @@
+include "test_dsp.chipi"
+
+target binja {
+    architecture TestDsp {
+        output "out/test_dsp_arch.py"
+
+        name "testdsp"
+
+        address_size 2
+        default_int_size 2
+        endianness big
+
+        registers {
+            ar0
+            ar1
+            ar2
+            ar3
+        }
+    }
+}

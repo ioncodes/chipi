@@ -136,6 +136,52 @@ pub enum ErrorKind {
     CircularInclude(String),
     /// Included file not found
     IncludeNotFound(String),
+
+    // --- Bindings-specific errors ---
+    /// Generic parse error in a `*.bindings.chipi` file
+    BindingsParse(String),
+    /// Unknown target kind (e.g. `target foo`)
+    UnknownTargetKind(String),
+    /// Unknown strategy keyword (`strategy frob`)
+    InvalidStrategy(String),
+    /// Required field missing in a bindings block
+    MissingBindingsField { block: String, field: String },
+    /// Endianness value not in {big, little}
+    InvalidEndianness(String),
+    /// Multiple `target` blocks present and CLI did not pick one
+    MultipleTargetsAmbiguous(Vec<String>),
+    /// Multiple decoders/dispatches/processors/architectures present and
+    /// CLI did not pick one with `--decoder`
+    MultipleDecodersAmbiguous(Vec<String>),
+    /// Decoder/dispatch/processor/architecture refers to a name that
+    /// isn't defined in any included spec
+    UnknownDecoderInBinding {
+        name: String,
+        suggestion: Option<String>,
+    },
+    /// Handler group references an instruction not present in the resolved
+    /// decoder
+    UnknownInstructionInGroup {
+        instruction: String,
+        suggestion: Option<String>,
+    },
+    /// IDA flow / Binja flow references an instruction not in the decoder
+    UnknownInstructionInFlow {
+        instruction: String,
+        suggestion: Option<String>,
+    },
+    /// `segment_registers` references a name not declared in `registers`
+    SegmentRegisterNotDeclared(String),
+    /// Bindings dispatch missing required `invalid_handler`
+    MissingInvalidHandler(String),
+    /// Bindings include cycle
+    BindingsCircularInclude(String),
+    /// `flat_*` strategy: a raw value matches multiple instructions that
+    /// resolve to different handlers
+    FlatDispatchAmbiguous {
+        raw: u64,
+        matches: Vec<(String, String)>,
+    },
 }
 
 /// An error with location and optional help text.
@@ -305,12 +351,110 @@ impl fmt::Display for Error {
             ErrorKind::IncludeNotFound(path) => {
                 format!("included file not found: '{}'", path)
             }
+
+            // --- Bindings-specific ---
+            ErrorKind::BindingsParse(msg) => msg.clone(),
+            ErrorKind::UnknownTargetKind(name) => {
+                format!(
+                    "unknown target kind '{}': expected one of rust, cpp, ida, binja",
+                    name
+                )
+            }
+            ErrorKind::InvalidStrategy(name) => {
+                format!(
+                    "unknown dispatch strategy '{}': expected one of fn_ptr_lut, jump_table, flat_lut, flat_match",
+                    name
+                )
+            }
+            ErrorKind::MissingBindingsField { block, field } => {
+                format!("{} is missing required field '{}'", block, field)
+            }
+            ErrorKind::InvalidEndianness(value) => {
+                format!("invalid endianness '{}': expected 'big' or 'little'", value)
+            }
+            ErrorKind::MultipleTargetsAmbiguous(names) => {
+                let mut s = String::from("multiple targets found:");
+                for name in names {
+                    s.push_str("\n   ");
+                    s.push_str(name);
+                }
+                s.push_str("\npass one explicitly with --target");
+                s
+            }
+            ErrorKind::MultipleDecodersAmbiguous(names) => {
+                let mut s = String::from("multiple dispatch targets found:");
+                for name in names {
+                    s.push_str("\n   ");
+                    s.push_str(name);
+                }
+                s.push_str("\npass one explicitly with --decoder");
+                s
+            }
+            ErrorKind::UnknownDecoderInBinding { name, .. } => {
+                format!("unknown decoder '{}' in bindings block", name)
+            }
+            ErrorKind::UnknownInstructionInGroup { instruction, .. } => {
+                format!("unknown instruction '{}' in handler group", instruction)
+            }
+            ErrorKind::UnknownInstructionInFlow { instruction, .. } => {
+                format!("unknown instruction '{}' in flow block", instruction)
+            }
+            ErrorKind::SegmentRegisterNotDeclared(name) => {
+                format!(
+                    "segment_registers entry '{}' is not declared in registers",
+                    name
+                )
+            }
+            ErrorKind::MissingInvalidHandler(decoder) => {
+                format!(
+                    "dispatch '{}' requires an `invalid_handler` directive",
+                    decoder
+                )
+            }
+            ErrorKind::BindingsCircularInclude(path) => {
+                format!("circular bindings include detected: '{}'", path)
+            }
+            ErrorKind::FlatDispatchAmbiguous { raw, matches } => {
+                let mut s = format!(
+                    "flat dispatch cannot resolve raw opcode {:#010x}\n   matched instructions:",
+                    raw
+                );
+                for (instr, handler) in matches {
+                    s.push_str(&format!("\n     {} -> {}", instr, handler));
+                }
+                s.push_str(
+                    "\n   flat dispatch requires each raw value to resolve to exactly one handler.",
+                );
+                s
+            }
         };
 
         write!(f, "error: {}", msg)?;
         write!(f, "\n --> {}:{}", self.span.file, self.span.line)?;
 
-        if let Some(help) = &self.help {
+        // Auto-emit `did you mean` from suggestion variants if the user
+        // didn't already attach a help message.
+        let auto_help = if self.help.is_none() {
+            match &self.kind {
+                ErrorKind::UnknownDecoderInBinding {
+                    suggestion: Some(s),
+                    ..
+                }
+                | ErrorKind::UnknownInstructionInGroup {
+                    suggestion: Some(s),
+                    ..
+                }
+                | ErrorKind::UnknownInstructionInFlow {
+                    suggestion: Some(s),
+                    ..
+                } => Some(format!("did you mean \"{}\"?", s)),
+                _ => None,
+            }
+        } else {
+            None
+        };
+
+        if let Some(help) = self.help.as_ref().or(auto_help.as_ref()) {
             write!(f, "\n = help: {}", help)?;
         }
 

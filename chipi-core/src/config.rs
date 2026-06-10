@@ -1,66 +1,42 @@
-//! Configuration types for chipi code generation.
+//! Internal configuration types consumed by the code generation pipeline.
 //!
-//! Defines the TOML config schema (`chipi.toml`) and the target types
-//! that carry all settings for code generation runs.
+//! These types are populated by the bindings frontend (`crate::bindings`).
+//! They are not user-facing. The user-facing format is `*.bindings.chipi`.
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use serde::{Deserialize, Serialize};
-
-/// Top-level chipi.toml configuration.
-///
-/// A single config file can define multiple generation targets of both kinds.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct ChipiConfig {
-    /// Decoder/disassembler generation targets.
-    #[serde(rename = "gen", default)]
-    pub targets: Vec<GenTarget>,
-
-    /// Emulator dispatch LUT generation targets.
-    #[serde(default)]
-    pub lut: Vec<LutTarget>,
-}
+use crate::backend::{FlowConfig, OperandKind};
 
 /// A single decoder/disassembler code generation target.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone)]
 pub struct GenTarget {
     /// Path to the input `.chipi` file.
-    /// Relative paths are resolved from the TOML file's directory.
-    /// Supports `$VAR` / `${VAR}` environment variable expansion (e.g. `$OUT_DIR`).
     pub input: String,
 
-    /// Target language backend. Currently only `"rust"` is supported.
+    /// Target language backend. One of `"rust"`, `"cpp"`, `"ida"`, `"binja"`.
     pub lang: String,
 
-    /// Output file path.
-    /// Relative paths are resolved from the TOML file's directory.
-    /// Supports `$VAR` / `${VAR}` environment variable expansion (e.g. `$OUT_DIR`).
+    /// Output file path. Supports `$VAR` and `${VAR}` env var expansion.
     pub output: String,
 
-    /// Whether to run a language-appropriate formatter on the output.
-    #[serde(default)]
+    /// Run a language-appropriate formatter on the output when true.
     pub format: bool,
 
-    /// Default dispatch strategy for all decoders/sub-decoders.
-    #[serde(default)]
+    /// Default dispatch strategy for all decoders and sub-decoders.
     pub dispatch: Dispatch,
 
     /// Per-decoder dispatch strategy overrides.
-    #[serde(default)]
     pub dispatch_overrides: HashMap<String, Dispatch>,
 
-    /// Type mappings: chipi type name -> language-specific type path.
-    #[serde(default)]
+    /// Map a chipi type name to a language-specific type path.
     pub type_map: HashMap<String, String>,
 
-    /// Reserved for language-specific settings.
-    #[serde(default)]
-    pub lang_options: Option<toml::Value>,
+    /// Backend-specific options. Each backend reads only its own variant.
+    pub lang_options: LangOptions,
 }
 
 impl GenTarget {
-    /// Create a new `GenTarget` with the given input, lang, and output.
     pub fn new(
         input: impl Into<String>,
         lang: impl Into<String>,
@@ -74,20 +50,18 @@ impl GenTarget {
             dispatch: Dispatch::default(),
             dispatch_overrides: HashMap::new(),
             type_map: HashMap::new(),
-            lang_options: None,
+            lang_options: LangOptions::None,
         }
     }
 }
 
 /// A single emulator dispatch LUT generation target.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone)]
 pub struct LutTarget {
     /// Path to the input `.chipi` file.
-    /// Supports `$VAR` expansion and relative paths (resolved from the TOML file's directory).
     pub input: String,
 
     /// Output file path for the LUT dispatch code.
-    /// Supports `$VAR` expansion (e.g. `$OUT_DIR/lut.rs`).
     pub output: String,
 
     /// Rust module path where handler functions live.
@@ -97,80 +71,151 @@ pub struct LutTarget {
     pub ctx_type: String,
 
     /// Dispatch strategy.
-    #[serde(default)]
     pub dispatch: Dispatch,
 
-    /// Instruction groups: group name -> list of instruction names.
-    /// Instructions in a group share one const-generic handler function.
-    #[serde(default)]
+    /// Map a group name to its list of instruction names.
     pub groups: HashMap<String, Vec<String>>,
 
-    /// Rust module path where the generated OP_* constants live.
-    /// Required when using groups so stubs can import the constants.
-    #[serde(default)]
+    /// Rust module path where the generated `OP_*` constants live.
     pub lut_mod: Option<String>,
 
-    /// Override the type of the second handler parameter (default: width-derived u8/u16/u32).
-    /// Set to a wrapper type like `"crate::cpu::Instruction"`.
-    #[serde(default)]
+    /// Override the type of the second handler parameter.
     pub instr_type: Option<String>,
 
     /// Expression to extract the raw integer from the instr local.
-    /// Default: `"instr.0"` when `instr_type` is set, `"opcode"` otherwise.
-    #[serde(default)]
     pub raw_expr: Option<String>,
 
     /// Output file path for the instruction newtype with field accessors.
-    /// Supports `$VAR` expansion.
-    /// If set, generates a `pub struct Name(pub u32)` with accessor methods.
-    #[serde(default)]
     pub instr_type_output: Option<String>,
 
-    /// Sub-decoder groups: sub-decoder name -> { group name -> [instruction names] }.
-    /// Instructions in a group share one const-generic handler function.
-    /// If a sub-decoder is listed here, a `dispatch_{snake_name}` function is generated.
-    #[serde(default)]
+    /// Map a sub-decoder name to its group map.
     pub subdecoder_groups: HashMap<String, HashMap<String, Vec<String>>>,
 
-    /// Output paths for sub-decoder instruction newtypes.
-    /// Maps sub-decoder name -> output file path.
-    /// Supports `$VAR` expansion (e.g. `$OUT_DIR/dsp_ext_instr.rs`).
-    #[serde(default)]
+    /// Map a sub-decoder name to its instr-type output path.
     pub subdecoder_instr_type_outputs: HashMap<String, String>,
 
-    /// Sub-decoder instruction types: sub-decoder name -> Rust type path.
-    /// When set, the generated dispatch function takes this type instead of raw `u8`/`u16`.
-    #[serde(default)]
+    /// Map a sub-decoder name to its instr-type Rust path.
     pub subdecoder_instr_types: HashMap<String, String>,
+
+    /// Map a sub-decoder name to its dispatch strategy.
+    /// An empty map makes sub-decoders inherit from `dispatch`.
+    pub subdecoder_dispatch: HashMap<String, Dispatch>,
+
+    /// Path to the handler called for unmatched opcodes.
+    /// `None` falls back to a `todo!()` panic.
+    pub invalid_handler: Option<String>,
+
+    /// Map a sub-decoder name to its invalid handler path.
+    pub subdecoder_invalid_handlers: HashMap<String, String>,
+
+    /// Map a sub-decoder name to its handler module override.
+    pub subdecoder_handler_mods: HashMap<String, String>,
 }
 
 /// Dispatch strategy for code generation.
-///
-/// Controls how decoders, sub-decoders, and emulator LUTs dispatch to handlers.
-/// The names are language-neutral; each backend maps them to the appropriate
-/// language construct.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Dispatch {
-    /// `#[inline(always)]` match statement (Rust), `switch` (C++), etc.
+    /// `#[inline(always)]` match statement.
     JumpTable,
-    /// Static function pointer lookup table.
+    /// Static function pointer lookup table per decision-tree branch.
     #[default]
     FnPtrLut,
+    /// Full-width function-pointer table indexed by raw decoder value.
+    FlatLut,
+    /// Full-width match with adjacent equal handlers compressed into ranges.
+    FlatMatch,
 }
 
-/// Load a `ChipiConfig` from a TOML file.
-pub fn load_config(path: &Path) -> Result<ChipiConfig, ConfigError> {
-    let content =
-        std::fs::read_to_string(path).map_err(|e| ConfigError::Io(path.to_path_buf(), e))?;
-    let config: ChipiConfig =
-        toml::from_str(&content).map_err(|e| ConfigError::Parse(path.to_path_buf(), e))?;
-    Ok(config)
+/// Backend-specific options.
+#[derive(Debug, Clone, Default)]
+pub enum LangOptions {
+    #[default]
+    None,
+    Cpp(CppOptions),
+    Ida(IdaOptions),
+    Binja(BinjaOptions),
+}
+
+impl LangOptions {
+    pub fn as_cpp(&self) -> Option<&CppOptions> {
+        match self {
+            LangOptions::Cpp(o) => Some(o),
+            _ => None,
+        }
+    }
+
+    pub fn as_ida(&self) -> Option<&IdaOptions> {
+        match self {
+            LangOptions::Ida(o) => Some(o),
+            _ => None,
+        }
+    }
+
+    pub fn as_binja(&self) -> Option<&BinjaOptions> {
+        match self {
+            LangOptions::Binja(o) => Some(o),
+            _ => None,
+        }
+    }
+}
+
+/// IDA processor module options.
+#[derive(Debug, Clone)]
+pub struct IdaOptions {
+    pub processor_name: String,
+    pub processor_long_name: String,
+    pub processor_id: u64,
+    pub register_names: Vec<String>,
+    pub segment_registers: Vec<String>,
+    pub address_size: u32,
+    /// Bytes per addressable unit. Word-addressed architectures use 2.
+    pub bytes_per_unit: u32,
+    pub flags: Vec<String>,
+    pub operand_types: HashMap<String, OperandKind>,
+    /// Map type alias names to display prefixes. Example: `"gpr"` -> `"r"`.
+    pub display_prefixes: HashMap<String, String>,
+    pub flow: FlowConfig,
+}
+
+/// Binary Ninja architecture plugin options.
+#[derive(Debug, Clone)]
+pub struct BinjaOptions {
+    pub architecture_name: String,
+    pub address_size: u32,
+    pub default_int_size: u32,
+    pub max_instr_length: u32,
+    pub endianness: String,
+    pub register_names: Vec<String>,
+    pub register_size: u32,
+    pub stack_pointer: Option<String>,
+    pub link_register: Option<String>,
+    pub bytes_per_unit: u32,
+    pub display_prefixes: HashMap<String, String>,
+    pub operand_types: HashMap<String, OperandKind>,
+    pub flow: FlowConfig,
+}
+
+/// C++ backend options.
+#[derive(Debug, Clone, Default)]
+pub struct CppOptions {
+    /// C++ namespace for generated code. Defaults to the decoder name in
+    /// snake_case.
+    pub namespace: Option<String>,
+    pub guard_style: CppGuardStyle,
+    /// Extra `#include` directives for user-provided type headers.
+    pub includes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CppGuardStyle {
+    #[default]
+    Pragma,
+    Ifndef,
 }
 
 /// Expand environment variables (`$VAR` or `${VAR}`) in a string.
 /// Unresolved variables are left as-is.
-fn expand_env(s: &str) -> String {
+pub fn expand_env(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars().peekable();
     while let Some(c) = chars.next() {
@@ -214,8 +259,8 @@ fn expand_env(s: &str) -> String {
     result
 }
 
-/// Resolve a path: expand env vars, then make relative paths relative to base_dir.
-fn resolve_path(path: &str, base_dir: &Path) -> String {
+/// Resolve a path. Expands env vars first. Joins relative paths to `base_dir`.
+pub fn resolve_path(path: &str, base_dir: &Path) -> String {
     let expanded = expand_env(path);
     let p = Path::new(&expanded);
     if p.is_absolute() {
@@ -226,14 +271,12 @@ fn resolve_path(path: &str, base_dir: &Path) -> String {
 }
 
 /// Resolve paths in a `GenTarget` relative to a base directory.
-/// Supports `$OUT_DIR`, `$CARGO_MANIFEST_DIR`, etc. in paths.
 pub fn resolve_gen_paths(target: &mut GenTarget, base_dir: &Path) {
     target.input = resolve_path(&target.input, base_dir);
     target.output = resolve_path(&target.output, base_dir);
 }
 
 /// Resolve paths in a `LutTarget` relative to a base directory.
-/// Supports `$OUT_DIR`, `$CARGO_MANIFEST_DIR`, etc. in paths.
 pub fn resolve_lut_paths(target: &mut LutTarget, base_dir: &Path) {
     target.input = resolve_path(&target.input, base_dir);
     target.output = resolve_path(&target.output, base_dir);
@@ -244,22 +287,3 @@ pub fn resolve_lut_paths(target: &mut LutTarget, base_dir: &Path) {
         *p = resolve_path(p, base_dir);
     }
 }
-
-#[derive(Debug)]
-pub enum ConfigError {
-    Io(PathBuf, std::io::Error),
-    Parse(PathBuf, toml::de::Error),
-}
-
-impl std::fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ConfigError::Io(path, e) => write!(f, "failed to read {}: {}", path.display(), e),
-            ConfigError::Parse(path, e) => {
-                write!(f, "failed to parse {}: {}", path.display(), e)
-            }
-        }
-    }
-}
-
-impl std::error::Error for ConfigError {}

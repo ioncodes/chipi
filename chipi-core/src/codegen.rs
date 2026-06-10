@@ -1998,6 +1998,40 @@ fn generate_subdecoder(out: &mut String, sd: &ValidatedSubDecoder, dispatch: cra
             writeln!(out, "}}").unwrap();
             writeln!(out).unwrap();
         }
+        crate::Dispatch::FlatLut | crate::Dispatch::FlatMatch => {
+            // The decoder-side codegen here builds a sub-decoder dispatch
+            // for the disassembler path. The new flat strategies are
+            // intended for emulator dispatch and aren't useful here, so
+            // fall back to the FnPtrLut shape.
+            let handler_type = format!("fn({}) -> {}", word_type, insn_struct);
+            let table_name = format!("_SD_{}_LUT", sd.name.to_uppercase());
+
+            writeln!(
+                out,
+                "static {}: [Option<{}>; {}] = [",
+                table_name, handler_type, lut_size
+            )
+            .unwrap();
+            for val in 0..lut_size {
+                match dispatch_table[val] {
+                    Some(idx) => {
+                        writeln!(out, "    Some(_sd_{}),", sd.instructions[idx].name).unwrap()
+                    }
+                    None => writeln!(out, "    None,").unwrap(),
+                }
+            }
+            writeln!(out, "];").unwrap();
+            writeln!(out).unwrap();
+            writeln!(
+                out,
+                "pub fn {}(val: {}) -> Option<{}> {{",
+                decode_fn, word_type, insn_struct
+            )
+            .unwrap();
+            writeln!(out, "    {}[val as usize].map(|f| f(val))", table_name).unwrap();
+            writeln!(out, "}}").unwrap();
+            writeln!(out).unwrap();
+        }
     }
 }
 

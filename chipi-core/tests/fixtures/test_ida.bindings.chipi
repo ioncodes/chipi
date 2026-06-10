@@ -1,0 +1,42 @@
+include "test_dsp.chipi"
+
+target ida {
+    processor TestDsp {
+        output "out/test_dsp_proc.py"
+
+        name "testdsp"
+        long_name "Test DSP Processor"
+        id 0x8001
+
+        address_size 16
+        bytes_per_unit 2
+
+        registers {
+            ar0
+            ar1
+            ar2
+            ar3
+            r0
+            r1
+            r2
+            r3
+            CS
+            DS
+        }
+
+        segment_registers {
+            CS
+            DS
+        }
+
+        flow {
+            calls {
+                call
+            }
+
+            stops {
+                halt
+            }
+        }
+    }
+}

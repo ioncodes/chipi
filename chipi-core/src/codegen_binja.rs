@@ -5,8 +5,8 @@
 
 use std::fmt::Write;
 
-use crate::backend::binja::BinjaOptions;
 use crate::codegen_python::{self, DisplayConfig};
+use crate::config::BinjaOptions;
 use crate::tree::DecodeNode;
 use crate::types::*;
 

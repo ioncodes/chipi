@@ -1,8 +1,7 @@
 //! Code generation backends.
 //!
-//! Each backend implements [`CodegenBackend`] to emit source code for a
-//! specific target language. Only the Rust backend exists today; the trait
-//! is the extensibility point for future languages.
+//! Each backend implements [`CodegenBackend`]. Each one emits source code
+//! for one target language.
 
 pub mod binja;
 pub mod cpp;
@@ -33,17 +32,13 @@ pub struct FlowConfig {
 
 /// Trait for language-specific code generation backends.
 pub trait CodegenBackend {
-    /// Language identifier (e.g., `"rust"`).
+    /// Language identifier. Examples: `"rust"`, `"cpp"`, `"ida"`, `"binja"`.
     fn lang(&self) -> &str;
-
-    /// Validate language-specific options from the `lang_options` config field.
-    /// Returns errors for unknown or invalid keys.
-    fn validate_lang_options(&self, options: &toml::Value) -> Result<(), Vec<String>>;
 
     /// Generate source code from the decoder IR and configuration.
     fn generate(&self, ir: &ValidatedDef, config: &GenTarget) -> Result<String, CodegenError>;
 
-    /// Optional: command to format the generated source.
+    /// Command to format the generated source. `None` skips formatting.
     fn formatter_command(&self) -> Option<&[&str]>;
 }
 

@@ -6,8 +6,7 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 
-use crate::backend::cpp::CppOptions;
-use crate::backend::cpp::GuardStyle;
+use crate::config::{CppGuardStyle as GuardStyle, CppOptions};
 use crate::tree::DecodeNode;
 use crate::types::*;
 

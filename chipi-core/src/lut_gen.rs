@@ -1,8 +1,9 @@
-//! Function-pointer LUT generation from a validated definition and dispatch tree.
+//! Function-pointer LUT generation. Consumes a validated definition and a
+//! dispatch tree.
 //!
-//! Translates chipi's decision tree into a set of static `[Handler; N]` arrays,
-//! one per tree `Branch`, plus a small inline dispatch function for each.
-//! The result is an emulator-style "look-up table" dispatch in generated Rust code.
+//! The output is one or more static `[Handler; N]` arrays. There is one
+//! per tree `Branch`. Each table has a small inline dispatch function next
+//! to it. The result is an emulator-style lookup-table dispatch.
 //!
 //! ## Basic usage (one handler per instruction)
 //!
@@ -10,7 +11,8 @@
 //!
 //! ## Grouped handlers with const generics
 //!
-//! Multiple instructions can share a single handler via const generics:
+//! Multiple instructions can share a single handler via const generics.
+//! Example:
 //!
 //! ```text
 //! // Generated LUT entry for addi (in the "alu" group):
@@ -26,12 +28,13 @@
 //! }
 //! ```
 //!
-//! The compiler monomorphizes each instantiation, so runtime dispatch is still a
-//! single indirect call into the table with no further branching overhead.
+//! The compiler monomorphizes each instantiation. Runtime dispatch is one
+//! indirect call into the table. There is no extra branching overhead.
 
 use std::collections::HashMap;
 use std::fmt::Write;
 
+use crate::error::{Error, ErrorKind, Span};
 use crate::tree::DecodeNode;
 use crate::types::*;
 
@@ -40,18 +43,20 @@ struct Ctx<'a> {
     handler_mod: &'a str,
     ctx_type: &'a str,
     /// Type of the second parameter passed to every handler.
-    /// `"u32"` means the raw opcode word (default); any other value is a
-    /// user-supplied wrapper type.
     instr_type: &'a str,
-    /// Expression that yields a `u32` from the local `instr` / `opcode`
-    /// parameter inside a generated dispatch function. For `u32` this is just
-    /// the parameter name itself; for a newtype wrapper it might be `"instr.0"`.
+    /// Expression that yields a `u32` from the local `instr` or `opcode`
+    /// parameter inside a generated dispatch function.
     raw_expr: &'a str,
     uid: usize,
-    /// Accumulated auxiliary items (tables + dispatch fns) in emission order.
+    /// Accumulated auxiliary items in emission order. Holds tables and
+    /// dispatch functions.
     buf: String,
-    /// instr_name -> group handler function name (empty = no grouping)
+    /// Map from instruction name to its group handler function name. Empty
+    /// means no grouping.
     groups: &'a HashMap<String, String>,
+    /// Optional handler for unmatched opcodes. Replaces the default
+    /// `todo!()` panic body of `_unimpl`.
+    invalid_handler: Option<&'a str>,
 }
 
 impl<'a> Ctx<'a> {
@@ -62,7 +67,8 @@ impl<'a> Ctx<'a> {
     }
 
     /// Parameter name used in generated function signatures.
-    /// `"opcode"` for primitive integer types, `"instr"` for wrapper types.
+    /// Returns `"opcode"` for primitive integer types. Returns `"instr"`
+    /// for wrapper types.
     fn param_name(&self) -> &'static str {
         if is_primitive(self.instr_type) {
             "opcode"
@@ -91,22 +97,33 @@ impl<'a> Ctx<'a> {
 
 /// Generate the Rust source for a function-pointer LUT.
 ///
-/// `handler_mod`  - module path for handler functions, e.g. `"crate::cpu::interpreter"`.
-/// `ctx_type`     - context type passed to every handler, e.g. `"crate::gekko::Gekko"`.
-/// `groups`       - maps each instruction name to the group handler that should serve it.
-///                  Pass an empty map for one-handler-per-instruction behaviour.
-/// `instr_type`   - type of the second parameter of every handler. Pass `None` to
-///                  derive automatically from the spec's `width` (`u8`/`u16`/`u32`).
-///                  Pass `Some("crate::cpu::Instruction")` to use a wrapper type.
-/// `raw_expr`     - expression that yields the underlying integer from the `instr`
-///                  local inside a dispatch function. Ignored when `instr_type` is
-///                  `None` (auto). Defaults to `"instr.0"` for wrapper types.
+/// `handler_mod`: module path where handlers live. Example:
+/// `"crate::cpu::interpreter"`.
+///
+/// `ctx_type`: context type passed to every handler. Example:
+/// `"crate::gekko::Gekko"`.
+///
+/// `groups`: map from instruction name to group handler name. An empty map
+/// gives one handler per instruction.
+///
+/// `instr_type`: type of the second handler parameter. Pass `None` to
+/// derive from the spec's `width`. The auto type is `u8`, `u16`, or `u32`.
+/// Pass `Some("crate::cpu::Instruction")` to use a wrapper type.
+///
+/// `raw_expr`: expression that yields the underlying integer from the
+/// `instr` local. Ignored when `instr_type` is `None`. Defaults to
+/// `"instr.0"` for wrapper types.
+///
+/// `invalid_handler`: handler called for unmatched opcodes. `None` falls
+/// back to a `todo!()` panic.
 ///
 /// The generated file contains:
-/// - `pub const OP_*: u32`: one constant per instruction, usable as const generic args
+///
+/// - `pub const OP_*: u32`. One constant per instruction. Usable as a
+///   const-generic argument.
 /// - `pub type Handler = fn(&mut Ctx, InstrType);`
-/// - Static dispatch tables (`_T0`, `_T1`, ...) sized to each bit-range level
-/// - `pub fn dispatch(ctx: &mut Ctx, instr: InstrType)`
+/// - Static dispatch tables `_T0`, `_T1`, etc. One per bit-range level.
+/// - `pub fn dispatch(ctx: &mut Ctx, instr: InstrType)`.
 pub fn generate_lut_code(
     def: &ValidatedDef,
     tree: &DecodeNode,
@@ -116,7 +133,8 @@ pub fn generate_lut_code(
     instr_type: Option<&str>,
     raw_expr: Option<&str>,
     dispatch: crate::Dispatch,
-) -> String {
+    invalid_handler: Option<&str>,
+) -> Result<String, Vec<Error>> {
     let instr_type = instr_type.unwrap_or_else(|| width_to_type(def.config.width));
     let raw_expr = raw_expr.unwrap_or_else(|| {
         if is_primitive(instr_type) {
@@ -135,6 +153,7 @@ pub fn generate_lut_code(
         uid: 0,
         buf: String::new(),
         groups,
+        invalid_handler,
     };
 
     let ct = ctx_type;
@@ -176,7 +195,11 @@ pub fn generate_lut_code(
             writeln!(out, "#[cold]").unwrap();
             writeln!(out, "#[inline(never)]").unwrap();
             writeln!(out, "fn _unimpl(_ctx: &mut {ct}, {pn}: {it}) {{").unwrap();
-            writeln!(out, "    todo!(\"unimplemented opcode {{:#010x}}\", {re})").unwrap();
+            if let Some(handler) = invalid_handler {
+                writeln!(out, "    {handler}(_ctx, {pn})").unwrap();
+            } else {
+                writeln!(out, "    todo!(\"unimplemented opcode {{:#010x}}\", {re})").unwrap();
+            }
             writeln!(out, "}}").unwrap();
             writeln!(out).unwrap();
             out.push_str(&ctx.buf);
@@ -192,6 +215,30 @@ pub fn generate_lut_code(
             writeln!(out, "pub fn dispatch(ctx: &mut {ct}, {pn}: {it}) {{").unwrap();
             emit_jump_table_node(&mut out, tree, &mut ctx, 1);
             writeln!(out, "}}").unwrap();
+        }
+        crate::Dispatch::FlatLut => {
+            emit_flat_lut(
+                &mut out,
+                FlatTargetSource::TopLevel(def),
+                &mut ctx,
+                "dispatch",
+                ct,
+                it,
+                pn,
+                re,
+            )?;
+        }
+        crate::Dispatch::FlatMatch => {
+            emit_flat_match(
+                &mut out,
+                FlatTargetSource::TopLevel(def),
+                &mut ctx,
+                "dispatch",
+                ct,
+                it,
+                pn,
+                re,
+            )?;
         }
     }
 
@@ -209,22 +256,22 @@ pub fn generate_lut_code(
         writeln!(out, "}}").unwrap();
     }
 
-    out
+    Ok(out)
 }
 
 /// Generate handler stub functions for every instruction.
 ///
-/// `group_to_instrs` maps each group handler name to the instruction names it covers.
-/// Pass an empty map for one-stub-per-instruction behaviour.
+/// `group_to_instrs` maps a group handler name to the instructions it
+/// covers. An empty map gives one stub per instruction.
 ///
-/// `lut_mod` is the Rust module path where the generated `OP_*` constants live
-/// (e.g. `"crate::cpu::lut"`). Required when groups are non-empty so that the
-/// const-generic stubs can reference those constants.
+/// `lut_mod` is the Rust module path where the generated `OP_*` constants
+/// live. Example: `"crate::cpu::lut"`. Required when groups are non-empty.
+/// The const-generic stubs need this to reference the constants.
 ///
-/// `instr_type` is the type of the second parameter. Pass `None` to derive from the
-/// spec's `width` (same default as `generate_lut_code`).
+/// `instr_type` is the type of the second parameter. Pass `None` to derive
+/// from the spec's `width`.
 ///
-/// Intended to be run **once** to bootstrap an interpreter module.
+/// Run this once to bootstrap an interpreter module.
 pub fn generate_stubs_code(
     def: &ValidatedDef,
     ctx_type: &str,
@@ -415,11 +462,15 @@ fn emit_jump_table_node(out: &mut String, node: &DecodeNode, ctx: &mut Ctx, inde
 
     match node {
         DecodeNode::Fail => {
-            writeln!(
-                out,
-                "{pad}todo!(\"unimplemented opcode {{:#010x}}\", {re});"
-            )
-            .unwrap();
+            if let Some(handler) = ctx.invalid_handler {
+                writeln!(out, "{pad}{handler}(ctx, {pn});").unwrap();
+            } else {
+                writeln!(
+                    out,
+                    "{pad}todo!(\"unimplemented opcode {{:#010x}}\", {re});"
+                )
+                .unwrap();
+            }
         }
         DecodeNode::Leaf { instruction_index } => {
             let handler = ctx.handler_for(&ctx.def.instructions[*instruction_index].name);
@@ -744,4 +795,374 @@ fn emit_size_node(
             writeln!(out, "{pad}}}").unwrap();
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Flat dispatch (flat_lut, flat_match)
+// ---------------------------------------------------------------------------
+
+/// Source of instructions for flat-dispatch enumeration.
+/// `TopLevel` considers only unit-0 segments. `Sub` considers all segments.
+pub(crate) enum FlatTargetSource<'a> {
+    TopLevel(&'a ValidatedDef),
+    Sub(&'a ValidatedSubDecoder),
+}
+
+impl<'a> FlatTargetSource<'a> {
+    fn width(&self) -> u32 {
+        match self {
+            FlatTargetSource::TopLevel(d) => d.config.width,
+            FlatTargetSource::Sub(s) => s.width,
+        }
+    }
+
+    fn instruction_count(&self) -> usize {
+        match self {
+            FlatTargetSource::TopLevel(d) => d.instructions.len(),
+            FlatTargetSource::Sub(s) => s.instructions.len(),
+        }
+    }
+
+    fn instr_name(&self, idx: usize) -> &str {
+        match self {
+            FlatTargetSource::TopLevel(d) => &d.instructions[idx].name,
+            FlatTargetSource::Sub(s) => &s.instructions[idx].name,
+        }
+    }
+
+    /// Whether instruction `idx` matches raw value `raw`.
+    /// Top-level decoders look only at unit-0 segments. Variable-length
+    /// instructions still flat-dispatch on their first word.
+    fn matches(&self, idx: usize, raw: u64) -> bool {
+        let segments = match self {
+            FlatTargetSource::TopLevel(d) => &d.instructions[idx].segments,
+            FlatTargetSource::Sub(s) => &s.instructions[idx].segments,
+        };
+        let only_unit_zero = matches!(self, FlatTargetSource::TopLevel(_));
+
+        for seg in segments {
+            if let Segment::Fixed {
+                ranges, pattern, ..
+            } = seg
+            {
+                let mut bit_idx = 0;
+                for range in ranges {
+                    let in_unit_0 = range.unit == 0;
+                    let range_width = range.width() as usize;
+                    if only_unit_zero && !in_unit_0 {
+                        bit_idx += range_width;
+                        continue;
+                    }
+                    for i in 0..range_width {
+                        if bit_idx >= pattern.len() {
+                            break;
+                        }
+                        let hw_bit = range.start - i as u32;
+                        let bit_val = (raw >> hw_bit) & 1;
+                        match pattern[bit_idx] {
+                            Bit::Zero if bit_val != 0 => return false,
+                            Bit::One if bit_val != 1 => return false,
+                            _ => {}
+                        }
+                        bit_idx += 1;
+                    }
+                }
+            }
+        }
+        true
+    }
+}
+
+/// Build a `Vec<String>` of length `2^width`. Each entry is the resolved
+/// handler expression for that raw value. Returns ambiguity errors if any
+/// value resolves to two or more distinct handler strings.
+fn build_flat_handler_table(
+    src: &FlatTargetSource,
+    handler_for: &dyn Fn(&str) -> String,
+    invalid_handler: &str,
+    span: &Span,
+) -> Result<Vec<String>, Vec<Error>> {
+    let width = src.width();
+    let n: u64 = 1u64 << width;
+    let mut table: Vec<String> = vec![invalid_handler.to_string(); n as usize];
+    let mut errors: Vec<Error> = Vec::new();
+
+    let n_instrs = src.instruction_count();
+
+    for raw in 0..n {
+        let mut matched: Vec<usize> = Vec::new();
+        for idx in 0..n_instrs {
+            if src.matches(idx, raw) {
+                matched.push(idx);
+            }
+        }
+        if matched.is_empty() {
+            // already invalid_handler
+        } else if matched.len() == 1 {
+            table[raw as usize] = handler_for(src.instr_name(matched[0]));
+        } else {
+            let handlers: Vec<String> = matched
+                .iter()
+                .map(|i| handler_for(src.instr_name(*i)))
+                .collect();
+            let first = &handlers[0];
+            if handlers.iter().all(|h| h == first) {
+                table[raw as usize] = first.clone();
+            } else {
+                let pairs: Vec<(String, String)> = matched
+                    .iter()
+                    .zip(handlers.iter())
+                    .map(|(i, h)| (src.instr_name(*i).to_string(), h.clone()))
+                    .collect();
+                errors.push(Error::new(
+                    ErrorKind::FlatDispatchAmbiguous {
+                        raw,
+                        matches: pairs,
+                    },
+                    span.clone(),
+                ));
+            }
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(table)
+    } else {
+        Err(errors)
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_flat_lut(
+    out: &mut String,
+    src: FlatTargetSource,
+    ctx: &mut Ctx,
+    fn_name: &str,
+    ct: &str,
+    it: &str,
+    pn: &str,
+    re: &str,
+) -> Result<(), Vec<Error>> {
+    let invalid = ctx
+        .invalid_handler
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "_unimpl".to_string());
+
+    let handler_for_owned = |name: &str| ctx.handler_for(name);
+    let span = Span::new("<flat_lut>", 0, 0, 0);
+    let table = build_flat_handler_table(&src, &handler_for_owned, &invalid, &span)?;
+
+    let n = table.len();
+    writeln!(out, "pub type Handler = fn(&mut {ct}, {it});").unwrap();
+    writeln!(out).unwrap();
+    if ctx.invalid_handler.is_none() {
+        writeln!(out, "#[cold]").unwrap();
+        writeln!(out, "#[inline(never)]").unwrap();
+        writeln!(out, "fn _unimpl(_ctx: &mut {ct}, {pn}: {it}) {{").unwrap();
+        writeln!(out, "    todo!(\"unimplemented opcode {{:#010x}}\", {re})").unwrap();
+        writeln!(out, "}}").unwrap();
+        writeln!(out).unwrap();
+    }
+    writeln!(out, "static DISPATCH: [Handler; {n}] = [").unwrap();
+    for (i, entry) in table.iter().enumerate() {
+        writeln!(out, "    {entry}, // {i:#x}").unwrap();
+    }
+    writeln!(out, "];").unwrap();
+    writeln!(out).unwrap();
+    writeln!(out, "/// Dispatch via a flat lookup table.").unwrap();
+    writeln!(out, "#[inline(always)]").unwrap();
+    writeln!(out, "pub fn {fn_name}(ctx: &mut {ct}, {pn}: {it}) {{").unwrap();
+    writeln!(out, "    let key = ({re}) as usize;").unwrap();
+    writeln!(out, "    DISPATCH[key](ctx, {pn});").unwrap();
+    writeln!(out, "}}").unwrap();
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_flat_match(
+    out: &mut String,
+    src: FlatTargetSource,
+    ctx: &mut Ctx,
+    fn_name: &str,
+    ct: &str,
+    it: &str,
+    pn: &str,
+    re: &str,
+) -> Result<(), Vec<Error>> {
+    let invalid = ctx
+        .invalid_handler
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "_unimpl".to_string());
+
+    let handler_for_owned = |name: &str| ctx.handler_for(name);
+    let span = Span::new("<flat_match>", 0, 0, 0);
+    let table = build_flat_handler_table(&src, &handler_for_owned, &invalid, &span)?;
+
+    if ctx.invalid_handler.is_none() {
+        writeln!(out, "#[cold]").unwrap();
+        writeln!(out, "#[inline(never)]").unwrap();
+        writeln!(out, "fn _unimpl(_ctx: &mut {ct}, {pn}: {it}) {{").unwrap();
+        writeln!(out, "    todo!(\"unimplemented opcode {{:#010x}}\", {re})").unwrap();
+        writeln!(out, "}}").unwrap();
+        writeln!(out).unwrap();
+    }
+    writeln!(out, "/// Dispatch via a compressed match.").unwrap();
+    writeln!(out, "#[inline(always)]").unwrap();
+    writeln!(out, "pub fn {fn_name}(ctx: &mut {ct}, {pn}: {it}) {{").unwrap();
+    writeln!(out, "    match ({re}) as u64 {{").unwrap();
+
+    let mut i = 0usize;
+    let n = table.len();
+    while i < n {
+        let current = &table[i];
+        let start = i;
+        while i < n && table[i] == *current {
+            i += 1;
+        }
+        let end = i - 1;
+        let pattern = if start == end {
+            format!("{:#x}", start)
+        } else {
+            format!("{:#x}..={:#x}", start, end)
+        };
+        writeln!(out, "        {pattern} => {current}(ctx, {pn}),").unwrap();
+    }
+
+    writeln!(out, "        _ => {invalid}(ctx, {pn}),").unwrap();
+    writeln!(out, "    }}").unwrap();
+    writeln!(out, "}}").unwrap();
+    Ok(())
+}
+
+/// Generate a flat dispatch function for a sub-decoder.
+/// Uses the explicit `flat_lut` or `flat_match` strategy.
+/// Errors on raw-value ambiguity.
+#[allow(clippy::too_many_arguments)]
+pub fn generate_subdecoder_flat_dispatch(
+    sd: &ValidatedSubDecoder,
+    handler_mod: &str,
+    ctx_type: &str,
+    groups: &HashMap<String, String>,
+    instr_type: Option<&str>,
+    invalid_handler: Option<&str>,
+    strategy: crate::Dispatch,
+) -> Result<String, Vec<Error>> {
+    let snake_name = sd.name.chars().fold(String::new(), |mut acc, c| {
+        if c.is_uppercase() && !acc.is_empty() {
+            acc.push('_');
+        }
+        acc.push(c.to_ascii_lowercase());
+        acc
+    });
+    let dispatch_fn = format!("dispatch_{snake_name}");
+
+    let param_type = width_to_type(sd.width);
+    let (param_name, param_type_str, raw_expr_str) = if let Some(it) = instr_type {
+        ("instr", it.to_string(), "instr.0".to_string())
+    } else {
+        ("val", param_type.to_string(), "val".to_string())
+    };
+
+    // Build a temporary Ctx-like structure for handler resolution. We
+    // emulate Ctx::handler_for using the local `groups` map and `handler_mod`.
+    let resolve = |name: &str| -> String {
+        if let Some(group) = groups.get(name) {
+            format!("{}::{group}::<{{ {} }}>", handler_mod, op_const_name(name))
+        } else {
+            format!("{}::{}", handler_mod, name)
+        }
+    };
+    let invalid = invalid_handler
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| format!("{}::invalid", handler_mod));
+
+    let span = Span::new("<flat_subdispatch>", 0, 0, 0);
+    let table = build_flat_handler_table(&FlatTargetSource::Sub(sd), &resolve, &invalid, &span)?;
+
+    let mut out = String::new();
+
+    // OP_* constants for the sub-decoder's instructions
+    writeln!(out, "// Sub-decoder constants for {}", sd.name).unwrap();
+    for (i, instr) in sd.instructions.iter().enumerate() {
+        writeln!(out, "pub const {}: u32 = {i};", op_const_name(&instr.name)).unwrap();
+    }
+    writeln!(out).unwrap();
+
+    match strategy {
+        crate::Dispatch::FlatLut => {
+            let n = table.len();
+            writeln!(
+                out,
+                "pub type SubHandler{name} = fn(&mut {ctx_type}, {param_type_str});",
+                name = sd.name,
+            )
+            .unwrap();
+            writeln!(out).unwrap();
+            writeln!(
+                out,
+                "static DISPATCH_{up}: [SubHandler{name}; {n}] = [",
+                up = sd.name.to_uppercase(),
+                name = sd.name,
+            )
+            .unwrap();
+            for (i, entry) in table.iter().enumerate() {
+                writeln!(out, "    {entry}, // {i:#x}").unwrap();
+            }
+            writeln!(out, "];").unwrap();
+            writeln!(out).unwrap();
+            writeln!(out, "/// Dispatch a sub-decoder extension opcode.").unwrap();
+            writeln!(out, "#[inline(always)]").unwrap();
+            writeln!(
+                out,
+                "pub fn {dispatch_fn}(ctx: &mut {ctx_type}, {param_name}: {param_type_str}) {{"
+            )
+            .unwrap();
+            writeln!(
+                out,
+                "    DISPATCH_{up}[({raw_expr_str}) as usize](ctx, {param_name});",
+                up = sd.name.to_uppercase()
+            )
+            .unwrap();
+            writeln!(out, "}}").unwrap();
+        }
+        crate::Dispatch::FlatMatch => {
+            writeln!(out, "/// Dispatch a sub-decoder extension opcode.").unwrap();
+            writeln!(out, "#[inline(always)]").unwrap();
+            writeln!(
+                out,
+                "pub fn {dispatch_fn}(ctx: &mut {ctx_type}, {param_name}: {param_type_str}) {{"
+            )
+            .unwrap();
+            writeln!(out, "    match {raw_expr_str} {{").unwrap();
+
+            let mut i = 0usize;
+            let n = table.len();
+            while i < n {
+                let current = &table[i];
+                let start = i;
+                while i < n && table[i] == *current {
+                    i += 1;
+                }
+                let end = i - 1;
+                let pattern = if start == end {
+                    format!("{:#x}", start)
+                } else {
+                    format!("{:#x}..={:#x}", start, end)
+                };
+                writeln!(out, "        {pattern} => {current}(ctx, {param_name}),").unwrap();
+            }
+            writeln!(out, "        _ => {invalid}(ctx, {param_name}),").unwrap();
+            writeln!(out, "    }}").unwrap();
+            writeln!(out, "}}").unwrap();
+        }
+        _ => {
+            return Err(vec![Error::new(
+                ErrorKind::InvalidStrategy(format!("{:?}", strategy)),
+                span,
+            )]);
+        }
+    }
+
+    Ok(out)
 }

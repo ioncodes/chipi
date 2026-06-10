@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use std::fmt::Write;
 
 use crate::backend::OperandKind;
-use crate::backend::ida::IdaOptions;
 use crate::codegen_python::{self, DisplayConfig};
+use crate::config::IdaOptions;
 use crate::tree::DecodeNode;
 use crate::types::*;
 
