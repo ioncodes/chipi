@@ -110,6 +110,13 @@ pub struct LutTarget {
 
     /// Map a sub-decoder name to its handler module override.
     pub subdecoder_handler_mods: HashMap<String, String>,
+
+    /// Extra const-generic arguments appended to every handler reference in
+    /// the generated LUT. Each entry becomes its own `{ ... }`-wrapped arg
+    /// so handlers with more than one const generic can be dispatched
+    /// without per-instantiation wrapper modules. Example: `["crate::sys::GC"]`
+    /// emits `handler::<{ OP_X }, { crate::sys::GC }>`.
+    pub handler_consts: Vec<String>,
 }
 
 /// Dispatch strategy for code generation.

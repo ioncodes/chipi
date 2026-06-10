@@ -86,7 +86,7 @@ target rust {
             output "$OUT_DIR/gekko_instr.rs"
         }
 
-        handler alu<const OP> {
+        handler alu {
             addi
             ori
         }
@@ -199,7 +199,7 @@ target rust {
             output "$OUT_DIR/gekko_instr.rs"
         }
 
-        handler alu<const OP> {
+        handler alu {
             addi
             ori
         }
@@ -213,13 +213,63 @@ function under the `handlers` module path:
 - `addi` -> `crate::cpu::interpreter::addi`
 - `ori`  -> `crate::cpu::interpreter::ori`
 
-Each `handler <name><const OP> { ... }` block groups the listed
-instructions under one const-generic handler:
+Each `handler <name> { ... }` block groups the listed instructions under
+one const-generic handler taking `<const OP: u32>`:
 
 - `addi` -> `crate::cpu::interpreter::alu::<{ OP_ADDI }>`
 - `ori`  -> `crate::cpu::interpreter::alu::<{ OP_ORI }>`
 
-The `OP_*` constants are emitted into the generated dispatch file.
+The `OP_*` constants are emitted into the generated dispatch file. The user
+writes:
+
+```rust
+pub fn alu<const OP: u32>(ctx: &mut Cpu, instr: Instruction) {
+    match OP {
+        OP_ADDI => { /* ... */ }
+        OP_ORI  => { /* ... */ }
+        _ => unreachable!(),
+    }
+}
+```
+
+### Extra const-generic handler arguments
+
+`handler_const <expr>` appends one or more extra const-generic arguments to
+every handler reference in the generated LUT. Use it when handlers take
+more const generics than just `OP` and the value is constant for the whole
+binding (e.g. a `SystemId` selecting which CPU configuration this LUT is
+for):
+
+```text
+target rust {
+    dispatch Gekko {
+        output "$OUT_DIR/gekko_lut_gc.rs"
+        context crate::gamecube::GameCube
+        handlers crate::gekko::interpreter
+        handler_const crate::system::GC
+
+        handler alu { addi, ori }
+    }
+
+    dispatch Gekko {
+        output "$OUT_DIR/gekko_lut_wii.rs"
+        context crate::wii::Wii
+        handlers crate::gekko::interpreter
+        handler_const crate::system::WII
+
+        handler alu { addi, ori }
+    }
+}
+```
+
+Generates `alu::<{ OP_ADDI }, { crate::system::GC }>` for the first dispatch
+and `alu::<{ OP_ADDI }, { crate::system::WII }>` for the second. Two LUTs,
+one shared generic handler module. The directive is repeatable for handlers
+with three or more const generics; each entry becomes its own `{ ... }`-wrapped
+arg in declaration order.
+
+For ungrouped instructions the same arguments apply: `sc` becomes
+`sc::<{ crate::system::GC }>`.
 
 ### Dispatch strategies
 

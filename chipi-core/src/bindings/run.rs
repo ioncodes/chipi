@@ -239,6 +239,7 @@ fn run_lut(target: &LutTarget, base_dir: &Path, mode: RunMode) -> Result<(), Vec
         t.raw_expr.as_deref(),
         t.dispatch,
         t.invalid_handler.as_deref(),
+        &t.handler_consts,
     )?;
 
     // Sub-decoder dispatch generation
@@ -284,6 +285,7 @@ fn run_lut(target: &LutTarget, base_dir: &Path, mode: RunMode) -> Result<(), Vec
                     sd_instr_type.as_deref(),
                     sd_invalid.as_deref(),
                     strategy,
+                    &t.handler_consts,
                 )?;
                 code.push_str(&block);
             }
@@ -298,6 +300,7 @@ fn run_lut(target: &LutTarget, base_dir: &Path, mode: RunMode) -> Result<(), Vec
                         &t.ctx_type,
                         &sd_groups,
                         sd_instr_type.as_deref(),
+                        &t.handler_consts,
                     ));
                 }
             }

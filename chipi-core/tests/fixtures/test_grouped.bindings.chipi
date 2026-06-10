@@ -13,7 +13,7 @@ target rust {
         strategy fn_ptr_lut
         invalid_handler crate::cpu::interpreter::invalid
 
-        handler control<const OP> {
+        handler control {
             nop
             halt
         }

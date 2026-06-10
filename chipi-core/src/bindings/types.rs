@@ -93,6 +93,12 @@ pub struct DispatchBinding {
     pub instruction_type: Option<InstructionTypeBinding>,
     pub handler_groups: Vec<HandlerBinding>,
     pub subdispatches: Vec<DispatchBinding>,
+    /// Extra const-generic argument appended to every handler reference in
+    /// the generated LUT. Used when the user's handler signature has more
+    /// const generics than the per-instruction OP. Each entry becomes its
+    /// own `{ ... }`-wrapped argument. Example: `["crate::sys::GC"]`
+    /// produces `handler::<{ OP_X }, { crate::sys::GC }>`.
+    pub handler_consts: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -104,7 +110,6 @@ pub struct InstructionTypeBinding {
 #[derive(Debug, Clone)]
 pub struct HandlerBinding {
     pub handler_name: String,
-    pub generic_params: Vec<String>,
     pub instructions: Vec<(String, Span)>,
     pub span: Span,
 }

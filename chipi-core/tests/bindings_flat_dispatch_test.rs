@@ -46,6 +46,7 @@ fn flat_lut_for_small_decoder_produces_static_table() {
         None,
         Dispatch::FlatLut,
         Some("crate::interp::invalid"),
+        &[],
     )
     .expect("flat_lut codegen");
 
@@ -72,6 +73,7 @@ fn flat_match_compresses_invalid_ranges() {
         None,
         Dispatch::FlatMatch,
         Some("crate::interp::invalid"),
+        &[],
     )
     .expect("flat_match codegen");
 
@@ -105,6 +107,7 @@ fn flat_strategies_with_grouped_handlers() {
         None,
         Dispatch::FlatLut,
         Some("crate::interp::invalid"),
+        &[],
     )
     .expect("flat_lut codegen with groups");
 

@@ -298,6 +298,11 @@ fn lower_rust_dispatch(
         .invalid_handler
         .clone()
         .or_else(|| parent.and_then(|p| p.invalid_handler.clone()));
+    let handler_consts: Vec<String> = if !d.handler_consts.is_empty() {
+        d.handler_consts.clone()
+    } else {
+        parent.map(|p| p.handler_consts.clone()).unwrap_or_default()
+    };
 
     let mut groups: HashMap<String, Vec<String>> = HashMap::new();
     for g in &d.handler_groups {
@@ -374,6 +379,7 @@ fn lower_rust_dispatch(
         invalid_handler,
         subdecoder_invalid_handlers,
         subdecoder_handler_mods,
+        handler_consts,
     };
     items.push(LoweredItem {
         target_kind: TargetKind::Rust,

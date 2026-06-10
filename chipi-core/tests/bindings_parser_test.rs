@@ -39,7 +39,6 @@ fn parse_grouped_dispatch() {
     assert_eq!(disp.handler_groups.len(), 1);
     let g = &disp.handler_groups[0];
     assert_eq!(g.handler_name, "control");
-    assert_eq!(g.generic_params.len(), 1);
     let names: Vec<&str> = g.instructions.iter().map(|(n, _)| n.as_str()).collect();
     assert_eq!(names, vec!["nop", "halt"]);
 }

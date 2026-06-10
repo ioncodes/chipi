@@ -11,8 +11,9 @@
 //!
 //! ## Grouped handlers with const generics
 //!
-//! Multiple instructions can share a single handler via const generics.
-//! Example:
+//! Multiple instructions can share a single handler via const generics. The
+//! binding lists them under a `handler` block; chipi emits LUT entries that
+//! supply the matching `OP_*` constant as a const-generic argument.
 //!
 //! ```text
 //! // Generated LUT entry for addi (in the "alu" group):
@@ -26,6 +27,21 @@
 //!         _ => unreachable!(),
 //!     }
 //! }
+//! ```
+//!
+//! ## Extra const-generic arguments via `handler_const`
+//!
+//! When handlers carry more than one const generic (e.g. `<const OP, const SYSTEM>`)
+//! and the extra args are constant for the whole binding, set them on the
+//! dispatch with `handler_const <expr>`. Each entry becomes its own
+//! `{ ... }`-wrapped argument appended to every emitted handler reference:
+//!
+//! ```text
+//! // Binding:
+//! handler_const crate::system::GC
+//!
+//! // Generated LUT entry:
+//! crate::cpu::interpreter::alu::<{ OP_ADDI }, { crate::system::GC }>
 //! ```
 //!
 //! The compiler monomorphizes each instantiation. Runtime dispatch is one
@@ -57,6 +73,11 @@ struct Ctx<'a> {
     /// Optional handler for unmatched opcodes. Replaces the default
     /// `todo!()` panic body of `_unimpl`.
     invalid_handler: Option<&'a str>,
+    /// Extra const-generic arguments appended to every handler reference in
+    /// the generated LUT, so handlers with more than one const generic
+    /// (e.g. `<const OP, const SYSTEM>`) can be dispatched without
+    /// per-instantiation wrappers.
+    handler_consts: &'a [String],
 }
 
 impl<'a> Ctx<'a> {
@@ -80,17 +101,20 @@ impl<'a> Ctx<'a> {
     /// Return the handler expression for `instr_name` as it should appear in a
     /// static table or a direct call.
     ///
-    /// - Ungrouped: `handler_mod::instr_name`
-    /// - Grouped:   `handler_mod::group_name::<{ OP_INSTR_NAME }>`
+    /// - Ungrouped: `handler_mod::instr_name` (or `::<{ extra }, ...>` if
+    ///   `handler_consts` is non-empty).
+    /// - Grouped:   `handler_mod::group_name::<{ OP_INSTR_NAME }>` (or
+    ///   `::<{ OP_INSTR_NAME }, { extra }, ...>` if `handler_consts` is set).
     fn handler_for(&self, instr_name: &str) -> String {
+        let extra: Vec<String> = self.handler_consts.iter().map(|c| format!("{{ {c} }}")).collect();
         if let Some(group) = self.groups.get(instr_name) {
-            format!(
-                "{}::{group}::<{{ {} }}>",
-                self.handler_mod,
-                op_const_name(instr_name)
-            )
-        } else {
+            let mut args = vec![format!("{{ {} }}", op_const_name(instr_name))];
+            args.extend(extra);
+            format!("{}::{group}::<{}>", self.handler_mod, args.join(", "))
+        } else if extra.is_empty() {
             format!("{}::{}", self.handler_mod, instr_name)
+        } else {
+            format!("{}::{}::<{}>", self.handler_mod, instr_name, extra.join(", "))
         }
     }
 }
@@ -134,6 +158,7 @@ pub fn generate_lut_code(
     raw_expr: Option<&str>,
     dispatch: crate::Dispatch,
     invalid_handler: Option<&str>,
+    handler_consts: &[String],
 ) -> Result<String, Vec<Error>> {
     let instr_type = instr_type.unwrap_or_else(|| width_to_type(def.config.width));
     let raw_expr = raw_expr.unwrap_or_else(|| {
@@ -154,6 +179,7 @@ pub fn generate_lut_code(
         buf: String::new(),
         groups,
         invalid_handler,
+        handler_consts,
     };
 
     let ct = ctx_type;
@@ -546,6 +572,33 @@ fn is_primitive(t: &str) -> bool {
 /// Convert an instruction name to its `OP_*` constant name.
 ///
 /// e.g. `"addi"` -> `"OP_ADDI"`, `"ps_add."` -> `"OP_PS_ADD_DOT"`
+/// Build a handler reference in the form expected by the LUT or a direct call:
+///
+/// - Ungrouped, no extra consts: `handler_mod::instr_name`
+/// - Ungrouped, with consts:     `handler_mod::instr_name::<{ extra }, ...>`
+/// - Grouped, no extra consts:   `handler_mod::group::<{ OP_INSTR }>`
+/// - Grouped, with consts:       `handler_mod::group::<{ OP_INSTR }, { extra }, ...>`
+///
+/// `handler_consts` lets handlers carry extra const generics (e.g. a system
+/// id) without per-binding wrapper modules.
+pub fn build_handler_ref(
+    handler_mod: &str,
+    instr_name: &str,
+    groups: &HashMap<String, String>,
+    handler_consts: &[String],
+) -> String {
+    let extra: Vec<String> = handler_consts.iter().map(|c| format!("{{ {c} }}")).collect();
+    if let Some(group) = groups.get(instr_name) {
+        let mut args = vec![format!("{{ {} }}", op_const_name(instr_name))];
+        args.extend(extra);
+        format!("{}::{group}::<{}>", handler_mod, args.join(", "))
+    } else if extra.is_empty() {
+        format!("{}::{}", handler_mod, instr_name)
+    } else {
+        format!("{}::{}::<{}>", handler_mod, instr_name, extra.join(", "))
+    }
+}
+
 pub fn op_const_name(name: &str) -> String {
     let sanitised = name.to_uppercase().replace('.', "_DOT").replace('-', "_");
     format!("OP_{sanitised}")
@@ -592,6 +645,7 @@ pub fn generate_subdecoder_dispatch(
     ctx_type: &str,
     groups: &HashMap<String, String>,
     instr_type: Option<&str>,
+    handler_consts: &[String],
 ) -> String {
     let snake_name = sd.name.chars().fold(String::new(), |mut acc, c| {
         if c.is_uppercase() && !acc.is_empty() {
@@ -701,15 +755,7 @@ pub fn generate_subdecoder_dispatch(
         match current {
             Some(idx) => {
                 let instr_name = &sd.instructions[idx].name;
-                let handler = if let Some(group) = groups.get(instr_name) {
-                    format!(
-                        "{}::{group}::<{{ {} }}>",
-                        handler_mod,
-                        op_const_name(instr_name)
-                    )
-                } else {
-                    format!("{}::{}", handler_mod, instr_name)
-                };
+                let handler = build_handler_ref(handler_mod, instr_name, groups, handler_consts);
                 writeln!(out, "        {pattern} => {handler}(ctx, {param_name}),").unwrap();
             }
             None => {
@@ -1047,6 +1093,7 @@ pub fn generate_subdecoder_flat_dispatch(
     instr_type: Option<&str>,
     invalid_handler: Option<&str>,
     strategy: crate::Dispatch,
+    handler_consts: &[String],
 ) -> Result<String, Vec<Error>> {
     let snake_name = sd.name.chars().fold(String::new(), |mut acc, c| {
         if c.is_uppercase() && !acc.is_empty() {
@@ -1066,13 +1113,8 @@ pub fn generate_subdecoder_flat_dispatch(
 
     // Build a temporary Ctx-like structure for handler resolution. We
     // emulate Ctx::handler_for using the local `groups` map and `handler_mod`.
-    let resolve = |name: &str| -> String {
-        if let Some(group) = groups.get(name) {
-            format!("{}::{group}::<{{ {} }}>", handler_mod, op_const_name(name))
-        } else {
-            format!("{}::{}", handler_mod, name)
-        }
-    };
+    let resolve =
+        |name: &str| -> String { build_handler_ref(handler_mod, name, groups, handler_consts) };
     let invalid = invalid_handler
         .map(|s| s.to_string())
         .unwrap_or_else(|| format!("{}::invalid", handler_mod));

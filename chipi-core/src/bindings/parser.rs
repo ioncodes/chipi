@@ -725,6 +725,7 @@ impl<'a> Parser<'a> {
         let mut instruction_type: Option<InstructionTypeBinding> = None;
         let mut handler_groups: Vec<HandlerBinding> = Vec::new();
         let mut subdispatches: Vec<DispatchBinding> = Vec::new();
+        let mut handler_consts: Vec<String> = Vec::new();
 
         loop {
             let t = self.peek_clone()?;
@@ -768,6 +769,11 @@ impl<'a> Parser<'a> {
                             self.next()?;
                             let (s, _) = self.expect_ident()?;
                             invalid_handler = Some(s);
+                        }
+                        "handler_const" => {
+                            self.next()?;
+                            let (s, _) = self.expect_ident()?;
+                            handler_consts.push(s);
                         }
                         "instruction_type" => {
                             self.next()?;
@@ -856,6 +862,7 @@ impl<'a> Parser<'a> {
             instruction_type,
             handler_groups,
             subdispatches,
+            handler_consts,
         })
     }
 
@@ -863,65 +870,6 @@ impl<'a> Parser<'a> {
         // Consume 'handler'
         self.next()?;
         let (handler_name, span) = self.expect_ident()?;
-
-        // Optional `<const OP>` generic params
-        let mut generic_params: Vec<String> = Vec::new();
-        let next = self.peek()?;
-        if matches!(next.tok, Tok::LAngle) {
-            self.next()?;
-            loop {
-                let t = self.peek_clone()?;
-                match &t.tok {
-                    Tok::RAngle => {
-                        self.next()?;
-                        break;
-                    }
-                    Tok::Ident(_) => {
-                        // Allow chained idents like `const OP` (two tokens).
-                        // We collect them separated by spaces.
-                        let mut parts: Vec<String> = Vec::new();
-                        loop {
-                            let t = self.peek_clone()?;
-                            match &t.tok {
-                                Tok::Ident(s) => {
-                                    let s = s.clone();
-                                    self.next()?;
-                                    parts.push(s);
-                                }
-                                Tok::Comma => {
-                                    self.next()?;
-                                    break;
-                                }
-                                Tok::RAngle => break,
-                                other => {
-                                    let t = self.next()?;
-                                    return Err(Error::new(
-                                        ErrorKind::BindingsParse(format!(
-                                            "unexpected token {:?} in generic params",
-                                            other
-                                        )),
-                                        t.span,
-                                    ));
-                                }
-                            }
-                        }
-                        if !parts.is_empty() {
-                            generic_params.push(parts.join(" "));
-                        }
-                    }
-                    _ => {
-                        let t = self.next()?;
-                        return Err(Error::new(
-                            ErrorKind::BindingsParse(format!(
-                                "unexpected token {:?} in generic params",
-                                t.tok
-                            )),
-                            t.span,
-                        ));
-                    }
-                }
-            }
-        }
 
         self.expect_lbrace()?;
         let mut instructions: Vec<(String, Span)> = Vec::new();
@@ -955,7 +903,6 @@ impl<'a> Parser<'a> {
 
         Ok(HandlerBinding {
             handler_name,
-            generic_params,
             instructions,
             span,
         })
