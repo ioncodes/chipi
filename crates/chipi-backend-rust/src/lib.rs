@@ -1382,12 +1382,7 @@ fn emit_sub_fns(isa: &Isa) -> String {
                 sub_fn_name(&sd.name, oname)
             );
             for arm in &sd.arms {
-                let segs = arm
-                    .outputs
-                    .iter()
-                    .find(|(n, _)| n == oname)
-                    .map(|(_, seg)| seg.as_slice())
-                    .unwrap_or(&[]);
+                let segs = arm.output(oname).unwrap_or(&[]);
                 let _ = writeln!(s, "    if (v & {:#x}) == {:#x} {{", arm.mask, arm.val);
                 s.push_str("        let mut __s = String::new();\n");
                 emit_sub_segs(segs, &arm.fields, &mut s);
@@ -1965,7 +1960,8 @@ pub fn emit_stubs(isa: &Isa) -> String {
 /// A spec feature the enum backend does not yet model, if any. The enum decoder reads a single fixed
 /// window through `ctx`, so variable `length` windows and `prefix` scans are out of scope, as are
 /// in-template display conditionals (the rendered value would depend on the raw `word`, which the
-/// enum does not retain). Such specs get a clear `compile_error!` rather than subtly wrong output.
+/// enum does not retain). Subdecoders are simply not yet wired into the enum render path. Such specs
+/// get a clear `compile_error!` rather than subtly wrong output.
 fn enum_unsupported(isa: &Isa) -> Option<&'static str> {
     if isa.length.is_some() {
         return Some("`length` (variable-window) specs");

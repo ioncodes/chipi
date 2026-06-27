@@ -324,6 +324,16 @@ pub struct SubArm {
     pub span: Span,
 }
 
+impl SubArm {
+    /// The template segments for output `name` (every declared output is set on every arm).
+    pub fn output(&self, name: &str) -> Option<&[Seg]> {
+        self.outputs
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, segs)| segs.as_slice())
+    }
+}
+
 /// A subdecoder: decodes a bound sub-field into named strings (display only). The arms are matched
 /// most-specific-first (most fixed bits wins); the first match supplies every output.
 #[derive(Clone, Debug)]

@@ -982,12 +982,7 @@ fn sub_fns_cpp(isa: &Isa) -> String {
             );
             s.push_str("    char buf[64]; std::string __r; (void)buf; (void)v;\n");
             for arm in &sd.arms {
-                let segs = arm
-                    .outputs
-                    .iter()
-                    .find(|(n, _)| n == oname)
-                    .map(|(_, seg)| seg.as_slice())
-                    .unwrap_or(&[]);
+                let segs = arm.output(oname).unwrap_or(&[]);
                 let _ = write!(
                     s,
                     "    if ((v & {:#x}ull) == {:#x}ull) {{ ",

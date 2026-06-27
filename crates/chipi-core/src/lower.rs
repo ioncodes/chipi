@@ -597,38 +597,41 @@ fn resolve_instr(
         // references run the subdecoder. The field may be narrower than the subdecoder (the value is
         // zero-extended for the lookup), as for the GameCube DSP's 7bit extension byte.
         if let Some(sd) = subdecoders.iter().find(|s| s.name == b.ty.name.text) {
-            match canon_range(range, bit_order, window) {
-                Ok(r) => {
-                    let raw_width = r.width();
-                    if raw_width > sd.unit_bits as u16 {
-                        errs.push(Diag::error(
-                            "WidthMismatch",
-                            format!(
-                                "field `{}` is {raw_width} bits but subdecoder `{}` decodes {} bits",
-                                b.name.text, sd.name, sd.unit_bits
-                            ),
-                            b.span,
-                        ));
-                    } else {
-                        fields.push(Field {
-                            name: b.name.text.clone(),
-                            range: r,
-                            ty: FieldTy {
-                                base: BaseTy::U(raw_width),
-                                xforms: Vec::new(),
-                                disp: Disp::None,
-                                type_name: Some(sd.name.clone()),
-                                raw_width,
-                                value_width: raw_width,
-                                signed: false,
-                                subdecoder: Some(sd.name.clone()),
-                            },
-                            span: b.span,
-                        });
-                    }
+            let r = match canon_range(range, bit_order, window) {
+                Ok(r) => r,
+                Err(e) => {
+                    errs.push(e);
+                    continue;
                 }
-                Err(e) => errs.push(e),
+            };
+            let raw_width = r.width();
+            if raw_width > sd.unit_bits as u16 {
+                errs.push(Diag::error(
+                    "WidthMismatch",
+                    format!(
+                        "field `{}` is {raw_width} bits but subdecoder `{}` decodes {} bits",
+                        b.name.text, sd.name, sd.unit_bits
+                    ),
+                    b.span,
+                ));
+                continue;
             }
+            let sdn = sd.name.clone();
+            fields.push(Field {
+                name: b.name.text.clone(),
+                range: r,
+                ty: FieldTy {
+                    base: BaseTy::U(raw_width),
+                    xforms: Vec::new(),
+                    disp: Disp::None,
+                    type_name: Some(sdn.clone()),
+                    raw_width,
+                    value_width: raw_width,
+                    signed: false,
+                    subdecoder: Some(sdn),
+                },
+                span: b.span,
+            });
             continue;
         }
 
@@ -795,29 +798,33 @@ fn resolve_instr(
                     }
                 }
                 crate::render::Seg::SubField { field, output } => {
-                    match fields.iter().find(|f| &f.name == field) {
-                        Some(f) => match &f.ty.subdecoder {
-                            Some(sdn) => {
-                                let sd = subdecoders.iter().find(|s| &s.name == sdn);
-                                if !sd.is_some_and(|s| s.outputs.iter().any(|o| o == output)) {
-                                    errs.push(Diag::error(
-                                        "UnknownName",
-                                        format!("`{field}.{output}`: subdecoder `{sdn}` has no output `{output}`"),
-                                        arm.template.span,
-                                    ));
-                                }
-                            }
-                            None => errs.push(Diag::error(
-                                "UnknownName",
-                                format!("`{field}.{output}`: field `{field}` is not a subdecoder field"),
-                                arm.template.span,
-                            )),
-                        },
-                        None => errs.push(Diag::error(
+                    let Some(f) = fields.iter().find(|f| &f.name == field) else {
+                        errs.push(Diag::error(
                             "UnknownName",
                             format!("display references `{{{field}.{output}}}`, but `{field}` is not a bound field"),
                             arm.template.span,
-                        )),
+                        ));
+                        continue;
+                    };
+                    let Some(sdn) = &f.ty.subdecoder else {
+                        errs.push(Diag::error(
+                            "UnknownName",
+                            format!(
+                                "`{field}.{output}`: field `{field}` is not a subdecoder field"
+                            ),
+                            arm.template.span,
+                        ));
+                        continue;
+                    };
+                    let sd = subdecoders.iter().find(|s| &s.name == sdn);
+                    if !sd.is_some_and(|s| s.outputs.iter().any(|o| o == output)) {
+                        errs.push(Diag::error(
+                            "UnknownName",
+                            format!(
+                                "`{field}.{output}`: subdecoder `{sdn}` has no output `{output}`"
+                            ),
+                            arm.template.span,
+                        ));
                     }
                 }
                 crate::render::Seg::Lit(_) | crate::render::Seg::Cond { .. } => {}

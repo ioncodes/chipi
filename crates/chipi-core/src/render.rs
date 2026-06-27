@@ -248,6 +248,16 @@ fn placeholder(body: &str, at: Span) -> Result<(String, FmtSpec), Diag> {
     Ok((name.to_string(), fmt))
 }
 
+/// Render `value` under a `dec`/`hex`/`signed_hex` hint (shared by a type's `Disp::Hint` and a
+/// `names { ... }` table's numeric default).
+fn render_hint(value: i128, ty: &FieldTy, hint: DispHint) -> String {
+    match hint {
+        DispHint::Hex => hex(value, ty.signed, ty.value_width, true, 0),
+        DispHint::SignedHex => signed_hex(value),
+        DispHint::Dec => dec(value, ty.signed),
+    }
+}
+
 /// Render one field value against its type's display spec and a placeholder format.
 pub fn render_field(value: i128, ty: &FieldTy, fmt: &FmtSpec) -> String {
     if fmt.hex {
@@ -258,16 +268,12 @@ pub fn render_field(value: i128, ty: &FieldTy, fmt: &FmtSpec) -> String {
     }
     match &ty.disp {
         Disp::Pattern(p) => p.replace("{}", &dec(value, ty.signed)),
-        Disp::Hint(DispHint::Hex) => hex(value, ty.signed, ty.value_width, true, 0),
-        Disp::Hint(DispHint::SignedHex) => signed_hex(value),
-        Disp::Hint(DispHint::Dec) => dec(value, ty.signed),
+        Disp::Hint(h) => render_hint(value, ty, *h),
         Disp::Names(t) => match t.lookup(value as u64) {
             Some(s) => s.to_string(),
             None => match &t.default {
                 NameDefault::Str(s) => s.clone(),
-                NameDefault::Hint(DispHint::Hex) => hex(value, ty.signed, ty.value_width, true, 0),
-                NameDefault::Hint(DispHint::SignedHex) => signed_hex(value),
-                NameDefault::Hint(DispHint::Dec) => dec(value, ty.signed),
+                NameDefault::Hint(h) => render_hint(value, ty, *h),
             },
         },
         Disp::None => {

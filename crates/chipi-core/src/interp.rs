@@ -406,10 +406,12 @@ fn render_sub(
     let Some(arm) = sd.arm_for(value) else {
         return String::new();
     };
-    let Some((_, segs)) = arm.outputs.iter().find(|(n, _)| n == output) else {
+    let Some(segs) = arm.output(output) else {
         return String::new();
     };
 
+    // The sub-fields feed `render_arm` only; their `.rendered` is never read (subdecoder outputs are
+    // `Lit`/`Field` only), so leave it empty rather than rendering it twice.
     let sub_fields: Vec<FieldValue> = arm
         .fields
         .iter()
@@ -421,7 +423,7 @@ fn render_sub(
                 range: f.range,
                 raw,
                 value: v,
-                rendered: render::render_field(v, &f.ty, &FmtSpec::default()),
+                rendered: String::new(),
                 ty: f.ty.clone(),
             }
         })

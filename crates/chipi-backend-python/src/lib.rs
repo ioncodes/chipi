@@ -899,12 +899,7 @@ fn sub_fns_py(isa: &Isa) -> String {
         for oname in &sd.outputs {
             let _ = writeln!(s, "def {}(v):", sub_fn_name_py(&sd.name, oname));
             for arm in &sd.arms {
-                let segs = arm
-                    .outputs
-                    .iter()
-                    .find(|(n, _)| n == oname)
-                    .map(|(_, seg)| seg.as_slice())
-                    .unwrap_or(&[]);
+                let segs = arm.output(oname).unwrap_or(&[]);
                 let _ = writeln!(
                     s,
                     "    if (v & {:#x}) == {:#x}: return {}",
