@@ -1,3 +1,32 @@
 [workspace]
-members = ["chipi-core", "chipi-cli", "chipi-build"]
-resolver = "3"
+resolver = "2"
+members = [
+    "crates/chipi-syntax",
+    "crates/chipi-core",
+    "crates/chipi-backend-rust",
+    "crates/chipi-backend-cpp",
+    "crates/chipi-backend-python",
+    "crates/chipi-macros",
+    "crates/chipi-cli",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.74"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ioncodes/chipi"
+description = "A declarative instruction-set decoder, dispatcher, disassembler and encoder generator."
+
+[workspace.dependencies]
+chipi-syntax = { path = "crates/chipi-syntax", version = "1.0.0" }
+chipi-core = { path = "crates/chipi-core", version = "1.0.0" }
+chipi-backend-rust = { path = "crates/chipi-backend-rust", version = "1.0.0" }
+chipi-backend-cpp = { path = "crates/chipi-backend-cpp", version = "1.0.0" }
+chipi-backend-python = { path = "crates/chipi-backend-python", version = "1.0.0" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+lto = "thin"

@@ -1,0 +1,29 @@
+# RISC-V RV32I branches: exercises the `assemble` bit-scatter computed operand.
+# The B-type immediate is scattered across the word; `assemble` gathers it declaratively and the
+# encoder inverts the same map for free. (RISC-V's compressed 16bit fetch windows and length
+# prefixes are not modeled here; this models the 32bit base encoding.)
+
+decoder Rv32 {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [6:0]
+selector f3 [14:12]
+
+operand greg = u5 { display("x{}") }
+
+# The B-type immediate, declared once as a reusable operand. A no-range binding (`off:bimm`) makes it
+# a computed operand, so the scatter map and its encoder inverse are shared by every branch instead
+# of being repeated per instruction.
+operand bimm = i13 assemble 13 {
+    [12]   = word[31]
+    [10:5] = word[30:25]
+    [4:1]  = word[11:8]
+    [11]   = word[7]
+    [0]    = 0
+} sign_extend
+
+beq op=0b1100011 f3=0b000 rs1:greg[19:15] rs2:greg[24:20] off:bimm | "beq {rs1}, {rs2}, {off}"
+bne op=0b1100011 f3=0b001 rs1:greg[19:15] rs2:greg[24:20] off:bimm | "bne {rs1}, {rs2}, {off}"

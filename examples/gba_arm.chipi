@@ -1,0 +1,28 @@
+# GBA ARM7TDMI: ARM (A32) state, a representative subset.
+# 32bit fixed words. Exercises a 3bit `class` primary and a residual `dpop` table, plus a direct
+# branch leaf. THUMB state and the `T` mode selector are out of scope; the rotated modified-immediate
+# (8bit value ror 2*rot) needs a `fn` and is not modeled here. This spec exposes the raw 12bit field.
+
+decoder Arm {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+selector class [27:25]
+selector dpop  [24:21]
+
+operand gpr   = u4 { display("r{}") }
+type    imm12 = u32 { zero_extend(12), display(dec) }
+type    boff  = i32 { sign_extend(24), display(signed_hex) }
+
+# data-processing, immediate operand form (I = 1, class = 0b001) selects the `dpop` residual table
+and_imm class=0b001 dpop=0b0000 cond:u4[31:28] s:u1[20] rn:gpr[19:16] rd:gpr[15:12] imm:imm12[11:0] | "and {rd}, {rn}, #{imm}"
+sub_imm class=0b001 dpop=0b0010 cond:u4[31:28] s:u1[20] rn:gpr[19:16] rd:gpr[15:12] imm:imm12[11:0] | "sub {rd}, {rn}, #{imm}"
+add_imm class=0b001 dpop=0b0100 cond:u4[31:28] s:u1[20] rn:gpr[19:16] rd:gpr[15:12] imm:imm12[11:0] | "add {rd}, {rn}, #{imm}"
+cmp_imm class=0b001 dpop=0b1010 cond:u4[31:28] s:u1[20] rn:gpr[19:16] rd:gpr[15:12] imm:imm12[11:0] | "cmp {rn}, #{imm}"
+mov_imm class=0b001 dpop=0b1101 cond:u4[31:28] s:u1[20] rn:gpr[19:16] rd:gpr[15:12] imm:imm12[11:0] | "mov {rd}, #{imm}"
+
+# branch (class = 0b101), a direct leaf. The L bit (B vs BL) is decoded as `l`; a `{l ? l :}`
+# conditional suffix in the template needs a computed operand, so this spec just shows the offset.
+b class=0b101 cond:u4[31:28] l:u1[24] off:boff[23:0] | "b {off}"

@@ -1,0 +1,31 @@
+# regression fixture: exercises the grammar's token classes.
+decoder Sample {
+    width = 32
+    bit_order = msb0
+    endian = big
+    mode m: bool = 1
+    context { flag:u1 = 0 }
+}
+
+selector op    [0:5]
+selector funct [22:30]
+
+operand greg = u5  { display("r{}") }
+type    simm = i32 { sign_extend(16), display(signed_hex) }
+
+form X {
+    rd:greg[6:10]
+    ra:greg[11:15]
+}
+
+fn helper(n:u1, imms:u6) -> u64 {
+    let len = bit_width(concat(n, ~imms))
+    return ones(len) & 0xFF
+}
+
+length =
+  | word[1:0] != 0b11 : 16
+  | else              : 32
+
+add op=0 funct=266 uses X when helper(0, 1) | "add{m?.} {rd}, {ra}"
+ori op=0b001101 rt:greg[16:20] imm:simm[16:31] = assemble 16 { [15:0] = word[16:31] } sign_extend | "ori {rt}, {imm}"

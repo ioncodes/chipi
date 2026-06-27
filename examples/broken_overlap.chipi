@@ -1,0 +1,16 @@
+# Negative fixture: an `op` constraint that overlaps a bound field.
+# The field-overlap validation pass rejects this with a span-pointing error
+# (error code `FieldOverlap`). Used by the validation test suite.
+
+decoder Broken {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [31:26]
+
+operand greg = u5 { display("r{}") }
+
+# `weird` is bound at [30:26], overlapping the `op` constraint at [31:26] (bits 26..30).
+bad op=0 weird:greg[30:26] rt:greg[20:16] | "bad {weird}, {rt}"

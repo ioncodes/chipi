@@ -1,0 +1,29 @@
+decoder Mips {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+selector op    [31:26]
+selector funct [5:0]
+
+operand greg = u5 { display("$r{}") }
+type simm16  = i32 { sign_extend(16), display(signed_hex) }
+type jtarget = u32 { shift_left(2), zero_extend(28) }   # PC-region OR is semantics, not decode
+
+# SPECIAL (op = 0) selects the funct residual table
+add  op=0 funct=0b100000 rd:greg[15:11] rs:greg[25:21] rt:greg[20:16] | "add {rd}, {rs}, {rt}"
+addu op=0 funct=0b100001 rd:greg[15:11] rs:greg[25:21] rt:greg[20:16] | "addu {rd}, {rs}, {rt}"
+or   op=0 funct=0b100101 rd:greg[15:11] rs:greg[25:21] rt:greg[20:16] | "or {rd}, {rs}, {rt}"
+sll  op=0 funct=0b000000 rd:greg[15:11] rt:greg[20:16] sa:u5[10:6]    | "sll {rd}, {rt}, {sa}"
+jr   op=0 funct=0b001000 rs:greg[25:21]                               | "jr {rs}"
+
+# I-type
+addiu op=0b001001 rt:greg[20:16] rs:greg[25:21] imm:simm16[15:0] | "addiu {rt}, {rs}, {imm}"
+lw    op=0b100011 rt:greg[20:16] rs:greg[25:21] off:simm16[15:0] | "lw {rt}, {off}({rs})"
+sw    op=0b101011 rt:greg[20:16] rs:greg[25:21] off:simm16[15:0] | "sw {rt}, {off}({rs})"
+beq   op=0b000100 rs:greg[25:21] rt:greg[20:16] off:simm16[15:0] | "beq {rs}, {rt}, {off}"
+
+# J-type
+j   op=0b000010 target:jtarget[25:0] | "j {target}"
+jal op=0b000011 target:jtarget[25:0] | "jal {target}"

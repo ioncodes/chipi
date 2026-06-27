@@ -1,0 +1,62 @@
+{
+  "decoder": {
+    "prefix": "decoder",
+    "body": [
+      "decoder ${1:Name} {",
+      "    width = ${2:32}",
+      "    bit_order = ${3|lsb0,msb0|}",
+      "    endian = ${4|little,big|}",
+      "}"
+    ],
+    "description": "A decoder header block."
+  },
+  "selector": {
+    "prefix": "selector",
+    "body": "selector ${1:name} [${2:hi}:${3:lo}]",
+    "description": "A named bit-slice selector."
+  },
+  "operand": {
+    "prefix": "operand",
+    "body": "operand ${1:name} = ${2:u5} { display(\"${3:\\$r{}}\") }",
+    "description": "An operand type with a display pattern."
+  },
+  "type": {
+    "prefix": "type",
+    "body": "type ${1:name} = ${2:i32} { sign_extend(${3:16}), display(signed_hex) }",
+    "description": "A value type with transforms and a display hint."
+  },
+  "instruction": {
+    "prefix": "instr",
+    "body": "${1:mnemonic} ${2:op}=${3:0} ${4:rd}:${5:greg}[${6:hi}:${7:lo}] | \"${1:mnemonic} {${4:rd}}\"",
+    "description": "An instruction leaf with a display line."
+  },
+  "fn": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:name}(${2:p}:${3:u6}) -> ${4:u64} {",
+      "    let ${5:x} = ${6:p}",
+      "    return ${5:x}",
+      "}"
+    ],
+    "description": "A bounded pure function."
+  },
+  "length": {
+    "prefix": "length",
+    "body": [
+      "length =",
+      "  | ${1:word[1:0] != 0b11} : ${2:16}",
+      "  | else                  : ${3:32}"
+    ],
+    "description": "An embedded length expression."
+  },
+  "prefix": {
+    "prefix": "prefix",
+    "body": [
+      "prefix ${1:scan} {",
+      "    ${2:0x66}       => ${3:flag} = 1",
+      "    _          => done",
+      "}"
+    ],
+    "description": "A prefix scan."
+  }
+}

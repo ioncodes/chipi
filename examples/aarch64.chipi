@@ -1,0 +1,34 @@
+# AArch64 logical-immediate decode: portable `fn` plus builtins.
+# The bitmask immediate is rebuilt from (N, immr, imms) by the pure function
+# `arm_bitmask`, following the Arm ARM. (32bit fixed; operand width via `sf` and the guard
+# `valid_bitmask` over the reserved encodings are not modeled here; this decodes the immediate.)
+
+decoder A64 {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [23:30]
+
+operand gpr = u5 { display("x{}") }
+
+fn valid_bitmask(n:u1, imms:u6) -> bool {
+    let len = bit_width(concat(n, ~imms))                 # 0 means reserved (len < 1)
+    return len >= 1 && ((imms & ones(len - 1)) != ones(len - 1))
+}
+
+fn arm_bitmask(n:u1, immr:u6, imms:u6) -> u64 {
+    let len = bit_width(concat(n, ~imms)) - 1
+    let esize = 1 << len
+    let levels = esize - 1
+    let s = imms & levels
+    let r = immr & levels
+    let welem = ones(s + 1)
+    return replicate(rotate_right(welem, r, esize), esize, 64)
+}
+
+and_imm op=0b00100100 sf:u1[31] n:u1[22] immr:u6[16:21] imms:u6[10:15] rn:gpr[5:9] rd:gpr[0:4]
+        when valid_bitmask(n, imms)
+        imm:u64 = arm_bitmask(n, immr, imms)
+        | "and {rd}, {rn}, #{imm:#x}"

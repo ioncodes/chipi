@@ -1,0 +1,11 @@
+[package]
+name = "chipi-syntax"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Lexer, recursive-descent parser, AST and diagnostics for the chipi instruction-set DSL."
+
+[lints]
+workspace = true

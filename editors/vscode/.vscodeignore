@@ -1,0 +1,5 @@
+.gitignore
+.vscodeignore
+test/**
+node_modules/**
+**/*.vsix

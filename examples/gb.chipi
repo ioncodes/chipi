@@ -1,0 +1,33 @@
+# Game Boy (Sharp SM83 / LR35902): single-byte opcode page, a representative subset.
+# 8bit unit, 256-entry dense primary table over the whole opcode byte. Demonstrates
+# most-specific-wins: HALT (0x76) is a specific leaf inside the general LD r,r' (0b01dddsss) block.
+# The CB-prefixed page and multi-byte immediate ops (variable length) are not modeled here.
+
+decoder Gb {
+    width = 8
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [0:7]
+
+# Register index 0..7 = B,C,D,E,H,L,(HL),A. A proper name `map` is out of scope; this spec shows the index.
+operand reg = u3 { display("r{}") }
+
+nop  op=0x00 | "nop"
+halt op=0x76 | "halt"
+
+# LD r, r' = 0b01dddsss (the 0x76 slot is HALT, resolved by specificity)
+ld [7:6]=0b01 dst:reg[5:3] src:reg[2:0] | "ld {dst}, {src}"
+
+# 8bit ALU A,r forms = 0b10ooosss
+add [7:3]=0b10000 src:reg[2:0] | "add a, {src}"
+sub [7:3]=0b10010 src:reg[2:0] | "sub {src}"
+and [7:3]=0b10100 src:reg[2:0] | "and {src}"
+xor [7:3]=0b10101 src:reg[2:0] | "xor {src}"
+or  [7:3]=0b10110 src:reg[2:0] | "or {src}"
+cp  [7:3]=0b10111 src:reg[2:0] | "cp {src}"
+
+# INC/DEC r = 0b00ddd10x
+inc [7:6]=0b00 [2:0]=0b100 dst:reg[5:3] | "inc {dst}"
+dec [7:6]=0b00 [2:0]=0b101 dst:reg[5:3] | "dec {dst}"

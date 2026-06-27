@@ -1,0 +1,82 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "chipi",
+  "scopeName": "source.chipi",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#string" },
+    { "include": "#declaration" },
+    { "include": "#keyword" },
+    { "include": "#constant" },
+    { "include": "#builtin" },
+    { "include": "#type" },
+    { "include": "#number" },
+    { "include": "#operator" },
+    { "include": "#binding" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "#.*$",
+      "name": "comment.line.number-sign.chipi"
+    },
+    "string": {
+      "name": "string.quoted.double.chipi",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "match": "\\\\[\\{\\}\\?:\\\\\"]",
+          "name": "constant.character.escape.chipi"
+        },
+        {
+          "name": "meta.template.placeholder.chipi",
+          "begin": "\\{",
+          "end": "\\}",
+          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.chipi" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.template.end.chipi" } },
+          "patterns": [
+            { "match": "[?:]", "name": "keyword.operator.template.chipi" },
+            { "match": "[A-Za-z_][A-Za-z0-9_]*", "name": "variable.other.template.chipi" },
+            { "match": "[0-9]+", "name": "constant.numeric.chipi" }
+          ]
+        }
+      ]
+    },
+    "declaration": {
+      "match": "\\b(decoder|selector|operand|type|form|fn|length|prefix|dispatch)\\b",
+      "name": "keyword.declaration.chipi"
+    },
+    "keyword": {
+      "match": "\\b(mode|context|uses|when|let|return|assemble|finish|done|else)\\b",
+      "name": "keyword.control.chipi"
+    },
+    "constant": {
+      "match": "\\b(lsb0|msb0|big|little)\\b",
+      "name": "constant.language.chipi"
+    },
+    "builtin": {
+      "match": "\\b(concat|sign_extend|zero_extend|ones|replicate|rotate_left|rotate_right|bit_width|clz|ctz|popcount|min|max|mask_from_range|fetch|display|shift_left|shift_right|hex|signed_hex|dec)\\b",
+      "name": "support.function.builtin.chipi"
+    },
+    "type": {
+      "match": "\\b([ui][0-9]+|bool|enum)\\b",
+      "name": "storage.type.chipi"
+    },
+    "number": {
+      "match": "\\b(0[xX][0-9a-fA-F_]+|0[bB][01_]+|[0-9][0-9_]*)\\b",
+      "name": "constant.numeric.chipi"
+    },
+    "operator": {
+      "match": "=>|->|\\.\\.|==|!=|<=|>=|<<|>>|&&|\\|\\||[=|&^~?:+\\-*/%<>]",
+      "name": "keyword.operator.chipi"
+    },
+    "binding": {
+      "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(:)\\s*([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "variable.parameter.chipi" },
+        "2": { "name": "punctuation.separator.chipi" },
+        "3": { "name": "storage.type.chipi" }
+      }
+    }
+  }
+}

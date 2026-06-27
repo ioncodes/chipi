@@ -1,0 +1,33 @@
+# x86-64 legacy + REX prefix scan: prefixes set decode context.
+#
+# A representative non-VEX slice: the legacy operand-size override (0x66) and the REX prefix block
+# (0x40..0x4F) set decode-local `context`, then a one-byte opcode is classified normally. Exercises
+# all three prefix terminators: Continue (0x66 keeps scanning), Finish (REX consumes and stops),
+# and Done (`_` stops without consuming, the byte is the opcode), plus per-byte bit reads (`byte[3]`).
+#
+# Decode with the byte-stream path: chipi_core::eval::decode_stream(prog, &[0x66, 0x48, 0x90]).
+
+decoder X86 {
+    width = 8
+    bit_order = lsb0
+    endian = little
+    context {
+        op_ovr:u1 = 0     # 0x66 operand-size override seen
+        rex_w:u1  = 0     # REX.W (64bit operand)
+        rex_r:u1  = 0     # REX.R (ModR/M reg extension)
+        rex_b:u1  = 0     # REX.B (ModR/M r/m extension)
+    }
+}
+
+prefix scan {
+    0x66       => op_ovr = 1                                   # legacy prefix: consume, keep scanning
+    0x40..0x4F => { rex_w = byte[3] rex_r = byte[2] rex_b = byte[0] finish }   # REX: consume, stop
+    _          => done                                        # non-prefix byte: this is the opcode
+}
+
+selector op [0:7]
+
+nop  op=0x90 | "nop"
+ret  op=0xC3 | "ret"
+hlt  op=0xF4 | "hlt"
+push op=0x50 | "push rax"

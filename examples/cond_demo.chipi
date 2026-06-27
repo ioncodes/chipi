@@ -1,0 +1,18 @@
+# In-template conditionals: the PowerPC-style suffix case. `{flag?suffix}` and the full
+# `{cond ? then : else}` form collapse the `.`(Rc) / `o`(OE) mnemonic cross-product into one
+# template, instead of writing four display arms. Branches are sub-templates (may contain `{field}`).
+
+decoder Cond {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [28:31]
+
+operand greg = u4 { display("r{}") }
+
+add op=0 rc:u1[0] oe:u1[10] rd:greg[20:23] ra:greg[16:19] rb:greg[12:15]
+    | "add{oe?o}{rc?.} {rd}, {ra}, {rb}"
+# `mov` uses the full ternary with a comparison and a nested {field} in a branch.
+mov op=1 s:u1[0] rd:greg[20:23] | "mov{s == 1 ?.{rd}:} {rd}"

@@ -1,0 +1,37 @@
+# GameCube/Wii "Gekko" (PowerPC 750CL), a representative subset.
+# Exercises msb0 bit numbering, a `form` and a correctly-placed residual `xo` table.
+#
+# For XO-form the extended opcode is 9 bits at msb0 [22:30]; bit 21 is OE (a separate field).
+# Using [21:30] here would overlap OE and the field-overlap pass would (correctly) reject it
+# (see examples/broken_gekko_xo.chipi). X-form's 10bit xo at [21:30] is the more general case.
+
+decoder Gekko {
+    width = 32
+    bit_order = msb0
+    endian = big
+}
+
+selector primary [0:5]
+selector xo      [22:30]   # XO-form extended opcode (9 bits), NOT [21:30]
+
+operand gpr = u5 { display("r{}") }
+type simm16 = i32 { sign_extend(16), display(signed_hex) }
+
+form XO {
+    rd:gpr[6:10]
+    ra:gpr[11:15]
+    rb:gpr[16:20]
+    oe:u1[21]
+    rc:u1[31]
+}
+
+# XO-form integer add family (primary = 31) selects the residual matcher over `xo`
+add  primary=31 xo=266 uses XO | "add {rd}, {ra}, {rb}"
+addc primary=31 xo=10  uses XO | "addc {rd}, {ra}, {rb}"
+adde primary=31 xo=138 uses XO | "adde {rd}, {ra}, {rb}"
+subf primary=31 xo=40  uses XO | "subf {rd}, {ra}, {rb}"
+
+# D-form add immediate (primary = 14): a direct leaf, with a conditional `li` alias
+addi primary=14 rd:gpr[6:10] ra:gpr[11:15] simm:simm16[16:31]
+    | ra == 0 : "li {rd}, {simm}"
+    | "addi {rd}, {ra}, {simm}"

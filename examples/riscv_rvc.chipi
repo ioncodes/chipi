@@ -1,0 +1,27 @@
+# RISC-V with the compressed (C) extension: exercises the embedded `length` expression.
+# The first parcel's low two bits pick the instruction length: 0b11 means a 32bit base instruction,
+# anything else a 16bit compressed instruction. The decode window (in bits) is selected by
+# `length` before deeper matching; the handle is sized to the widest arm (32 bits).
+
+decoder Rv32c {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+length =
+  | word[1:0] != 0b11 : 16
+  | else              : 32
+
+selector op [6:0]
+
+operand greg   = u5  { display("x{}") }
+operand simm12 = i12 { display("{}") }
+
+# C.NOP = 0x0001, a 16bit compressed instruction (low two bits = 0b01).
+c_nop op=0b0000001 [15:7]=0
+    | "c.nop"
+
+# ADDI: the 32bit base form (low two bits = 0b11).
+addi op=0b0010011 [14:12]=0b000 rd:greg[11:7] rs1:greg[19:15] imm:simm12[31:20]
+    | "addi {rd}, {rs1}, {imm}"

@@ -1,0 +1,17 @@
+# Cross-product demo: opcode 0xA9 decodes differently per the host `m` mode (8 vs 16bit
+# accumulator), like the 65816. chipi builds one decode table per mode combination
+# and the host picks it via select_table(m).
+
+decoder MX {
+    width = 8
+    bit_order = lsb0
+    endian = little
+    mode m: bool = 1
+}
+
+selector op [0:7]
+
+lda8  m=1 op=0xA9 | "lda #imm8"
+lda16 m=0 op=0xA9 | "lda #imm16"
+nop   op=0xEA | "nop"
+tax   op=0xAA | "tax"

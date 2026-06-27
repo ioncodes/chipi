@@ -1,0 +1,22 @@
+[package]
+name = "chipi-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The `chipi` command-line interface."
+
+[[bin]]
+name = "chipi"
+path = "src/main.rs"
+
+[dependencies]
+chipi-syntax.workspace = true
+chipi-core.workspace = true
+chipi-backend-rust.workspace = true
+chipi-backend-cpp.workspace = true
+chipi-backend-python.workspace = true
+
+[lints]
+workspace = true

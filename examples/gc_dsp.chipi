@@ -1,0 +1,23 @@
+# GameCube/Wii DSP (Macronix "GC-DSP"): single-word ops, a representative subset.
+# 16bit fixed instruction words, msb0. Exercises a second dense+residual ISA at a non-32bit
+# width. The control group (op6 = 0) is a residual table over the low 10 bits.
+# Two-word ops (LRI, LR, ADDI, each followed by a 16bit immediate) and packed parallel-move
+# extension opcodes are variable-length and are not modeled here.
+
+decoder GcDsp {
+    width = 16
+    bit_order = msb0
+    endian = big
+}
+
+selector op6 [0:5]
+
+operand reg = u5 { display("$r{}") }
+
+# control group (op6 = 0) selects the residual matcher over the low 10 bits
+nop  [0:5]=0 [6:15]=0x000 | "nop"
+halt [0:5]=0 [6:15]=0x021 | "halt"
+ret  [0:5]=0 [6:15]=0x2df | "ret"
+
+# move register to register (op6 = 7): src at bits[9:5], dst at bits[4:0] (numeric)
+mrr [0:5]=0b000111 sreg:reg[6:10] dreg:reg[11:15] | "mrr {dreg}, {sreg}"
