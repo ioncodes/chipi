@@ -204,38 +204,39 @@ fn placeholder(body: &str, at: Span) -> Result<(String, FmtSpec), Diag> {
         ));
     }
     let mut fmt = FmtSpec::default();
-    match spec {
-        Some("sym") => {
-            fmt.sym = true;
-            return Ok((name.to_string(), fmt));
-        }
-        Some("rel") => {
-            fmt.rel = true;
-            return Ok((name.to_string(), fmt));
-        }
-        Some(spec) => {
-            for ch in spec.chars() {
-                match ch {
-                    '#' => fmt.alt = true,
-                    'x' | 'X' => fmt.hex = true,
-                    'd' => fmt.dec = true,
-                    '0'..='9' => {
-                        fmt.zero_pad = fmt
-                            .zero_pad
-                            .saturating_mul(10)
-                            .saturating_add(ch as usize - '0' as usize);
-                    }
-                    _ => {
-                        return Err(Diag::error(
-                            "BadDisplayTemplate",
-                            format!("unsupported format spec `{spec}` in display template"),
-                            at,
-                        ))
+    // The spec is a `:`-separated list of parts. `sym`/`rel` are flags that may be combined with a
+    // hex/dec/zero-pad part to control the fallback when no symbol/target resolves, e.g.
+    // `{addr:04x:sym}` resolves a symbol or otherwise renders a 4-digit hex.
+    if let Some(spec) = spec {
+        for part in spec.split(':').map(str::trim) {
+            match part {
+                "" => {}
+                "sym" => fmt.sym = true,
+                "rel" => fmt.rel = true,
+                part => {
+                    for ch in part.chars() {
+                        match ch {
+                            '#' => fmt.alt = true,
+                            'x' | 'X' => fmt.hex = true,
+                            'd' => fmt.dec = true,
+                            '0'..='9' => {
+                                fmt.zero_pad = fmt
+                                    .zero_pad
+                                    .saturating_mul(10)
+                                    .saturating_add(ch as usize - '0' as usize);
+                            }
+                            _ => {
+                                return Err(Diag::error(
+                                    "BadDisplayTemplate",
+                                    format!("unsupported format spec `{part}` in display template"),
+                                    at,
+                                ))
+                            }
+                        }
                     }
                 }
             }
         }
-        None => {}
     }
 
     if fmt.zero_pad > MAX_ZERO_PAD {
