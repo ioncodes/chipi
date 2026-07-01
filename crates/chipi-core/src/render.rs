@@ -203,13 +203,14 @@ fn placeholder(body: &str, at: Span) -> Result<(String, FmtSpec), Diag> {
             at,
         ));
     }
-    // A spec is one or more `:`-separated parts. `sym`/`rel` pick address resolution and may be
-    // combined with a width/base part that renders the fallback when no symbol is known, e.g.
-    // `06x:sym` prints the symbol if the context has one, otherwise a 6-digit hex value.
     let mut fmt = FmtSpec::default();
+    // The spec is a `:`-separated list of parts. `sym`/`rel` are flags that may be combined with a
+    // hex/dec/zero-pad part to control the fallback when no symbol/target resolves, e.g.
+    // `{addr:04x:sym}` resolves a symbol or otherwise renders a 4-digit hex.
     if let Some(spec) = spec {
-        for part in spec.split(':') {
-            match part.trim() {
+        for part in spec.split(':').map(str::trim) {
+            match part {
+                "" => {}
                 "sym" => fmt.sym = true,
                 "rel" => fmt.rel = true,
                 part => {
