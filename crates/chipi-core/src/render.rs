@@ -203,39 +203,39 @@ fn placeholder(body: &str, at: Span) -> Result<(String, FmtSpec), Diag> {
             at,
         ));
     }
+    // A spec is one or more `:`-separated parts. `sym`/`rel` pick address resolution and may be
+    // combined with a width/base part that renders the fallback when no symbol is known, e.g.
+    // `06x:sym` prints the symbol if the context has one, otherwise a 6-digit hex value.
     let mut fmt = FmtSpec::default();
-    match spec {
-        Some("sym") => {
-            fmt.sym = true;
-            return Ok((name.to_string(), fmt));
-        }
-        Some("rel") => {
-            fmt.rel = true;
-            return Ok((name.to_string(), fmt));
-        }
-        Some(spec) => {
-            for ch in spec.chars() {
-                match ch {
-                    '#' => fmt.alt = true,
-                    'x' | 'X' => fmt.hex = true,
-                    'd' => fmt.dec = true,
-                    '0'..='9' => {
-                        fmt.zero_pad = fmt
-                            .zero_pad
-                            .saturating_mul(10)
-                            .saturating_add(ch as usize - '0' as usize);
-                    }
-                    _ => {
-                        return Err(Diag::error(
-                            "BadDisplayTemplate",
-                            format!("unsupported format spec `{spec}` in display template"),
-                            at,
-                        ))
+    if let Some(spec) = spec {
+        for part in spec.split(':') {
+            match part.trim() {
+                "sym" => fmt.sym = true,
+                "rel" => fmt.rel = true,
+                part => {
+                    for ch in part.chars() {
+                        match ch {
+                            '#' => fmt.alt = true,
+                            'x' | 'X' => fmt.hex = true,
+                            'd' => fmt.dec = true,
+                            '0'..='9' => {
+                                fmt.zero_pad = fmt
+                                    .zero_pad
+                                    .saturating_mul(10)
+                                    .saturating_add(ch as usize - '0' as usize);
+                            }
+                            _ => {
+                                return Err(Diag::error(
+                                    "BadDisplayTemplate",
+                                    format!("unsupported format spec `{part}` in display template"),
+                                    at,
+                                ))
+                            }
+                        }
                     }
                 }
             }
         }
-        None => {}
     }
 
     if fmt.zero_pad > MAX_ZERO_PAD {
@@ -317,5 +317,35 @@ fn signed_hex(value: i128) -> String {
         format!("-0x{:x}", value.unsigned_abs())
     } else {
         format!("0x{value:x}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn field_fmt(body: &str) -> FmtSpec {
+        let (_, fmt) = placeholder(body, Span::at(0)).expect("placeholder parses");
+        fmt
+    }
+
+    // `sym`/`rel` are modifiers, not exclusive specs: a width/base part alongside them supplies the
+    // fallback rendering used when the disasm context has no symbol for the address.
+    #[test]
+    fn sym_combines_with_width() {
+        let fmt = field_fmt("addr:06x:sym");
+        assert!(fmt.sym);
+        assert!(fmt.hex);
+        assert_eq!(fmt.zero_pad, 6);
+
+        // Order is irrelevant, and bare `:sym` still works with a default (unpadded) fallback.
+        assert_eq!(field_fmt("addr:sym:04x"), field_fmt("addr:04x:sym"));
+        let bare = field_fmt("addr:sym");
+        assert!(bare.sym && !bare.hex && bare.zero_pad == 0);
+    }
+
+    #[test]
+    fn unknown_spec_part_still_rejected() {
+        assert!(placeholder("addr:06q:sym", Span::at(0)).is_err());
     }
 }
