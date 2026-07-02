@@ -45,10 +45,10 @@ pub fn ident(name: &str) -> String {
     }
 }
 
-/// `add_imm` -> `AddImm`, `alu` -> `Alu` (used for dispatch-group enum variants/types).
+/// `add_imm` -> `AddImm`, `lda.dpx` -> `LdaDpx`, `alu` -> `Alu` (used for enum variants/types).
 pub fn pascal(name: &str) -> String {
     let mut out = String::new();
-    for seg in name.split('_') {
+    for seg in name.split(|c: char| !c.is_ascii_alphanumeric()) {
         let mut chars = seg.chars();
         if let Some(first) = chars.next() {
             out.extend(first.to_uppercase());

@@ -453,4 +453,98 @@ impl Expr {
             | Expr::Call { span, .. } => *span,
         }
     }
+
+    /// Visit this expression and every sub-expression, pre-order (a node before its children,
+    /// children in source order). The shared walker behind name collection and read checks.
+    pub fn walk(&self, f: &mut impl FnMut(&Expr)) {
+        f(self);
+        match self {
+            Expr::Int(_) | Expr::Name(_) => {}
+            Expr::Slice { base, .. } => base.walk(f),
+            Expr::Assemble { parts, .. } => {
+                for p in parts {
+                    p.src.walk(f);
+                }
+            }
+            Expr::Unary { rhs, .. } => rhs.walk(f),
+            Expr::Binary { lhs, rhs, .. } => {
+                lhs.walk(f);
+                rhs.walk(f);
+            }
+            Expr::Cond {
+                cond, then, els, ..
+            } => {
+                cond.walk(f);
+                then.walk(f);
+                els.walk(f);
+            }
+            Expr::Call { args, .. } => {
+                for a in args {
+                    a.walk(f);
+                }
+            }
+        }
+    }
+
+    /// Structural clone with name substitution: every `Name` node for which `f` returns an
+    /// expression is replaced by it; everything else is cloned as-is. The shared skeleton
+    /// behind decode-variable folding and `for`-loop variable substitution.
+    pub fn map_names(&self, f: &impl Fn(&Ident) -> Option<Expr>) -> Expr {
+        match self {
+            Expr::Name(n) => f(n).unwrap_or_else(|| self.clone()),
+            Expr::Int(_) => self.clone(),
+            Expr::Slice { base, hi, lo, span } => Expr::Slice {
+                base: Box::new(base.map_names(f)),
+                hi: *hi,
+                lo: *lo,
+                span: *span,
+            },
+            Expr::Assemble {
+                out_width,
+                parts,
+                ext,
+                span,
+            } => Expr::Assemble {
+                out_width: *out_width,
+                parts: parts
+                    .iter()
+                    .map(|p| AssemblePart {
+                        hi: p.hi,
+                        lo: p.lo,
+                        src: p.src.map_names(f),
+                        span: p.span,
+                    })
+                    .collect(),
+                ext: *ext,
+                span: *span,
+            },
+            Expr::Unary { op, rhs, span } => Expr::Unary {
+                op: *op,
+                rhs: Box::new(rhs.map_names(f)),
+                span: *span,
+            },
+            Expr::Binary { op, lhs, rhs, span } => Expr::Binary {
+                op: *op,
+                lhs: Box::new(lhs.map_names(f)),
+                rhs: Box::new(rhs.map_names(f)),
+                span: *span,
+            },
+            Expr::Cond {
+                cond,
+                then,
+                els,
+                span,
+            } => Expr::Cond {
+                cond: Box::new(cond.map_names(f)),
+                then: Box::new(then.map_names(f)),
+                els: Box::new(els.map_names(f)),
+                span: *span,
+            },
+            Expr::Call { callee, args, span } => Expr::Call {
+                callee: callee.clone(),
+                args: args.iter().map(|a| a.map_names(f)).collect(),
+                span: *span,
+            },
+        }
+    }
 }

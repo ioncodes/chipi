@@ -51,7 +51,17 @@ pub fn assemble_inst(isa: &Isa, line: &str) -> Result<Assembled, AsmError> {
 
     for (idx, inst) in isa.instrs.iter().enumerate() {
         for arm in &inst.display {
-            let Some(values) = match_template(inst, &arm.segs, line) else {
+            // Arms without in-template conditionals match against the borrowed segments
+            // directly; only conditional arms pay for `expand_conds`' cloned alternatives,
+            // and the first alternative that parses wins.
+            let values = if arm.segs.iter().any(|s| matches!(s, Seg::Cond { .. })) {
+                expand_conds(&arm.segs)
+                    .into_iter()
+                    .find_map(|segs| match_template(inst, &segs, line))
+            } else {
+                match_template(inst, &arm.segs, line)
+            };
+            let Some(values) = values else {
                 continue;
             };
             matched = true;
@@ -98,21 +108,11 @@ pub fn assemble_inst(isa: &Isa, line: &str) -> Result<Assembled, AsmError> {
     }
 }
 
-/// Does `v` fit a `w`-bit field, read as either signed or unsigned? (So `0x80` is accepted for an
-/// `i8` displacement, while `0x1234` is rejected for a `u8` direct-page operand.)
-fn fits(v: i128, w: u16) -> bool {
-    if w == 0 || w >= 128 {
-        return true;
-    }
-    let lo = -(1i128 << (w - 1));
-    let hi = 1i128 << w;
-    v >= lo && v < hi
-}
-
-/// Every supplied operand value fits its operand's declared value width.
+/// Every supplied operand value fits its operand's declared value width. (The encoder rejects
+/// misfits too; this pre-filter just keeps template selection cheap.)
 fn operands_fit(inst: &Insn, values: &[(String, i128)]) -> bool {
     values.iter().all(|(n, v)| match field_ty(inst, n) {
-        Some(ty) => fits(*v, ty.value_width),
+        Some(ty) => crate::inverse::value_fits(*v, ty.value_width),
         None => true,
     })
 }
@@ -131,7 +131,9 @@ fn build_bytes(isa: &Isa, inst: &Insn, word: u64, values: &[(String, i128)]) -> 
     }
 
     for c in &inst.computed {
-        let Some(bits) = crate::interp::fetch_width(&c.expr) else {
+        // The text assembler works word-level: expression fetch widths resolve at the decode
+        // variables' defaults, the same environment `decode(word)` uses.
+        let Some(bits) = crate::interp::fetch_width_vars(&c.expr, &isa.vars_default) else {
             continue;
         };
         let v = values.iter().find(|(n, _)| n == &c.name).map(|(_, v)| *v)?;
@@ -159,6 +161,40 @@ pub fn roundtrip_asm(isa: &Isa, word: u64) -> Option<bool> {
     Some((word & care) == (re & care))
 }
 
+/// Expand in-template conditionals into flat alternatives: each `{cond ? a : b}` doubles the
+/// candidate list (then-branch first). Capped at 16 alternatives; templates beyond that are not
+/// assembled. The parsed values need not satisfy the condition; the caller's encode step and the
+/// roundtrip check are the arbiters.
+fn expand_conds(segs: &[Seg]) -> Vec<Vec<Seg>> {
+    let mut out: Vec<Vec<Seg>> = vec![Vec::new()];
+    for seg in segs {
+        match seg {
+            Seg::Cond { then, els, .. } => {
+                if out.len() * 2 > 16 {
+                    return Vec::new();
+                }
+                let mut next = Vec::new();
+                for prefix in &out {
+                    for branch in [then, els] {
+                        for expanded in expand_conds(branch) {
+                            let mut v = prefix.clone();
+                            v.extend(expanded);
+                            next.push(v);
+                        }
+                    }
+                }
+                out = next;
+            }
+            other => {
+                for v in &mut out {
+                    v.push(other.clone());
+                }
+            }
+        }
+    }
+    out
+}
+
 /// Match a template against `line`, returning `(operand, value)` pairs, or `None` if a literal fails
 /// to match or a field token cannot be parsed. The whole line must be consumed.
 fn match_template(inst: &Insn, segs: &[Seg], line: &str) -> Option<Vec<(String, i128)>> {
@@ -167,8 +203,8 @@ fn match_template(inst: &Insn, segs: &[Seg], line: &str) -> Option<Vec<(String, 
     for (i, seg) in segs.iter().enumerate() {
         match seg {
             Seg::Lit(l) => rest = rest.strip_prefix(l.as_str())?,
-            // Conditional and subdecoder-output segments are not unambiguously reversible; skip such
-            // instructions for assembly.
+            // Conditionals were expanded away by `expand_conds`; a subdecoder output renders
+            // arbitrary text and stays unassemblable.
             Seg::Cond { .. } | Seg::SubField { .. } => return None,
             Seg::Field { name, fmt } => {
                 let next_lit = match segs.get(i + 1) {
@@ -206,12 +242,9 @@ fn field_ty<'a>(inst: &'a Insn, name: &str) -> Option<&'a FieldTy> {
 
 /// Strip the operand's display pattern (like `$r{}` or `#{}`) and read the inner number, honouring the
 /// template's format spec: a `:x` (hex) field is read in base 16 even without a `0x` prefix, which is
-/// how chipi renders it. A `:rel`/`:sym` field is PC/symbol-relative and cannot be recovered without
-/// decode context, so it does not match here.
+/// how chipi renders it. `:rel`/`:sym` are modifiers whose word-level rendering falls back to the
+/// numeric form, so a numeric token parses; an unresolved symbol NAME does not (loud NoMatch).
 fn parse_field_token(token: &str, ty: &FieldTy, fmt: &FmtSpec) -> Option<i128> {
-    if fmt.rel || fmt.sym {
-        return None;
-    }
     let token = token.trim();
 
     // A `names { ... }` operand reverses by matching the token against the table, then falling back
@@ -237,7 +270,23 @@ fn parse_field_token(token: &str, ty: &FieldTy, fmt: &FmtSpec) -> Option<i128> {
         _ => token,
     };
     if fmt.hex {
-        parse_radix(inner, 16)
+        let v = parse_radix(inner, 16)?;
+
+        // The renderer zero-pads hex to exactly max(pad, needed) digits. Accept only that
+        // form, so a 16bit render like `$0000` never matches an 8bit `02x` template (which
+        // would win on spec order and re-encode to the wrong leaf).
+        if fmt.zero_pad > 0 && v >= 0 {
+            let digits = inner
+                .trim()
+                .strip_prefix("0x")
+                .or_else(|| inner.trim().strip_prefix("0X"))
+                .unwrap_or(inner.trim());
+            let needed = format!("{:x}", v as u128).len();
+            if digits.len() != needed.max(fmt.zero_pad) {
+                return None;
+            }
+        }
+        Some(v)
     } else {
         parse_number(inner)
     }

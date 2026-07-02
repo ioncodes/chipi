@@ -1,0 +1,22 @@
+# Identity axes. A dotted leaf name (`lda.imm`) names the leaf on two axes: the
+# mnemonic (lda) and the form (imm). Codegen derives the Mnemonic and Form enums,
+# mnemonic()/form() accessors and the name tables, while the flat opcode id stays.
+# Leaves of one form must bind the same operand shape, so a consumer can match over
+# Form once and use one accessor set per form (see FormShape in check.rs). Dispatch
+# groups accept axis patterns: `lda.*` is every leaf of the mnemonic.
+
+decoder Axes {
+    width = 16
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [8:15]
+
+lda.imm op=0xA9 v:u8[0:7]  | "lda #${v:02x}"
+lda.dp  op=0xA5 dp:u8[0:7] | "lda ${dp:02x}"
+ldx.imm op=0xA2 v:u8[0:7]  | "ldx #${v:02x}"
+sta.dp  op=0x85 dp:u8[0:7] | "sta ${dp:02x}"
+nop     op=0xEA            | "nop"
+
+dispatch load { lda.*, ldx.* }

@@ -245,11 +245,10 @@ fn cmd_explain(args: &[String]) -> Result<(), String> {
     // For a byte stream on an ISA with `fetch(N)` operands, the plain decode only sees the opcode
     // window (operands read as 0). Run the contextual disassembler over the bytes so the operands
     // show their real values and the reported length includes the fetched bytes.
-    let has_fetch = isa.instrs.iter().any(|i| {
-        i.computed
-            .iter()
-            .any(|c| interp::fetch_width(&c.expr).is_some())
-    });
+    let has_fetch = isa
+        .instrs
+        .iter()
+        .any(|i| i.computed.iter().any(|c| interp::is_fetch(&c.expr)));
 
     if let (Some(bytes), true) = (&stream_bytes, has_fetch && d.is_valid()) {
         struct StreamBytes<'a>(&'a [u8]);
@@ -363,30 +362,77 @@ fn cmd_check(args: &[String]) -> Result<(), String> {
     );
 
     if a.roundtrip {
-        let (valid, ok) = roundtrip_scan(&l.isa);
-        println!("roundtrip: {ok}/{valid} valid encodings re-encode to the same word");
-        if ok != valid {
-            return Err(format!("{} word(s) failed to round-trip", valid - ok));
+        let scan = roundtrip_scan(&l.isa);
+        println!(
+            "roundtrip: {}/{} valid encodings re-encode to the same word",
+            scan.ok, scan.valid
+        );
+
+        report_leaf_status(&l.isa, &scan);
+
+        if scan.ok != scan.valid {
+            return Err(format!(
+                "{} word(s) failed to round-trip",
+                scan.valid - scan.ok
+            ));
         }
     }
 
     Ok(())
 }
 
-/// Tries every word for windows up to 16bit, otherwise a fixed 200k-word LCG sample.
-fn roundtrip_scan(isa: &Isa) -> (u64, u64) {
-    let bits = isa.window_bits();
-    let (mut valid, mut ok) = (0u64, 0u64);
+/// Tallies from one word-sample sweep: the encoder round-trip counts and the per-leaf
+/// assembler round-trip counts.
+struct ScanStats {
+    /// Words that decoded to a leaf and re-encoded (successfully or not to the same word).
+    valid: u64,
+    /// Words whose re-encode matched under the care mask.
+    ok: u64,
+    /// Per-leaf: how often the sample decoded to it.
+    seen: Vec<u64>,
+    /// Per-leaf: how often its disassembly re-assembled to the same word.
+    asm_ok: Vec<u64>,
+}
+
+/// One sweep over the word sample (every word for windows up to 16bit, otherwise a fixed
+/// 200k-word LCG), decoding each word once and feeding both the encoder round-trip tally and
+/// the per-leaf assembler tally from that single decode.
+fn roundtrip_scan(isa: &Isa) -> ScanStats {
+    let n = isa.instrs.len();
+    let mut stats = ScanStats {
+        valid: 0,
+        ok: 0,
+        seen: vec![0; n],
+        asm_ok: vec![0; n],
+    };
 
     let mut tally = |word: u64| {
-        if let Some(b) = chipi_core::inverse::roundtrip(isa, word) {
-            valid += 1;
-            if b {
-                ok += 1;
+        let d = chipi_core::interp::decode(isa, word);
+        let Some(idx) = d.instr_index else { return };
+        stats.seen[idx] += 1;
+        let care = chipi_core::inverse::care_mask(isa, idx);
+
+        // Encoder round-trip, as inverse::roundtrip does it (the decode already happened).
+        let values: Vec<(String, i128)> =
+            d.fields.iter().map(|f| (f.name.clone(), f.value)).collect();
+        if let Ok(re) = chipi_core::inverse::encode(isa, idx, &values) {
+            stats.valid += 1;
+            if (word & care) == (re & care) {
+                stats.ok += 1;
+            }
+        }
+
+        // Assembler round-trip, as assemble::roundtrip_asm does it.
+        if let Some(text) = &d.disasm {
+            if let Ok(re) = chipi_core::assemble::assemble_line(isa, text) {
+                if (word & care) == (re & care) {
+                    stats.asm_ok[idx] += 1;
+                }
             }
         }
     };
 
+    let bits = isa.window_bits();
     if bits <= 16 {
         for w in 0..(1u64 << bits) {
             tally(w);
@@ -402,7 +448,39 @@ fn roundtrip_scan(isa: &Isa) -> (u64, u64) {
         }
     }
 
-    (valid, ok)
+    stats
+}
+
+/// Per-leaf assembler status from the sweep: leaves whose disassembly fails to re-assemble
+/// (or that the sample never reached). This is the honest map of what the text assembler can
+/// and cannot reverse for this spec.
+fn report_leaf_status(isa: &Isa, scan: &ScanStats) {
+    let n = isa.instrs.len();
+    let clean = (0..n)
+        .filter(|&i| scan.seen[i] > 0 && scan.asm_ok[i] == scan.seen[i])
+        .count();
+    let broken: Vec<usize> = (0..n)
+        .filter(|&i| scan.seen[i] > 0 && scan.asm_ok[i] < scan.seen[i])
+        .collect();
+    let unseen: Vec<usize> = (0..n).filter(|&i| scan.seen[i] == 0).collect();
+
+    println!(
+        "assembler: {clean}/{} leaves re-assemble their own disassembly over the sample",
+        n
+    );
+    for &i in &broken {
+        println!(
+            "  not assemblable: {} ({}/{} sampled words re-assemble)",
+            isa.instrs[i].name, scan.asm_ok[i], scan.seen[i]
+        );
+    }
+    if !unseen.is_empty() {
+        let names: Vec<&str> = unseen
+            .iter()
+            .map(|&i| isa.instrs[i].name.as_str())
+            .collect();
+        println!("  never decoded in the sample: {}", names.join(", "));
+    }
 }
 
 fn cmd_dump_ir(args: &[String]) -> Result<(), String> {

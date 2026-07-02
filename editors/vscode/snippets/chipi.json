@@ -58,5 +58,28 @@
       "}"
     ],
     "description": "A prefix scan."
+  },
+  "For expansion": {
+    "prefix": "for",
+    "body": [
+      "for ${1:n} in ${2:0}..${3:8} {",
+      "    ${4:name}_{${1:n}} op = ${5:0x03} + ${1:n} * ${6:0x20} | \"${7:text} {${1:n}}\"",
+      "}"
+    ],
+    "description": "Expand an indexed instruction family (opcode = base + n * step)"
+  },
+  "Axis leaf": {
+    "prefix": "axis",
+    "body": [
+      "${1:lda}.${2:imm} op=${3:0xA9} ${4:v}:${5:u8}[${6:0:7}] | \"${1:lda} #${${4:v}:02x}\""
+    ],
+    "description": "A dotted leaf name: mnemonic and form axes derive Mnemonic/Form enums"
+  },
+  "Mode fetch": {
+    "prefix": "fetchm",
+    "body": [
+      "${1:imm}:${2:u16} = fetch(${3:m} ? ${4:8} : ${5:16})"
+    ],
+    "description": "A stream operand whose width depends on a host mode"
   }
 }

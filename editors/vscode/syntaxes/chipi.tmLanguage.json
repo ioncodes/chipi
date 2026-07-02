@@ -3,16 +3,42 @@
   "name": "chipi",
   "scopeName": "source.chipi",
   "patterns": [
-    { "include": "#comment" },
-    { "include": "#string" },
-    { "include": "#declaration" },
-    { "include": "#keyword" },
-    { "include": "#constant" },
-    { "include": "#builtin" },
-    { "include": "#type" },
-    { "include": "#number" },
-    { "include": "#operator" },
-    { "include": "#binding" }
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#declaration"
+    },
+    {
+      "include": "#axis"
+    },
+    {
+      "include": "#interpolation"
+    },
+    {
+      "include": "#keyword"
+    },
+    {
+      "include": "#constant"
+    },
+    {
+      "include": "#builtin"
+    },
+    {
+      "include": "#type"
+    },
+    {
+      "include": "#number"
+    },
+    {
+      "include": "#operator"
+    },
+    {
+      "include": "#binding"
+    }
   ],
   "repository": {
     "comment": {
@@ -32,12 +58,29 @@
           "name": "meta.template.placeholder.chipi",
           "begin": "\\{",
           "end": "\\}",
-          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.chipi" } },
-          "endCaptures": { "0": { "name": "punctuation.definition.template.end.chipi" } },
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.template.begin.chipi"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.template.end.chipi"
+            }
+          },
           "patterns": [
-            { "match": "[?:]", "name": "keyword.operator.template.chipi" },
-            { "match": "[A-Za-z_][A-Za-z0-9_]*", "name": "variable.other.template.chipi" },
-            { "match": "[0-9]+", "name": "constant.numeric.chipi" }
+            {
+              "match": "[?:]",
+              "name": "keyword.operator.template.chipi"
+            },
+            {
+              "match": "[A-Za-z_][A-Za-z0-9_]*",
+              "name": "variable.other.template.chipi"
+            },
+            {
+              "match": "[0-9]+",
+              "name": "constant.numeric.chipi"
+            }
           ]
         }
       ]
@@ -47,7 +90,7 @@
       "name": "keyword.declaration.chipi"
     },
     "keyword": {
-      "match": "\\b(mode|context|uses|when|let|return|assemble|finish|done|else)\\b",
+      "match": "\\b(mode|context|uses|when|let|return|assemble|finish|done|else|for|in|fetch)\\b",
       "name": "keyword.control.chipi"
     },
     "constant": {
@@ -73,9 +116,48 @@
     "binding": {
       "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(:)\\s*([A-Za-z_][A-Za-z0-9_]*)",
       "captures": {
-        "1": { "name": "variable.parameter.chipi" },
-        "2": { "name": "punctuation.separator.chipi" },
-        "3": { "name": "storage.type.chipi" }
+        "1": {
+          "name": "variable.parameter.chipi"
+        },
+        "2": {
+          "name": "punctuation.separator.chipi"
+        },
+        "3": {
+          "name": "storage.type.chipi"
+        }
+      }
+    },
+    "axis": {
+      "comment": "A dotted leaf name (lda.dpx) or dispatch axis pattern (lda.*): mnemonic and form axes.",
+      "match": "\\b([a-z_][A-Za-z0-9_]*)(\\.)([A-Za-z_][A-Za-z0-9_]*|\\*)",
+      "captures": {
+        "1": {
+          "name": "entity.name.function.mnemonic.chipi"
+        },
+        "2": {
+          "name": "punctuation.separator.axis.chipi"
+        },
+        "3": {
+          "name": "entity.name.type.form.chipi"
+        }
+      }
+    },
+    "interpolation": {
+      "comment": "A for-block name interpolation: bbs_b{n}.",
+      "match": "\\b([a-z_][A-Za-z0-9_]*)(\\{)([a-z_][A-Za-z0-9_]*)(\\})",
+      "captures": {
+        "1": {
+          "name": "entity.name.function.mnemonic.chipi"
+        },
+        "2": {
+          "name": "punctuation.definition.interpolation.chipi"
+        },
+        "3": {
+          "name": "variable.parameter.loop.chipi"
+        },
+        "4": {
+          "name": "punctuation.definition.interpolation.chipi"
+        }
       }
     }
   }

@@ -29,3 +29,13 @@ length =
 
 add op=0 funct=266 uses X when helper(0, 1) | "add{m?.} {rd}, {ra}"
 ori op=0b001101 rt:greg[16:20] imm:simm[16:31] = assemble 16 { [15:0] = word[16:31] } sign_extend | "ori {rt}, {imm}"
+
+# 1.0 syntax: identity axes, expression fetch widths, for blocks, axis patterns.
+lda.imm op=0xA9 imm:u16 = fetch(m ? 8 : 16) | "lda #{m?${imm:02x}:${imm:04x}}"
+lda.dp  op=0xA5 dp:u8[0:7] | "lda ${dp:02x}"
+
+for n in 0..8 {
+    bbs_b{n} op = 0x03 + n * 0x20 dp:u8[0:7] | "bbs ${dp:02x}.{n}"
+}
+
+dispatch loads { lda.*, ori }

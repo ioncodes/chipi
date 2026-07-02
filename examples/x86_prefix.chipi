@@ -1,11 +1,15 @@
-# x86-64 legacy + REX prefix scan: prefixes set decode context.
+# x86-64 legacy + REX prefix scan: prefixes set decode variables that decode reads back.
 #
 # A representative non-VEX slice: the legacy operand-size override (0x66) and the REX prefix block
 # (0x40..0x4F) set decode-local `context`, then a one-byte opcode is classified normally. Exercises
 # all three prefix terminators: Continue (0x66 keeps scanning), Finish (REX consumes and stops),
 # and Done (`_` stops without consuming, the byte is the opcode), plus per-byte bit reads (`byte[3]`).
 #
-# Decode with the byte-stream path: chipi_core::eval::decode_stream(prog, &[0x66, 0x48, 0x90]).
+# Guards read the context back, so the prefixes change what decodes: 0x90 is `nop` without REX.B
+# and `xchg r8, rax` with it, and 0x50 pushes `ax` under 0x66. Word-level decode (`decode(word)`,
+# generated `classify(word)`) uses the declared defaults, as if no prefix was seen.
+#
+# Decode with the byte-stream path: chipi_core::interp::decode_stream(prog, &[0x66, 0x48, 0x90]).
 
 decoder X86 {
     width = 8
@@ -27,7 +31,9 @@ prefix scan {
 
 selector op [0:7]
 
-nop  op=0x90 | "nop"
-ret  op=0xC3 | "ret"
-hlt  op=0xF4 | "hlt"
-push op=0x50 | "push rax"
+nop     op=0x90 when rex_b == 0 | "nop"
+xchg_r8 op=0x90 when rex_b == 1 | "xchg r8, rax"
+ret     op=0xC3                 | "ret"
+hlt     op=0xF4                 | "hlt"
+push16  op=0x50 when op_ovr == 1 | "push ax"
+push    op=0x50                  | "push rax"

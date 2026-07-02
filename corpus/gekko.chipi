@@ -1,0 +1,898 @@
+# Gekko (PowerPC 750) - Nintendo GameCube CPU
+# 32-bit opcodes, MSB0 bit ordering, big endian.
+
+decoder Gekko {
+    width = 32
+    bit_order = msb0
+    endian = big
+}
+
+selector primary [0:5]
+
+# registers
+operand gpr = u5 { display("r{}") }
+operand fpr = u5 { display("f{}") }
+
+# small unsigned fields that disassemble as plain decimals
+operand d1 = u1 { display(dec) }
+operand d3 = u3 { display(dec) }
+operand d4 = u4 { display(dec) }
+operand d5 = u5 { display(dec) }
+operand d8 = u8 { display(dec) }
+
+# branch-condition mnemonic suffixes, keyed by the low two bits of BI (the CR bit within a field)
+operand bc_true  = u2 { display(names { 0 => "lt", 1 => "gt", 2 => "eq", _ => "so" }) }
+operand bc_false = u2 { display(names { 0 => "ge", 1 => "le", 2 => "ne", _ => "ns" }) }
+
+# special-purpose register names, keyed by the ("deswapped") SPR number; unknown SPRs show the number
+operand spr_name = u16 {
+    display(names {
+        1 => "xer", 8 => "lr", 9 => "ctr", 18 => "dsisr", 19 => "dar", 22 => "dec",
+        25 => "sdr1", 26 => "srr0", 27 => "srr1",
+        272 => "sprg0", 273 => "sprg1", 274 => "sprg2", 275 => "sprg3",
+        268 => "tbl", 269 => "tbu", 282 => "ear", 284 => "tbl", 285 => "tbu", 287 => "pvr",
+        528 => "ibat0u", 529 => "ibat0l", 530 => "ibat1u", 531 => "ibat1l",
+        532 => "ibat2u", 533 => "ibat2l", 534 => "ibat3u", 535 => "ibat3l",
+        536 => "dbat0u", 537 => "dbat0l", 538 => "dbat1u", 539 => "dbat1l",
+        540 => "dbat2u", 541 => "dbat2l", 542 => "dbat3u", 543 => "dbat3l",
+        912 => "gqr0", 913 => "gqr1", 914 => "gqr2", 915 => "gqr3",
+        916 => "gqr4", 917 => "gqr5", 918 => "gqr6", 919 => "gqr7",
+        920 => "hid2", 921 => "wpar", 922 => "dmau", 923 => "dmal",
+        936 => "ummcr0", 937 => "upmc1", 938 => "upmc2", 939 => "usia",
+        940 => "ummcr1", 941 => "upmc3", 942 => "upmc4", 943 => "usda",
+        952 => "mmcr0", 953 => "pmc1", 954 => "pmc2", 955 => "sia",
+        956 => "mmcr1", 957 => "pmc3", 958 => "pmc4", 959 => "sda",
+        1008 => "hid0", 1009 => "hid1", 1010 => "iabr", 1013 => "dabr", 1017 => "l2cr",
+        1019 => "ictc", 1020 => "thrm1", 1021 => "thrm2", 1022 => "thrm3",
+        _ => dec
+    })
+}
+
+# immediates
+type uimm        = u16 { display(hex) }
+type simm12      = i32 { sign_extend(12), display(signed_hex) }
+type simm16      = i32 { sign_extend(16), display(signed_hex) }
+type simm24      = i32 { sign_extend(24), shift_left(2), display(signed_hex) }
+type disp        = i32 { sign_extend(16), display(signed_hex) }
+type branch_disp = i32 { sign_extend(14), shift_left(2), display(signed_hex) }
+
+# Recurring operand layouts, factored as forms. `uses` appends a form's fields to a
+# leaf's own bindings; the extended-opcode constraints stay inline on each instruction.
+form XO   { rd:gpr[6:10] ra:gpr[11:15] rb:gpr[16:20] oe:bool[21] rc:bool[31] }
+form X_RD { rd:gpr[6:10] ra:gpr[11:15] rb:gpr[16:20] }
+form X_RS { rs:gpr[6:10] ra:gpr[11:15] rb:gpr[16:20] }
+form FPR3 { fd:fpr[6:10] fa:fpr[11:15] fb:fpr[16:20] rc:bool[31] }
+form FPR4 { fd:fpr[6:10] fa:fpr[11:15] fb:fpr[16:20] fc:fpr[21:25] rc:bool[31] }
+form D_LD { rd:gpr[6:10] ra:gpr[11:15] d:disp[16:31] }
+form D_ST { rs:gpr[6:10] ra:gpr[11:15] d:disp[16:31] }
+
+# ============================================================
+# Primary opcode 3: twi (Trap Word Immediate)
+# ============================================================
+twi         primary=3 to:d5[6:10] ra:gpr[11:15] simm:simm16[16:31]
+            | "twi {to}, {ra}, {simm}"
+
+# ============================================================
+# Primary opcode 4: Paired Single
+# ============================================================
+
+# PS Compare - X-form
+ps_cmpu0    primary=4 crfd:d3[6:8] [9:10]=0 fa:fpr[11:15] fb:fpr[16:20] [21:30]=0 [31]=0
+            | "ps_cmpu0 cr{crfd}, {fa}, {fb}"
+
+ps_cmpo0    primary=4 crfd:d3[6:8] [9:10]=0 fa:fpr[11:15] fb:fpr[16:20] [21:30]=0b0000100000 [31]=0
+            | "ps_cmpo0 cr{crfd}, {fa}, {fb}"
+
+ps_cmpu1    primary=4 crfd:d3[6:8] [9:10]=0 fa:fpr[11:15] fb:fpr[16:20] [21:30]=0b0001000000 [31]=0
+            | "ps_cmpu1 cr{crfd}, {fa}, {fb}"
+
+ps_cmpo1    primary=4 crfd:d3[6:8] [9:10]=0 fa:fpr[11:15] fb:fpr[16:20] [21:30]=0b0001100000 [31]=0
+            | "ps_cmpo1 cr{crfd}, {fa}, {fb}"
+
+# PS Unary/Move - X-form ([11:15]=00000)
+ps_res      primary=4 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0000011000 rc:bool[31]
+            | "ps_res{rc?.} {fd}, {fb}"
+
+ps_rsqrte   primary=4 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0000011010 rc:bool[31]
+            | "ps_rsqrte{rc?.} {fd}, {fb}"
+
+ps_neg      primary=4 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0000101000 rc:bool[31]
+            | "ps_neg{rc?.} {fd}, {fb}"
+
+ps_mr       primary=4 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0001001000 rc:bool[31]
+            | "ps_mr{rc?.} {fd}, {fb}"
+
+ps_nabs     primary=4 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0010001000 rc:bool[31]
+            | "ps_nabs{rc?.} {fd}, {fb}"
+
+ps_abs      primary=4 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0100001000 rc:bool[31]
+            | "ps_abs{rc?.} {fd}, {fb}"
+
+# PS Merge - X-form
+ps_merge00  primary=4 uses FPR3 [21:30]=0b1000010000
+            | "ps_merge00{rc?.} {fd}, {fa}, {fb}"
+
+ps_merge01  primary=4 uses FPR3 [21:30]=0b1000110000
+            | "ps_merge01{rc?.} {fd}, {fa}, {fb}"
+
+ps_merge10  primary=4 uses FPR3 [21:30]=0b1001010000
+            | "ps_merge10{rc?.} {fd}, {fa}, {fb}"
+
+ps_merge11  primary=4 uses FPR3 [21:30]=0b1001110000
+            | "ps_merge11{rc?.} {fd}, {fa}, {fb}"
+
+# Quantized Load/Store - X-form
+psq_lx      primary=4 fd:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] w:d1[21] i:d3[22:24] [25:30]=0b000110 [31]=0
+            | "psq_lx {fd}, {ra}, {rb}, {w}, {i}"
+
+psq_stx     primary=4 fs:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] w:d1[21] i:d3[22:24] [25:30]=0b000111 [31]=0
+            | "psq_stx {fs}, {ra}, {rb}, {w}, {i}"
+
+psq_lux     primary=4 fd:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] w:d1[21] i:d3[22:24] [25:30]=0b100110 [31]=0
+            | "psq_lux {fd}, {ra}, {rb}, {w}, {i}"
+
+psq_stux    primary=4 fs:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] w:d1[21] i:d3[22:24] [25:30]=0b100111 [31]=0
+            | "psq_stux {fs}, {ra}, {rb}, {w}, {i}"
+
+# PS Arithmetic - A-form (5-bit XO at [26:30])
+ps_sum0     primary=4 uses FPR4 [26:30]=0b01010
+            | "ps_sum0{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+ps_sum1     primary=4 uses FPR4 [26:30]=0b01011
+            | "ps_sum1{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+ps_muls0    primary=4 fd:fpr[6:10] fa:fpr[11:15] [16:20]=0 fc:fpr[21:25] [26:30]=0b01100 rc:bool[31]
+            | "ps_muls0{rc?.} {fd}, {fa}, {fc}"
+
+ps_muls1    primary=4 fd:fpr[6:10] fa:fpr[11:15] [16:20]=0 fc:fpr[21:25] [26:30]=0b01101 rc:bool[31]
+            | "ps_muls1{rc?.} {fd}, {fa}, {fc}"
+
+ps_madds0   primary=4 uses FPR4 [26:30]=0b01110
+            | "ps_madds0{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+ps_madds1   primary=4 uses FPR4 [26:30]=0b01111
+            | "ps_madds1{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+ps_div      primary=4 uses FPR3 [21:25]=0 [26:30]=0b10010
+            | "ps_div{rc?.} {fd}, {fa}, {fb}"
+
+ps_sub      primary=4 uses FPR3 [21:25]=0 [26:30]=0b10100
+            | "ps_sub{rc?.} {fd}, {fa}, {fb}"
+
+ps_add      primary=4 uses FPR3 [21:25]=0 [26:30]=0b10101
+            | "ps_add{rc?.} {fd}, {fa}, {fb}"
+
+ps_sel      primary=4 uses FPR4 [26:30]=0b10111
+            | "ps_sel{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+ps_mul      primary=4 fd:fpr[6:10] fa:fpr[11:15] [16:20]=0 fc:fpr[21:25] [26:30]=0b11001 rc:bool[31]
+            | "ps_mul{rc?.} {fd}, {fa}, {fc}"
+
+ps_msub     primary=4 uses FPR4 [26:30]=0b11100
+            | "ps_msub{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+ps_madd     primary=4 uses FPR4 [26:30]=0b11101
+            | "ps_madd{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+ps_nmsub    primary=4 uses FPR4 [26:30]=0b11110
+            | "ps_nmsub{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+ps_nmadd    primary=4 uses FPR4 [26:30]=0b11111
+            | "ps_nmadd{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+# Locked Cache Instruction
+dcbz_l      primary=4 [6:10]=0 ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1111110110 [31]=0
+            | "dcbz_l {ra}, {rb}"
+
+# ============================================================
+# Primary opcode 7: mulli
+# ============================================================
+mulli       primary=7 rd:gpr[6:10] ra:gpr[11:15] simm:simm16[16:31]
+            | "mulli {rd}, {ra}, {simm}"
+
+# ============================================================
+# Primary opcode 8: subfic
+# ============================================================
+subfic      primary=8 rd:gpr[6:10] ra:gpr[11:15] simm:simm16[16:31]
+            | "subfic {rd}, {ra}, {simm}"
+
+# ============================================================
+# Primary opcodes 10-15: Compare/Arithmetic D-form
+# ============================================================
+cmpli       primary=10 crfd:d3[6:8] [9]=0 l:d1[10] ra:gpr[11:15] uimm:uimm[16:31]
+            | l == 0 && crfd == 0 : "cmplwi {ra}, {uimm}"
+            | l == 0              : "cmplwi cr{crfd}, {ra}, {uimm}"
+            | "cmpli {crfd}, {l}, {ra}, {uimm}"
+
+cmpi        primary=11 crfd:d3[6:8] [9]=0 l:d1[10] ra:gpr[11:15] simm:simm16[16:31]
+            | l == 0 && crfd == 0 : "cmpwi {ra}, {simm}"
+            | l == 0              : "cmpwi cr{crfd}, {ra}, {simm}"
+            | "cmpi {crfd}, {l}, {ra}, {simm}"
+
+addic       primary=12 rd:gpr[6:10] ra:gpr[11:15] simm:simm16[16:31]
+            nsimm:i32 = -sign_extend(simm, 16)
+            | simm < 0 : "subic {rd}, {ra}, {nsimm:#x}"
+            | "addic {rd}, {ra}, {simm}"
+
+addic_dot   primary=13 rd:gpr[6:10] ra:gpr[11:15] simm:simm16[16:31]
+            nsimm:i32 = -sign_extend(simm, 16)
+            | simm < 0 : "subic. {rd}, {ra}, {nsimm:#x}"
+            | "addic. {rd}, {ra}, {simm}"
+
+addi        primary=14 rd:gpr[6:10] ra:gpr[11:15] simm:simm16[16:31]
+            nsimm:i32 = -sign_extend(simm, 16)
+            | ra == 0  : "li {rd}, {simm}"
+            | simm < 0 : "subi {rd}, {ra}, {nsimm:#x}"
+            | "addi {rd}, {ra}, {simm}"
+
+addis       primary=15 rd:gpr[6:10] ra:gpr[11:15] simm:simm16[16:31]
+            nsimm:i32 = -sign_extend(simm, 16)
+            | ra == 0  : "lis {rd}, {simm}"
+            | simm < 0 : "subis {rd}, {ra}, {nsimm:#x}"
+            | "addis {rd}, {ra}, {simm}"
+
+# ============================================================
+# Primary opcode 16: bcx (Branch Conditional)
+# ============================================================
+bcx         primary=16 bo:d5[6:10] bi:d5[11:15] bd:branch_disp[16:29] aa:bool[30] lk:bool[31]
+            bct:bc_true  = bi % 4
+            bcf:bc_false = bi % 4
+            bihi:u3 = bi / 4
+            boodd:u1 = bo % 2
+            | bo >= 12 && bo <= 15 : "b{bct}{boodd?+}{lk?l}{aa?a} {bihi?cr{bihi:d}, :}{bd}"
+            | bo >= 4  && bo <= 7  : "b{bcf}{boodd?+}{lk?l}{aa?a} {bihi?cr{bihi:d}, :}{bd}"
+            | bo >= 16 && bo <= 17 : "bdnz{boodd?+}{lk?l}{aa?a} {bd}"
+            | bo >= 18 && bo <= 19 : "bdz{boodd?+}{lk?l}{aa?a} {bd}"
+            | "bc{lk?l}{aa?a} {bo}, {bi}, {bd}"
+
+# ============================================================
+# Primary opcode 17: sc (System Call)
+# ============================================================
+sc          primary=17 [6:29]=0 [30]=1 [31]=0
+            | "sc"
+
+# ============================================================
+# Primary opcode 18: bx (Branch)
+# ============================================================
+bx          primary=18 li:simm24[6:29] aa:bool[30] lk:bool[31]
+            | "b{lk?l}{aa?a} {li}"
+
+# ============================================================
+# Primary opcode 19: XL-form (Branch to LR/CTR, CR ops, etc.)
+# ============================================================
+mcrf        primary=19 crfd:d3[6:8] [9:10]=0 crfs:d3[11:13] [14:20]=0 [21:30]=0 [31]=0
+            | "mcrf cr{crfd}, cr{crfs}"
+
+bclrx       primary=19 bo:d5[6:10] bi:d5[11:15] [16:20]=0 [21:30]=0b0000010000 lk:bool[31]
+            bct:bc_true  = bi % 4
+            bcf:bc_false = bi % 4
+            bihi:u3 = bi / 4
+            boodd:u1 = bo % 2
+            | bo == 20 && bi == 0  : "blr{lk?l}"
+            | bo >= 12 && bo <= 15 : "b{bct}lr{boodd?+}{lk?l}{bihi? cr{bihi:d}:}"
+            | bo >= 4  && bo <= 7  : "b{bcf}lr{boodd?+}{lk?l}{bihi? cr{bihi:d}:}"
+            | bo >= 16 && bo <= 17 : "bdnzlr{boodd?+}{lk?l}"
+            | bo >= 18 && bo <= 19 : "bdzlr{boodd?+}{lk?l}"
+            | "bclr{lk?l} {bo}, {bi}"
+
+crnor       primary=19 crbd:d5[6:10] crba:d5[11:15] crbb:d5[16:20] [21:30]=0b0000100001 [31]=0
+            | crba == crbb : "crnot {crbd}, {crba}"
+            | "crnor {crbd}, {crba}, {crbb}"
+
+rfi         primary=19 [6:10]=0 [11:15]=0 [16:20]=0 [21:30]=0b0000110010 [31]=0
+            | "rfi"
+
+crandc      primary=19 crbd:d5[6:10] crba:d5[11:15] crbb:d5[16:20] [21:30]=0b0010000001 [31]=0
+            | "crandc {crbd}, {crba}, {crbb}"
+
+isync       primary=19 [6:10]=0 [11:15]=0 [16:20]=0 [21:30]=0b0010010110 [31]=0
+            | "isync"
+
+crxor       primary=19 crbd:d5[6:10] crba:d5[11:15] crbb:d5[16:20] [21:30]=0b0011000001 [31]=0
+            | crbd == crba && crba == crbb : "crclr {crbd}"
+            | "crxor {crbd}, {crba}, {crbb}"
+
+crnand      primary=19 crbd:d5[6:10] crba:d5[11:15] crbb:d5[16:20] [21:30]=0b0011100001 [31]=0
+            | "crnand {crbd}, {crba}, {crbb}"
+
+crand       primary=19 crbd:d5[6:10] crba:d5[11:15] crbb:d5[16:20] [21:30]=0b0100000001 [31]=0
+            | "crand {crbd}, {crba}, {crbb}"
+
+creqv       primary=19 crbd:d5[6:10] crba:d5[11:15] crbb:d5[16:20] [21:30]=0b0100100001 [31]=0
+            | crbd == crba && crba == crbb : "crset {crbd}"
+            | "creqv {crbd}, {crba}, {crbb}"
+
+crorc       primary=19 crbd:d5[6:10] crba:d5[11:15] crbb:d5[16:20] [21:30]=0b0110100001 [31]=0
+            | "crorc {crbd}, {crba}, {crbb}"
+
+cror        primary=19 crbd:d5[6:10] crba:d5[11:15] crbb:d5[16:20] [21:30]=0b0111000001 [31]=0
+            | crba == crbb : "crmove {crbd}, {crba}"
+            | "cror {crbd}, {crba}, {crbb}"
+
+bcctrx      primary=19 bo:d5[6:10] bi:d5[11:15] [16:20]=0 [21:30]=0b1000010000 lk:bool[31]
+            bct:bc_true  = bi % 4
+            bcf:bc_false = bi % 4
+            bihi:u3 = bi / 4
+            boodd:u1 = bo % 2
+            | bo == 20 && bi == 0  : "bctr{lk?l}"
+            | bo >= 12 && bo <= 15 : "b{bct}ctr{boodd?+}{lk?l}{bihi? cr{bihi:d}:}"
+            | bo >= 4  && bo <= 7  : "b{bcf}ctr{boodd?+}{lk?l}{bihi? cr{bihi:d}:}"
+            | "bcctr{lk?l} {bo}, {bi}"
+
+# ============================================================
+# Primary opcodes 20-21, 23: Rotate M-form
+# ============================================================
+rlwimix     primary=20 rs:gpr[6:10] ra:gpr[11:15] sh:d5[16:20] mb:d5[21:25] me:d5[26:30] rc:bool[31]
+            ins_n:u8 = me - mb + 1
+            | sh == 32 - mb && me >= mb : "inslwi{rc?.} {ra}, {rs}, {ins_n:d}, {mb}"
+            | sh == 31 - me && me >= mb : "insrwi{rc?.} {ra}, {rs}, {ins_n:d}, {mb}"
+            | "rlwimi{rc?.} {ra}, {rs}, {sh}, {mb}, {me}"
+
+rlwinmx     primary=21 rs:gpr[6:10] ra:gpr[11:15] sh:d5[16:20] mb:d5[21:25] me:d5[26:30] rc:bool[31]
+            clrrwi_n:u8   = 31 - me
+            extlwi_n:u8   = me + 1
+            clrlslwi_n:u8 = mb + sh
+            extrwi_n:u8   = 32 - mb
+            extrwi_b:u8   = sh + mb - 32
+            | mb == 0 && me == 31       : "rotlwi{rc?.} {ra}, {rs}, {sh}"
+            | mb == 0 && me == 31 - sh  : "slwi{rc?.} {ra}, {rs}, {sh}"
+            | me == 31 && sh == 32 - mb : "srwi{rc?.} {ra}, {rs}, {mb}"
+            | sh == 0 && mb == 0        : "clrrwi{rc?.} {ra}, {rs}, {clrrwi_n:d}"
+            | sh == 0 && me == 31       : "clrlwi{rc?.} {ra}, {rs}, {mb}"
+            | mb == 0                   : "extlwi{rc?.} {ra}, {rs}, {extlwi_n:d}, {sh}"
+            | me == 31 - sh             : "clrlslwi{rc?.} {ra}, {rs}, {clrlslwi_n:d}, {sh}"
+            | me == 31 && sh + mb >= 32 : "extrwi{rc?.} {ra}, {rs}, {extrwi_n:d}, {extrwi_b:d}"
+            | "rlwinm{rc?.} {ra}, {rs}, {sh}, {mb}, {me}"
+
+rlwnmx      primary=23 uses X_RS mb:d5[21:25] me:d5[26:30] rc:bool[31]
+            | mb == 0 && me == 31 : "rotlw{rc?.} {ra}, {rs}, {rb}"
+            | "rlwnm{rc?.} {ra}, {rs}, {rb}, {mb}, {me}"
+
+# ============================================================
+# Primary opcodes 24-29: Logical Immediate D-form
+# ============================================================
+ori         primary=24 rs:gpr[6:10] ra:gpr[11:15] uimm:uimm[16:31]
+            | rs == 0 && ra == 0 && uimm == 0 : "nop"
+            | "ori {ra}, {rs}, {uimm}"
+
+oris        primary=25 rs:gpr[6:10] ra:gpr[11:15] uimm:uimm[16:31]
+            | "oris {ra}, {rs}, {uimm}"
+
+xori        primary=26 rs:gpr[6:10] ra:gpr[11:15] uimm:uimm[16:31]
+            | "xori {ra}, {rs}, {uimm}"
+
+xoris       primary=27 rs:gpr[6:10] ra:gpr[11:15] uimm:uimm[16:31]
+            | "xoris {ra}, {rs}, {uimm}"
+
+andi_dot    primary=28 rs:gpr[6:10] ra:gpr[11:15] uimm:uimm[16:31]
+            | "andi. {ra}, {rs}, {uimm}"
+
+andis_dot   primary=29 rs:gpr[6:10] ra:gpr[11:15] uimm:uimm[16:31]
+            | "andis. {ra}, {rs}, {uimm}"
+
+# ============================================================
+# Primary opcode 31: X-form and XO-form
+# ============================================================
+
+# --- Integer Compare X-form ---
+cmp         primary=31 crfd:d3[6:8] [9]=0 l:d1[10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0 [31]=0
+            | l == 0 && crfd == 0 : "cmpw {ra}, {rb}"
+            | l == 0              : "cmpw cr{crfd}, {ra}, {rb}"
+            | "cmp {crfd}, {l}, {ra}, {rb}"
+
+# --- Trap X-form ---
+tw          primary=31 to:d5[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b0000000100 [31]=0
+            | to == 31 && ra == 0 && rb == 0 : "trap"
+            | "tw {to}, {ra}, {rb}"
+
+# --- Integer Arithmetic XO-form (9-bit XO at [22:30]) ---
+subfcx      primary=31 uses XO [22:30]=0b000001000
+            | "subfc{oe?o}{rc?.} {rd}, {ra}, {rb}"
+
+mulhwux     primary=31 uses X_RD [21]=0 [22:30]=0b000001011 rc:bool[31]
+            | "mulhwu{rc?.} {rd}, {ra}, {rb}"
+
+addcx       primary=31 uses XO [22:30]=0b000001010
+            | "addc{oe?o}{rc?.} {rd}, {ra}, {rb}"
+
+lwarx       primary=31 uses X_RD [21:30]=0b0000010100 [31]=0
+            | "lwarx {rd}, {ra}, {rb}"
+
+lwzx        primary=31 uses X_RD [21:30]=0b0000010111 [31]=0
+            | "lwzx {rd}, {ra}, {rb}"
+
+slwx        primary=31 uses X_RS [21:30]=0b0000011000 rc:bool[31]
+            | "slw{rc?.} {ra}, {rs}, {rb}"
+
+cntlzwx     primary=31 rs:gpr[6:10] ra:gpr[11:15] [16:20]=0 [21:30]=0b0000011010 rc:bool[31]
+            | "cntlzw{rc?.} {ra}, {rs}"
+
+andx        primary=31 uses X_RS [21:30]=0b0000011100 rc:bool[31]
+            | "and{rc?.} {ra}, {rs}, {rb}"
+
+cmpl        primary=31 crfd:d3[6:8] [9]=0 l:d1[10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b0000100000 [31]=0
+            | l == 0 && crfd == 0 : "cmplw {ra}, {rb}"
+            | l == 0              : "cmplw cr{crfd}, {ra}, {rb}"
+            | "cmpl {crfd}, {l}, {ra}, {rb}"
+
+subfx       primary=31 uses XO [22:30]=0b000101000
+            | "subf{oe?o}{rc?.} {rd}, {ra}, {rb}"
+
+dcbst       primary=31 [6:10]=0 ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b0000110110 [31]=0
+            | "dcbst {ra}, {rb}"
+
+lwzux       primary=31 uses X_RD [21:30]=0b0000110111 [31]=0
+            | "lwzux {rd}, {ra}, {rb}"
+
+andcx       primary=31 uses X_RS [21:30]=0b0000111100 rc:bool[31]
+            | "andc{rc?.} {ra}, {rs}, {rb}"
+
+mulhwx      primary=31 uses X_RD [21]=0 [22:30]=0b001001011 rc:bool[31]
+            | "mulhw{rc?.} {rd}, {ra}, {rb}"
+
+mfcr        primary=31 rd:gpr[6:10] [11:20]=0 [21:30]=0b0000010011 [31]=0
+            | "mfcr {rd}"
+
+mfmsr       primary=31 rd:gpr[6:10] [11:20]=0 [21:30]=0b0001010011 [31]=0
+            | "mfmsr {rd}"
+
+dcbf        primary=31 [6:10]=0 ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b0001010110 [31]=0
+            | "dcbf {ra}, {rb}"
+
+lbzx        primary=31 uses X_RD [21:30]=0b0001010111 [31]=0
+            | "lbzx {rd}, {ra}, {rb}"
+
+negx        primary=31 rd:gpr[6:10] ra:gpr[11:15] [16:20]=0 oe:bool[21] [22:30]=0b001101000 rc:bool[31]
+            | "neg{oe?o}{rc?.} {rd}, {ra}"
+
+lbzux       primary=31 uses X_RD [21:30]=0b0001110111 [31]=0
+            | "lbzux {rd}, {ra}, {rb}"
+
+norx        primary=31 uses X_RS [21:30]=0b0001111100 rc:bool[31]
+            | rs == rb : "not{rc?.} {ra}, {rs}"
+            | "nor{rc?.} {ra}, {rs}, {rb}"
+
+subfex      primary=31 uses XO [22:30]=0b010001000
+            | "subfe{oe?o}{rc?.} {rd}, {ra}, {rb}"
+
+addex       primary=31 uses XO [22:30]=0b010001010
+            | "adde{oe?o}{rc?.} {rd}, {ra}, {rb}"
+
+mtcrf       primary=31 rs:gpr[6:10] [11]=0 crm:d8[12:19] [20]=0 [21:30]=0b0010010000 [31]=0
+            | crm == 255 : "mtcr {rs}"
+            | "mtcrf {crm}, {rs}"
+
+mtmsr       primary=31 rs:gpr[6:10] [11:20]=0 [21:30]=0b0010010010 [31]=0
+            | "mtmsr {rs}"
+
+stwcx_dot   primary=31 uses X_RS [21:30]=0b0010010110 [31]=1
+            | "stwcx. {rs}, {ra}, {rb}"
+
+stwx        primary=31 uses X_RS [21:30]=0b0010010111 [31]=0
+            | "stwx {rs}, {ra}, {rb}"
+
+stwux       primary=31 uses X_RS [21:30]=0b0010110111 [31]=0
+            | "stwux {rs}, {ra}, {rb}"
+
+subfzex     primary=31 rd:gpr[6:10] ra:gpr[11:15] [16:20]=0 oe:bool[21] [22:30]=0b011001000 rc:bool[31]
+            | "subfze{oe?o}{rc?.} {rd}, {ra}"
+
+addzex      primary=31 rd:gpr[6:10] ra:gpr[11:15] [16:20]=0 oe:bool[21] [22:30]=0b011001010 rc:bool[31]
+            | "addze{oe?o}{rc?.} {rd}, {ra}"
+
+mtsr        primary=31 rs:gpr[6:10] [11]=0 sr:d4[12:15] [16:20]=0 [21:30]=0b0011010010 [31]=0
+            | "mtsr {sr}, {rs}"
+
+stbx        primary=31 uses X_RS [21:30]=0b0011010111 [31]=0
+            | "stbx {rs}, {ra}, {rb}"
+
+subfmex     primary=31 rd:gpr[6:10] ra:gpr[11:15] [16:20]=0 oe:bool[21] [22:30]=0b011101000 rc:bool[31]
+            | "subfme{oe?o}{rc?.} {rd}, {ra}"
+
+addmex      primary=31 rd:gpr[6:10] ra:gpr[11:15] [16:20]=0 oe:bool[21] [22:30]=0b011101010 rc:bool[31]
+            | "addme{oe?o}{rc?.} {rd}, {ra}"
+
+mullwx      primary=31 uses XO [22:30]=0b011101011
+            | "mullw{oe?o}{rc?.} {rd}, {ra}, {rb}"
+
+mtsrin      primary=31 rs:gpr[6:10] [11:15]=0 rb:gpr[16:20] [21:30]=0b0011110010 [31]=0
+            | "mtsrin {rs}, {rb}"
+
+dcbtst      primary=31 [6:10]=0 ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b0011110110 [31]=0
+            | "dcbtst {ra}, {rb}"
+
+stbux       primary=31 uses X_RS [21:30]=0b0011110111 [31]=0
+            | "stbux {rs}, {ra}, {rb}"
+
+addx        primary=31 uses XO [22:30]=0b100001010
+            | "add{oe?o}{rc?.} {rd}, {ra}, {rb}"
+
+dcbt        primary=31 [6:10]=0 ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b0100010110 [31]=0
+            | "dcbt {ra}, {rb}"
+
+lhzx        primary=31 uses X_RD [21:30]=0b0100010111 [31]=0
+            | "lhzx {rd}, {ra}, {rb}"
+
+eqvx        primary=31 uses X_RS [21:30]=0b0100011100 rc:bool[31]
+            | "eqv{rc?.} {ra}, {rs}, {rb}"
+
+tlbie       primary=31 [6:10]=0 [11:15]=0 rb:gpr[16:20] [21:30]=0b0100110010 [31]=0
+            | "tlbie {rb}"
+
+eciwx       primary=31 uses X_RD [21:30]=0b0100110110 [31]=0
+            | "eciwx {rd}, {ra}, {rb}"
+
+lhzux       primary=31 uses X_RD [21:30]=0b0100110111 [31]=0
+            | "lhzux {rd}, {ra}, {rb}"
+
+xorx        primary=31 uses X_RS [21:30]=0b0100111100 rc:bool[31]
+            | "xor{rc?.} {ra}, {rs}, {rb}"
+
+mfspr       primary=31 rd:gpr[6:10] spr:u10[11:20] [21:30]=0b0101010011 [31]=0
+            sprn:spr_name = spr % 32 * 32 + spr / 32
+            | spr == 256 : "mflr {rd}"
+            | spr == 288 : "mfctr {rd}"
+            | spr == 32  : "mfxer {rd}"
+            | "mfspr {rd}, {sprn}"
+
+lhax        primary=31 uses X_RD [21:30]=0b0101010111 [31]=0
+            | "lhax {rd}, {ra}, {rb}"
+
+tlbia       primary=31 [6:10]=0 [11:15]=0 [16:20]=0 [21:30]=0b0101110010 [31]=0
+            | "tlbia"
+
+mftb        primary=31 rd:gpr[6:10] tbr:u10[11:20] [21:30]=0b0101110011 [31]=0
+            tbrn:u16 = tbr % 32 * 32 + tbr / 32
+            | tbr == 392 : "mftb {rd}"
+            | tbr == 424 : "mftbu {rd}"
+            | "mftb {rd}, {tbrn:d}"
+
+lhaux       primary=31 uses X_RD [21:30]=0b0101110111 [31]=0
+            | "lhaux {rd}, {ra}, {rb}"
+
+sthx        primary=31 uses X_RS [21:30]=0b0110010111 [31]=0
+            | "sthx {rs}, {ra}, {rb}"
+
+orcx        primary=31 uses X_RS [21:30]=0b0110011100 rc:bool[31]
+            | "orc{rc?.} {ra}, {rs}, {rb}"
+
+ecowx       primary=31 uses X_RS [21:30]=0b0110110110 [31]=0
+            | "ecowx {rs}, {ra}, {rb}"
+
+sthux       primary=31 uses X_RS [21:30]=0b0110110111 [31]=0
+            | "sthux {rs}, {ra}, {rb}"
+
+orx         primary=31 uses X_RS [21:30]=0b0110111100 rc:bool[31]
+            | rs == rb : "mr{rc?.} {ra}, {rs}"
+            | "or{rc?.} {ra}, {rs}, {rb}"
+
+divwux      primary=31 uses XO [22:30]=0b111001011
+            | "divwu{oe?o}{rc?.} {rd}, {ra}, {rb}"
+
+mtspr       primary=31 rs:gpr[6:10] spr:u10[11:20] [21:30]=0b0111010011 [31]=0
+            sprn:spr_name = spr % 32 * 32 + spr / 32
+            | spr == 256 : "mtlr {rs}"
+            | spr == 288 : "mtctr {rs}"
+            | spr == 32  : "mtxer {rs}"
+            | "mtspr {sprn}, {rs}"
+
+dcbi        primary=31 [6:10]=0 ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b0111010110 [31]=0
+            | "dcbi {ra}, {rb}"
+
+nandx       primary=31 uses X_RS [21:30]=0b0111011100 rc:bool[31]
+            | "nand{rc?.} {ra}, {rs}, {rb}"
+
+divwx       primary=31 uses XO [22:30]=0b111101011
+            | "divw{oe?o}{rc?.} {rd}, {ra}, {rb}"
+
+mcrxr       primary=31 crfd:d3[6:8] [9:20]=0 [21:30]=0b1000000000 [31]=0
+            | "mcrxr cr{crfd}"
+
+lwbrx       primary=31 uses X_RD [21:30]=0b1000010110 [31]=0
+            | "lwbrx {rd}, {ra}, {rb}"
+
+lfsx        primary=31 fd:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1000010111 [31]=0
+            | "lfsx {fd}, {ra}, {rb}"
+
+srwx        primary=31 uses X_RS [21:30]=0b1000011000 rc:bool[31]
+            | "srw{rc?.} {ra}, {rs}, {rb}"
+
+lswx        primary=31 uses X_RD [21:30]=0b1000010101 [31]=0
+            | "lswx {rd}, {ra}, {rb}"
+
+tlbsync     primary=31 [6:10]=0 [11:15]=0 [16:20]=0 [21:30]=0b1000110110 [31]=0
+            | "tlbsync"
+
+lfsux       primary=31 fd:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1000110111 [31]=0
+            | "lfsux {fd}, {ra}, {rb}"
+
+mfsr        primary=31 rd:gpr[6:10] [11]=0 sr:d4[12:15] [16:20]=0 [21:30]=0b1001010011 [31]=0
+            | "mfsr {rd}, {sr}"
+
+lswi        primary=31 rd:gpr[6:10] ra:gpr[11:15] nb:d5[16:20] [21:30]=0b1001010101 [31]=0
+            | "lswi {rd}, {ra}, {nb}"
+
+sync        primary=31 [6:8]=0 [11:20]=0 [21:30]=0b1001010110 [31]=0
+            | "sync"
+
+lfdx        primary=31 fd:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1001010111 [31]=0
+            | "lfdx {fd}, {ra}, {rb}"
+
+lfdux       primary=31 fd:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1001110111 [31]=0
+            | "lfdux {fd}, {ra}, {rb}"
+
+mfsrin      primary=31 rd:gpr[6:10] [11:15]=0 rb:gpr[16:20] [21:30]=0b1010010011 [31]=0
+            | "mfsrin {rd}, {rb}"
+
+stswx       primary=31 uses X_RS [21:30]=0b1010010101 [31]=0
+            | "stswx {rs}, {ra}, {rb}"
+
+stwbrx      primary=31 uses X_RS [21:30]=0b1010010110 [31]=0
+            | "stwbrx {rs}, {ra}, {rb}"
+
+stfsx       primary=31 fs:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1010010111 [31]=0
+            | "stfsx {fs}, {ra}, {rb}"
+
+stfsux      primary=31 fs:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1010110111 [31]=0
+            | "stfsux {fs}, {ra}, {rb}"
+
+stswi       primary=31 rs:gpr[6:10] ra:gpr[11:15] nb:d5[16:20] [21:30]=0b1011010101 [31]=0
+            | "stswi {rs}, {ra}, {nb}"
+
+stfdx       primary=31 fs:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1011010111 [31]=0
+            | "stfdx {fs}, {ra}, {rb}"
+
+stfdux      primary=31 fs:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1011110111 [31]=0
+            | "stfdux {fs}, {ra}, {rb}"
+
+dcba        primary=31 [6:10]=0 ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1011110110 [31]=0
+            | "dcba {ra}, {rb}"
+
+lhbrx       primary=31 uses X_RD [21:30]=0b1100010110 [31]=0
+            | "lhbrx {rd}, {ra}, {rb}"
+
+srawx       primary=31 uses X_RS [21:30]=0b1100011000 rc:bool[31]
+            | "sraw{rc?.} {ra}, {rs}, {rb}"
+
+srawix      primary=31 rs:gpr[6:10] ra:gpr[11:15] sh:d5[16:20] [21:30]=0b1100111000 rc:bool[31]
+            | "srawi{rc?.} {ra}, {rs}, {sh}"
+
+eieio       primary=31 [6:10]=0 [11:15]=0 [16:20]=0 [21:30]=0b1101010110 [31]=0
+            | "eieio"
+
+sthbrx      primary=31 uses X_RS [21:30]=0b1110010110 [31]=0
+            | "sthbrx {rs}, {ra}, {rb}"
+
+extshx      primary=31 rs:gpr[6:10] ra:gpr[11:15] [16:20]=0 [21:30]=0b1110011010 rc:bool[31]
+            | "extsh{rc?.} {ra}, {rs}"
+
+extsbx      primary=31 rs:gpr[6:10] ra:gpr[11:15] [16:20]=0 [21:30]=0b1110111010 rc:bool[31]
+            | "extsb{rc?.} {ra}, {rs}"
+
+icbi        primary=31 [6:10]=0 ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1111010110 [31]=0
+            | "icbi {ra}, {rb}"
+
+stfiwx      primary=31 fs:fpr[6:10] ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1111010111 [31]=0
+            | "stfiwx {fs}, {ra}, {rb}"
+
+tlbld       primary=31 [6:10]=0 [11:15]=0 rb:gpr[16:20] [21:30]=0b1111010010 [31]=0
+            | "tlbld {rb}"
+
+tlbli       primary=31 [6:10]=0 [11:15]=0 rb:gpr[16:20] [21:30]=0b1111110010 [31]=0
+            | "tlbli {rb}"
+
+dcbz        primary=31 [6:10]=0 ra:gpr[11:15] rb:gpr[16:20] [21:30]=0b1111110110 [31]=0
+            | "dcbz {ra}, {rb}"
+
+# ============================================================
+# Primary opcodes 32-55: Load/Store D-form
+# ============================================================
+lwz         primary=32 uses D_LD
+            | "lwz {rd}, {d}({ra})"
+
+lwzu        primary=33 uses D_LD
+            | "lwzu {rd}, {d}({ra})"
+
+lbz         primary=34 uses D_LD
+            | "lbz {rd}, {d}({ra})"
+
+lbzu        primary=35 uses D_LD
+            | "lbzu {rd}, {d}({ra})"
+
+stw         primary=36 uses D_ST
+            | "stw {rs}, {d}({ra})"
+
+stwu        primary=37 uses D_ST
+            | "stwu {rs}, {d}({ra})"
+
+stb         primary=38 uses D_ST
+            | "stb {rs}, {d}({ra})"
+
+stbu        primary=39 uses D_ST
+            | "stbu {rs}, {d}({ra})"
+
+lhz         primary=40 uses D_LD
+            | "lhz {rd}, {d}({ra})"
+
+lhzu        primary=41 uses D_LD
+            | "lhzu {rd}, {d}({ra})"
+
+lha         primary=42 uses D_LD
+            | "lha {rd}, {d}({ra})"
+
+lhau        primary=43 uses D_LD
+            | "lhau {rd}, {d}({ra})"
+
+sth         primary=44 uses D_ST
+            | "sth {rs}, {d}({ra})"
+
+sthu        primary=45 uses D_ST
+            | "sthu {rs}, {d}({ra})"
+
+lmw         primary=46 uses D_LD
+            | "lmw {rd}, {d}({ra})"
+
+stmw        primary=47 uses D_ST
+            | "stmw {rs}, {d}({ra})"
+
+# FP Load D-form
+lfs         primary=48 fd:fpr[6:10] ra:gpr[11:15] d:disp[16:31]
+            | "lfs {fd}, {d}({ra})"
+
+lfsu        primary=49 fd:fpr[6:10] ra:gpr[11:15] d:disp[16:31]
+            | "lfsu {fd}, {d}({ra})"
+
+lfd         primary=50 fd:fpr[6:10] ra:gpr[11:15] d:disp[16:31]
+            | "lfd {fd}, {d}({ra})"
+
+lfdu        primary=51 fd:fpr[6:10] ra:gpr[11:15] d:disp[16:31]
+            | "lfdu {fd}, {d}({ra})"
+
+# FP Store D-form
+stfs        primary=52 fs:fpr[6:10] ra:gpr[11:15] d:disp[16:31]
+            | "stfs {fs}, {d}({ra})"
+
+stfsu       primary=53 fs:fpr[6:10] ra:gpr[11:15] d:disp[16:31]
+            | "stfsu {fs}, {d}({ra})"
+
+stfd        primary=54 fs:fpr[6:10] ra:gpr[11:15] d:disp[16:31]
+            | "stfd {fs}, {d}({ra})"
+
+stfdu       primary=55 fs:fpr[6:10] ra:gpr[11:15] d:disp[16:31]
+            | "stfdu {fs}, {d}({ra})"
+
+# ============================================================
+# Primary opcodes 56-57: Paired Singles Quantized Load
+# ============================================================
+psq_l       primary=56 fd:fpr[6:10] ra:gpr[11:15] wq:d1[16] iq:d3[17:19] dq:simm12[20:31]
+            | "psq_l {fd}, {dq}({ra}), {wq}, {iq}"
+
+psq_lu      primary=57 fd:fpr[6:10] ra:gpr[11:15] wq:d1[16] iq:d3[17:19] dq:simm12[20:31]
+            | "psq_lu {fd}, {dq}({ra}), {wq}, {iq}"
+
+# ============================================================
+# Primary opcode 59: FP Single Arithmetic A-form
+# ============================================================
+fdivsx      primary=59 uses FPR3 [21:25]=0 [26:30]=0b10010
+            | "fdivs{rc?.} {fd}, {fa}, {fb}"
+
+fsubsx      primary=59 uses FPR3 [21:25]=0 [26:30]=0b10100
+            | "fsubs{rc?.} {fd}, {fa}, {fb}"
+
+faddsx      primary=59 uses FPR3 [21:25]=0 [26:30]=0b10101
+            | "fadds{rc?.} {fd}, {fa}, {fb}"
+
+fsqrtsx     primary=59 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:25]=0 [26:30]=0b10110 rc:bool[31]
+            | "fsqrts{rc?.} {fd}, {fb}"
+
+fresx       primary=59 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:25]=0 [26:30]=0b11000 rc:bool[31]
+            | "fres{rc?.} {fd}, {fb}"
+
+fmulsx      primary=59 fd:fpr[6:10] fa:fpr[11:15] [16:20]=0 fc:fpr[21:25] [26:30]=0b11001 rc:bool[31]
+            | "fmuls{rc?.} {fd}, {fa}, {fc}"
+
+fmsubsx     primary=59 uses FPR4 [26:30]=0b11100
+            | "fmsubs{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+fmaddsx     primary=59 uses FPR4 [26:30]=0b11101
+            | "fmadds{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+fnmsubsx    primary=59 uses FPR4 [26:30]=0b11110
+            | "fnmsubs{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+fnmaddsx    primary=59 uses FPR4 [26:30]=0b11111
+            | "fnmadds{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+# ============================================================
+# Primary opcodes 60-61: Paired Singles Quantized Store
+# ============================================================
+psq_st      primary=60 fs:fpr[6:10] ra:gpr[11:15] wq:d1[16] iq:d3[17:19] dq:simm12[20:31]
+            | "psq_st {fs}, {dq}({ra}), {wq}, {iq}"
+
+psq_stu     primary=61 fs:fpr[6:10] ra:gpr[11:15] wq:d1[16] iq:d3[17:19] dq:simm12[20:31]
+            | "psq_stu {fs}, {dq}({ra}), {wq}, {iq}"
+
+# ============================================================
+# Primary opcode 63: FP Double X-form and A-form
+# ============================================================
+
+# FP Compare X-form
+fcmpu       primary=63 crfd:d3[6:8] [9:10]=0 fa:fpr[11:15] fb:fpr[16:20] [21:30]=0 [31]=0
+            | "fcmpu cr{crfd}, {fa}, {fb}"
+
+# FP Move/Convert X-form (10-bit XO at [21:30])
+frspx       primary=63 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0000001100 rc:bool[31]
+            | "frsp{rc?.} {fd}, {fb}"
+
+fctiwx      primary=63 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0000001110 rc:bool[31]
+            | "fctiw{rc?.} {fd}, {fb}"
+
+fctiwzx     primary=63 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0000001111 rc:bool[31]
+            | "fctiwz{rc?.} {fd}, {fb}"
+
+fcmpo       primary=63 crfd:d3[6:8] [9:10]=0 fa:fpr[11:15] fb:fpr[16:20] [21:30]=0b0000100000 [31]=0
+            | "fcmpo cr{crfd}, {fa}, {fb}"
+
+mtfsb1x     primary=63 crbd:d5[6:10] [11:20]=0 [21:30]=0b0000100110 rc:bool[31]
+            | "mtfsb1{rc?.} {crbd}"
+
+fnegx       primary=63 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0000101000 rc:bool[31]
+            | "fneg{rc?.} {fd}, {fb}"
+
+mcrfs       primary=63 crfd:d3[6:8] [9:10]=0 crfs:d3[11:13] [14:20]=0 [21:30]=0b0001000000 [31]=0
+            | "mcrfs cr{crfd}, cr{crfs}"
+
+mtfsb0x     primary=63 crbd:d5[6:10] [11:20]=0 [21:30]=0b0001000110 rc:bool[31]
+            | "mtfsb0{rc?.} {crbd}"
+
+fmrx        primary=63 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0001001000 rc:bool[31]
+            | "fmr{rc?.} {fd}, {fb}"
+
+mtfsfix     primary=63 crfd:d3[6:8] [9:10]=0 [11:15]=0 imm:d4[16:19] [20]=0 [21:30]=0b0010000110 rc:bool[31]
+            | "mtfsfi{rc?.} cr{crfd}, {imm}"
+
+fnabsx      primary=63 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0010001000 rc:bool[31]
+            | "fnabs{rc?.} {fd}, {fb}"
+
+fabsx       primary=63 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:30]=0b0100001000 rc:bool[31]
+            | "fabs{rc?.} {fd}, {fb}"
+
+mffsx       primary=63 fd:fpr[6:10] [11:20]=0 [21:30]=0b1001000111 rc:bool[31]
+            | "mffs{rc?.} {fd}"
+
+mtfsfx      primary=63 [6]=0 fm:d8[7:14] [15]=0 fb:fpr[16:20] [21:30]=0b1011000111 rc:bool[31]
+            | "mtfsf{rc?.} {fm}, {fb}"
+
+# FP Double Arithmetic A-form (5-bit XO at [26:30])
+fdivx       primary=63 uses FPR3 [21:25]=0 [26:30]=0b10010
+            | "fdiv{rc?.} {fd}, {fa}, {fb}"
+
+fsubx       primary=63 uses FPR3 [21:25]=0 [26:30]=0b10100
+            | "fsub{rc?.} {fd}, {fa}, {fb}"
+
+faddx       primary=63 uses FPR3 [21:25]=0 [26:30]=0b10101
+            | "fadd{rc?.} {fd}, {fa}, {fb}"
+
+fsqrtx      primary=63 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:25]=0 [26:30]=0b10110 rc:bool[31]
+            | "fsqrt{rc?.} {fd}, {fb}"
+
+fselx       primary=63 uses FPR4 [26:30]=0b10111
+            | "fsel{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+fmulx       primary=63 fd:fpr[6:10] fa:fpr[11:15] [16:20]=0 fc:fpr[21:25] [26:30]=0b11001 rc:bool[31]
+            | "fmul{rc?.} {fd}, {fa}, {fc}"
+
+frsqrtex    primary=63 fd:fpr[6:10] [11:15]=0 fb:fpr[16:20] [21:25]=0 [26:30]=0b11010 rc:bool[31]
+            | "frsqrte{rc?.} {fd}, {fb}"
+
+fmsubx      primary=63 uses FPR4 [26:30]=0b11100
+            | "fmsub{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+fmaddx      primary=63 uses FPR4 [26:30]=0b11101
+            | "fmadd{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+fnmsubx     primary=63 uses FPR4 [26:30]=0b11110
+            | "fnmsub{rc?.} {fd}, {fa}, {fc}, {fb}"
+
+fnmaddx     primary=63 uses FPR4 [26:30]=0b11111
+            | "fnmadd{rc?.} {fd}, {fa}, {fc}, {fb}"

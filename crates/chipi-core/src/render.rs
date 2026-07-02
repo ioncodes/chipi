@@ -32,6 +32,16 @@ pub enum Seg {
     },
 }
 
+/// Whether any segment (recursively) carries a `:sym` or `:rel` placeholder, which needs the
+/// contextual disassembler's symbol resolution. Shared by every backend's feature gating.
+pub fn segs_have_sym(segs: &[Seg]) -> bool {
+    segs.iter().any(|s| match s {
+        Seg::Field { fmt, .. } => fmt.sym || fmt.rel,
+        Seg::Cond { then, els, .. } => segs_have_sym(then) || segs_have_sym(els),
+        Seg::SubField { .. } | Seg::Lit(_) => false,
+    })
+}
+
 /// A placeholder format specifier.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FmtSpec {

@@ -4,11 +4,13 @@
 //! synthesised full-unit key for small windows. It builds a dense table over the selector's value
 //! space, then resolves each slot to a leaf, an invalid slot, or a residual matcher over the
 //! discriminating bits. Ambiguity (two leaves that match the same word with no priority) and table
-//! holes are reported here. One tree is produced per mode combination.
+//! holes are reported here. One tree is produced per distinct filtered leaf set: mode combinations
+//! whose constraints select the same leaves share a tree through `Built::combo_tree`.
 
 use crate::lower::Resolved;
 use crate::model::{BitRange, Mode, Selector};
 use chipi_syntax::{Diag, Span};
+use std::sync::Arc;
 
 /// A named contiguous key over the window.
 #[derive(Clone, Debug)]
@@ -58,11 +60,17 @@ impl Slot {
 }
 
 /// One arm of a sparse verify chain: route to `opcode` when `(word & mask) == val`.
+///
+/// With `check_guard` set, the leaf's `when` guard is part of the match: a failed guard falls
+/// through to the next arm instead of selecting the leaf. This is how leaves separable only by
+/// guards share a slot. Arms of pre-existing specificity chains keep `check_guard = false`, so
+/// their guards still run once after classification (failure means reserved, not fallthrough).
 #[derive(Clone, Debug)]
 pub struct SparseArm {
     pub mask: u64,
     pub val: u64,
     pub opcode: usize,
+    pub check_guard: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -95,7 +103,9 @@ pub struct Tree {
     pub primary_lowering: Lowering,
     pub slots: Vec<Slot>,
     pub residuals: Vec<Residual>,
-    pub opcodes: Vec<Opcode>,
+    /// The opcode-id table. It is identical for every tree of a build (ids are global), so all
+    /// trees share one allocation; cloning a tree copies a pointer, not the table.
+    pub opcodes: Arc<Vec<Opcode>>,
     pub n_invalid: usize,
 }
 
@@ -105,18 +115,23 @@ impl Tree {
     }
 }
 
-/// The cross-product build output: one tree per mode combination.
+/// The cross-product build output. `trees` holds one tree per distinct filtered leaf set (not
+/// per combination); `combo_tree[combo]` maps each mode combination to its tree in `trees`.
 pub struct Built {
     pub trees: Vec<Tree>,
+    pub combo_tree: Vec<usize>,
     pub errors: Vec<Diag>,
     pub warnings: Vec<Diag>,
 }
 
 struct Leaf {
     id: usize,
+    /// Declaration order (index into `instrs`): the priority order of guard chains.
+    decl: usize,
     fixed_mask: u64,
     fixed_val: u64,
     name: String,
+    guarded: bool,
     span: Span,
     mode_constraints: Vec<(usize, u64)>,
 }
@@ -152,14 +167,18 @@ pub fn build(r: &Resolved) -> Built {
             let (mask, val) = inst.fixed_mask_val();
             Leaf {
                 id: id_of[idx],
+                decl: idx,
                 fixed_mask: mask,
                 fixed_val: val,
                 name: inst.name.clone(),
+                guarded: inst.guard.is_some(),
                 span: inst.span,
                 mode_constraints: inst.mode_constraints.clone(),
             }
         })
         .collect();
+
+    let opcodes = Arc::new(opcodes);
 
     let window = r.decoder.unit_bits as u16;
     let primary = match pick_primary(r, &leaves, window) {
@@ -168,6 +187,7 @@ pub fn build(r: &Resolved) -> Built {
             errors.push(e);
             return Built {
                 trees: vec![empty_tree(opcodes)],
+                combo_tree: vec![0],
                 errors,
                 warnings,
             };
@@ -181,32 +201,59 @@ pub fn build(r: &Resolved) -> Built {
         .product::<u64>()
         .max(1);
 
+    // The cap is on the raw cross-product, not the count of distinct trees. Per-combination
+    // artifacts (the combo->tree map, one classify wrapper and dispatch arm per combination in
+    // every backend) scale with the raw count regardless of tree sharing, and a spec whose modes
+    // do not discriminate leaves should shrink its mode declarations rather than lean on the
+    // deduplication.
     if combos > 256 {
+        let breakdown: Vec<String> = r
+            .modes
+            .iter()
+            .map(|m| format!("{}: {}", m.name, m.cardinality))
+            .collect();
         errors.push(Diag::error(
             "ModeBudgetExceeded",
             format!(
-                "mode cross-product is {combos} combinations (>256); reduce decode-affecting modes"
+                "mode cross-product is {combos} combinations ({}), over the 256 cap; shrink the \
+                 widest mode or move it out of decode (guards can read modes without splitting \
+                 tables)",
+                breakdown.join(" x ")
             ),
             r.instrs.first().map(|i| i.span).unwrap_or(Span::at(0)),
         ));
         return Built {
             trees: vec![],
+            combo_tree: vec![],
             errors,
             warnings,
         };
     }
 
-    let mut trees = Vec::new();
+    // Build one tree per distinct filtered leaf set. Two combinations whose mode constraints
+    // select the same leaves get byte-identical trees, so they share one.
+    let mut trees: Vec<Tree> = Vec::new();
+    let mut combo_tree = Vec::with_capacity(combos as usize);
+    let mut seen: Vec<(Vec<usize>, usize)> = Vec::new();
+
     for combo in 0..combos {
-        let scope: Vec<&Leaf> = leaves
+        let scope_idx: Vec<usize> = leaves
             .iter()
-            .filter(|l| {
+            .enumerate()
+            .filter(|(_, l)| {
                 l.mode_constraints
                     .iter()
                     .all(|&(mi, v)| mode_value(&r.modes, combo, mi) == v)
             })
+            .map(|(i, _)| i)
             .collect();
 
+        if let Some((_, t)) = seen.iter().find(|(k, _)| *k == scope_idx) {
+            combo_tree.push(*t);
+            continue;
+        }
+
+        let scope: Vec<&Leaf> = scope_idx.iter().map(|&i| &leaves[i]).collect();
         let (slots, residuals, n_invalid) =
             build_slots(r, &primary, &scope, &mut errors, &mut warnings);
 
@@ -218,16 +265,19 @@ pub fn build(r: &Resolved) -> Built {
             opcodes: opcodes.clone(),
             n_invalid,
         });
+        seen.push((scope_idx, trees.len() - 1));
+        combo_tree.push(trees.len() - 1);
     }
 
     Built {
         trees,
+        combo_tree,
         errors,
         warnings,
     }
 }
 
-fn empty_tree(opcodes: Vec<Opcode>) -> Tree {
+fn empty_tree(opcodes: Arc<Vec<Opcode>>) -> Tree {
     Tree {
         primary: SelKey {
             name: "<none>".into(),
@@ -241,8 +291,9 @@ fn empty_tree(opcodes: Vec<Opcode>) -> Tree {
     }
 }
 
-/// Value of mode `mi` within combination `combo` (mixed radix over cardinalities).
-fn mode_value(modes: &[Mode], combo: u64, mi: usize) -> u64 {
+/// Value of mode `mi` within combination `combo` (mixed radix over cardinalities). The
+/// canonical mixed-radix decode, shared with `check`'s fetch-width sweep.
+pub(crate) fn mode_value(modes: &[Mode], combo: u64, mi: usize) -> u64 {
     let mut radix = 1u64;
     for m in &modes[..mi] {
         radix *= m.cardinality;
@@ -298,6 +349,10 @@ fn build_slots(
                 .collect();
             if dominators.len() == 1 {
                 slots.push(Slot::Leaf(dominators[0].id));
+            } else if guard_separable(&cands) {
+                // Masks cannot decide, but guards can: chain the candidates.
+                residuals.push(guard_chain(&cands, p_mask));
+                slots.push(Slot::Residual(residuals.len() - 1));
             } else {
                 // No single dominator: the slot is ambiguous; report and pick most-specific.
                 let (a, b) = incomparable(&cands);
@@ -305,7 +360,9 @@ fn build_slots(
                     Diag::error(
                         "Ambiguous",
                         format!(
-                            "`{}` and `{}` match the same encoding with no distinguishing bit",
+                            "`{}` and `{}` match the same encoding with no distinguishing bit \
+                             (guards could decide the slot, but at most one unguarded leaf is \
+                             allowed per slot)",
                             a.name, b.name
                         ),
                         a.span,
@@ -359,44 +416,53 @@ fn build_residual(r: &Resolved, cands: &[&Leaf], p_mask: u64) -> Result<Residual
     // Keyed fast path: every candidate fixes exactly the contiguous key.
     if cands.iter().all(|l| (l.fixed_mask & !p_mask) == key_mask) {
         let key_name = selector_named(r, key_range).unwrap_or_else(|| format!("bits[{hi}:{lo}]"));
-        let mut errs = Vec::new();
-        let mut arms: Vec<(u64, usize)> = Vec::new();
+
+        // Group candidates by key value to find collisions.
+        let mut groups: Vec<(u64, Vec<&Leaf>)> = Vec::new();
         for l in cands {
             let key = (l.fixed_val & key_mask) >> lo;
-            if let Some(&(_, other)) = arms.iter().find(|(k, _)| *k == key) {
-                let other_name = cands
-                    .iter()
-                    .find(|c| c.id == other)
-                    .map(|c| c.name.as_str())
-                    .unwrap_or("?");
+            match groups.iter_mut().find(|(k, _)| *k == key) {
+                Some((_, g)) => g.push(l),
+                None => groups.push((key, vec![l])),
+            }
+        }
+
+        if groups.iter().all(|(_, g)| g.len() == 1) {
+            let mut arms: Vec<(u64, usize)> = groups.iter().map(|(k, g)| (*k, g[0].id)).collect();
+            arms.sort_by_key(|(k, _)| *k);
+
+            let lowering = residual_lowering(arms.len(), key_range.width());
+            return Ok(Residual::Keyed {
+                key: SelKey {
+                    name: key_name,
+                    range: key_range,
+                },
+                lowering,
+                arms,
+                default: 0,
+            });
+        }
+
+        // Key collisions: if guards can separate every colliding group, fall back to a
+        // sparse chain over the whole slot; otherwise report the collisions.
+        if groups.iter().all(|(_, g)| guard_separable(g)) {
+            return build_sparse(cands, p_mask);
+        }
+
+        let mut errs = Vec::new();
+        for (key, g) in groups.iter().filter(|(_, g)| g.len() > 1) {
+            for pair in g.windows(2) {
                 errs.push(Diag::error(
                     "Ambiguous",
                     format!(
                         "`{}` collides with `{}` on residual key {key_name} = {key:#x}",
-                        l.name, other_name
+                        pair[1].name, pair[0].name
                     ),
-                    l.span,
+                    pair[1].span,
                 ));
-            } else {
-                arms.push((key, l.id));
             }
         }
-        arms.sort_by_key(|(k, _)| *k);
-
-        if !errs.is_empty() {
-            return Err(errs);
-        }
-
-        let lowering = residual_lowering(arms.len(), key_range.width());
-        return Ok(Residual::Keyed {
-            key: SelKey {
-                name: key_name,
-                range: key_range,
-            },
-            lowering,
-            arms,
-            default: 0,
-        });
+        return Err(errs);
     }
 
     build_sparse(cands, p_mask)
@@ -405,7 +471,10 @@ fn build_residual(r: &Resolved, cands: &[&Leaf], p_mask: u64) -> Result<Residual
 fn build_sparse(cands: &[&Leaf], p_mask: u64) -> Result<Residual, Vec<Diag>> {
     let mut errs = Vec::new();
 
-    // detect any pair that can match the same word with no strict-superset relationship.
+    // Detect pairs that can match the same word with no strict-superset relationship. Such a
+    // pair is fine when a guard can decide it (at most one of the two unguarded); the guarded
+    // members become guard-checked chain arms. Two unguarded leaves stay ambiguous.
+    let mut chained: Vec<usize> = Vec::new();
     for (i, a) in cands.iter().enumerate() {
         let am = a.fixed_mask & !p_mask;
         for b in &cands[i + 1..] {
@@ -418,12 +487,19 @@ fn build_sparse(cands: &[&Leaf], p_mask: u64) -> Result<Residual, Vec<Diag>> {
             let a_super = (am & bm) == bm;
             let b_super = (am & bm) == am;
             let strict = (a_super && am != bm) || (b_super && am != bm);
-            if !strict {
+            if strict {
+                continue;
+            }
+            if a.guarded || b.guarded {
+                chained.push(a.id);
+                chained.push(b.id);
+            } else {
                 errs.push(
                     Diag::error(
                         "Ambiguous",
                         format!(
-                            "`{}` and `{}` can match the same encoding with no distinguishing bit",
+                            "`{}` and `{}` can match the same encoding with no distinguishing \
+                             bit; a `when` guard on one of them would decide the overlap",
                             a.name, b.name
                         ),
                         a.span,
@@ -434,12 +510,15 @@ fn build_sparse(cands: &[&Leaf], p_mask: u64) -> Result<Residual, Vec<Diag>> {
         }
     }
 
-    // most fixed bits first; tie-break by name for a stable order
+    // Most fixed bits first; among equals, guarded arms precede the unguarded fallback and
+    // declaration order sets the priority of competing guards. Name breaks the final tie.
     let mut ordered: Vec<&&Leaf> = cands.iter().collect();
     ordered.sort_by(|a, b| {
         (b.fixed_mask & !p_mask)
             .count_ones()
             .cmp(&(a.fixed_mask & !p_mask).count_ones())
+            .then(b.guarded.cmp(&a.guarded))
+            .then(a.decl.cmp(&b.decl))
             .then(a.name.cmp(&b.name))
     });
     let arms = ordered
@@ -448,6 +527,7 @@ fn build_sparse(cands: &[&Leaf], p_mask: u64) -> Result<Residual, Vec<Diag>> {
             mask: l.fixed_mask & !p_mask,
             val: l.fixed_val & !p_mask,
             opcode: l.id,
+            check_guard: l.guarded && chained.contains(&l.id),
         })
         .collect();
 
@@ -458,6 +538,34 @@ fn build_sparse(cands: &[&Leaf], p_mask: u64) -> Result<Residual, Vec<Diag>> {
         })
     } else {
         Err(errs)
+    }
+}
+
+/// Can guards decide between these candidates? True when at most one is unguarded (the guarded
+/// members chain in declaration order; the unguarded one, if any, is the fallback).
+fn guard_separable(cands: &[&Leaf]) -> bool {
+    cands.iter().filter(|l| !l.guarded).count() <= 1
+}
+
+/// A guard chain over candidates that all match every word of the slot: guarded leaves in
+/// declaration order, the unguarded fallback last.
+fn guard_chain(cands: &[&Leaf], p_mask: u64) -> Residual {
+    let mut ordered: Vec<&&Leaf> = cands.iter().collect();
+    ordered.sort_by(|a, b| b.guarded.cmp(&a.guarded).then(a.decl.cmp(&b.decl)));
+
+    let arms = ordered
+        .iter()
+        .map(|l| SparseArm {
+            mask: l.fixed_mask & !p_mask,
+            val: l.fixed_val & !p_mask,
+            opcode: l.id,
+            check_guard: l.guarded,
+        })
+        .collect();
+
+    Residual::Sparse {
+        lowering: Lowering::Sparse,
+        arms,
     }
 }
 
@@ -494,38 +602,53 @@ fn selector_named(r: &Resolved, range: BitRange) -> Option<String> {
         .map(|s| s.name.clone())
 }
 
-fn pick_primary(r: &Resolved, leaves: &[Leaf], window: u16) -> Result<SelKey, Diag> {
-    // declared selectors constrained by *every* leaf
-    let qualifying: Vec<&Selector> = r
-        .selectors
+/// The primary-selector choice shared by `pick_primary` and `check`'s `LengthWindow` pass:
+/// among the selectors constrained by every leaf mask and narrow enough for a dense table
+/// (at most [`MAX_PRIMARY_BITS`] wide), the widest wins, with most-significant range (higher
+/// `lo`) then name as tiebreaks. `None` when no such selector exists; the callers apply their
+/// own whole-word fallback and error reporting.
+pub(crate) fn narrow_primary_selector<'a>(
+    selectors: &'a [Selector],
+    leaf_masks: &[u64],
+) -> Option<&'a Selector> {
+    let mut narrow: Vec<&Selector> = selectors
         .iter()
         .filter(|s| {
             let m = s.range.mask();
-            leaves.iter().all(|l| (l.fixed_mask & m) != 0)
+            leaf_masks.iter().all(|&lm| (lm & m) != 0)
         })
-        .collect();
-
-    // among those, the ones narrow enough for a dense primary table.
-    let mut narrow: Vec<&&Selector> = qualifying
-        .iter()
         .filter(|s| s.range.width() <= MAX_PRIMARY_BITS)
         .collect();
 
-    if !narrow.is_empty() {
-        // widest, then most-significant (higher lo), then name
-        narrow.sort_by(|a, b| {
-            b.range
-                .width()
-                .cmp(&a.range.width())
-                .then(b.range.lo.cmp(&a.range.lo))
-                .then(a.name.cmp(&b.name))
-        });
-        let s = narrow[0];
+    narrow.sort_by(|a, b| {
+        b.range
+            .width()
+            .cmp(&a.range.width())
+            .then(b.range.lo.cmp(&a.range.lo))
+            .then(a.name.cmp(&b.name))
+    });
+    narrow.first().copied()
+}
+
+fn pick_primary(r: &Resolved, leaves: &[Leaf], window: u16) -> Result<SelKey, Diag> {
+    let leaf_masks: Vec<u64> = leaves.iter().map(|l| l.fixed_mask).collect();
+
+    if let Some(s) = narrow_primary_selector(&r.selectors, &leaf_masks) {
         return Ok(SelKey {
             name: s.name.clone(),
             range: s.range,
         });
     }
+
+    // declared selectors constrained by *every* leaf (all wider than the cap at this point)
+    let qualifying: Vec<&Selector> = r
+        .selectors
+        .iter()
+        .filter(|s| {
+            let m = s.range.mask();
+            leaf_masks.iter().all(|&lm| (lm & m) != 0)
+        })
+        .collect();
 
     if let Some(wide) = qualifying.first() {
         return Err(Diag::error(

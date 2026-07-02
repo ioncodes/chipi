@@ -10,26 +10,66 @@
 use crate::model::Func;
 use chipi_syntax::ast::{AssemblePart, BinOp, Expr, Ext, UnOp};
 
-/// The builtin function names recognised by the computation layer.
-pub const BUILTINS: &[&str] = &[
-    "concat",
-    "sign_extend",
-    "zero_extend",
-    "ones",
-    "replicate",
-    "rotate_left",
-    "rotate_right",
-    "bit_width",
-    "clz",
-    "ctz",
-    "popcount",
-    "min",
-    "max",
-    "mask_from_range",
+/// How [`infer_width`] sizes a builtin call's result.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WidthRule {
+    /// The sum of the argument widths (`concat`).
+    SumOfArgWidths,
+    /// A fixed width, independent of the arguments.
+    Const(u16),
+    /// The widest argument (`min`, `max`).
+    MaxOfArgs,
+}
+
+/// One entry of the canonical builtin table: name, accepted argument count and width rule.
+///
+/// This table is the single source of truth for which builtins exist, their arity and their
+/// inferred width. The evaluator ([`eval_builtin`]) and each backend's `emit_call` keep
+/// per-target match arms because the emitted syntax genuinely differs; sync tests in each
+/// crate diff those arms against this table, so a missing arm is a test failure.
+pub struct Builtin {
+    pub name: &'static str,
+    pub min_args: usize,
+    pub max_args: usize,
+    pub width: WidthRule,
+}
+
+impl Builtin {
+    const fn new(name: &'static str, min_args: usize, max_args: usize, width: WidthRule) -> Self {
+        Builtin {
+            name,
+            min_args,
+            max_args,
+            width,
+        }
+    }
+}
+
+/// The builtin functions recognised by the computation layer.
+pub const BUILTINS: &[Builtin] = &[
+    Builtin::new("concat", 1, usize::MAX, WidthRule::SumOfArgWidths),
+    Builtin::new("sign_extend", 2, 2, WidthRule::Const(64)),
+    Builtin::new("zero_extend", 2, 2, WidthRule::Const(64)),
+    Builtin::new("ones", 1, 1, WidthRule::Const(64)),
+    Builtin::new("replicate", 3, 3, WidthRule::Const(64)),
+    Builtin::new("rotate_left", 3, 3, WidthRule::Const(64)),
+    Builtin::new("rotate_right", 3, 3, WidthRule::Const(64)),
+    Builtin::new("bit_width", 1, 1, WidthRule::Const(8)),
+    Builtin::new("clz", 2, 2, WidthRule::Const(8)),
+    Builtin::new("ctz", 1, 1, WidthRule::Const(8)),
+    Builtin::new("popcount", 1, 1, WidthRule::Const(8)),
+    Builtin::new("min", 2, 2, WidthRule::MaxOfArgs),
+    Builtin::new("max", 2, 2, WidthRule::MaxOfArgs),
+    Builtin::new("mask_from_range", 3, 3, WidthRule::Const(64)),
 ];
 
+/// Look up a builtin by name.
+pub fn builtin_of(name: &str) -> Option<&'static Builtin> {
+    BUILTINS.iter().find(|b| b.name == name)
+}
+
 pub fn is_builtin(name: &str) -> bool {
-    BUILTINS.contains(&name)
+    builtin_of(name).is_some()
 }
 
 /// Evaluation environment: the `word`, per-name value and width lookups, plus the `fn` table.
@@ -142,7 +182,9 @@ pub fn eval_value(e: &Expr, env: &Env) -> u128 {
 
 /// Evaluate a user `fn`: bind params (masked to width), run `let`s in order, return masked.
 pub fn eval_fn(f: &Func, args: &[u128], fns: &[Func]) -> u128 {
-    // (name, value, width); a let's local width is pinned to 64 (matches the reference model).
+    // (name, value, width); a let's width was inferred once during lowering so that
+    // width-sensitive consumers (concat, ctz) see the same width whether the expression is
+    // named or inlined. All backends read the same stored widths.
     let mut locals: Vec<(String, u128, u16)> = f
         .params
         .iter()
@@ -162,9 +204,9 @@ pub fn eval_fn(f: &Func, args: &[u128], fns: &[Func]) -> u128 {
     };
 
     // run `let`s in order, each visible to later lets and the return expression.
-    for (name, expr) in &f.lets {
+    for (name, expr, width) in &f.lets {
         let v = run(expr, &locals);
-        locals.push((name.clone(), v, 64));
+        locals.push((name.clone(), v, *width));
     }
 
     run(&f.ret_expr, &locals) & mask128(f.ret.width())
@@ -211,8 +253,15 @@ fn eval_assemble(out_width: u16, parts: &[AssemblePart], ext: Ext, env: &Env) ->
 }
 
 fn builtin(name: &str, args: &[Expr], env: &Env) -> u128 {
+    eval_builtin(name, args, env).unwrap_or(0)
+}
+
+/// Evaluate one builtin call, or `None` for a name without an evaluator arm. Public so the
+/// sync test can assert every [`BUILTINS`] entry is actually evaluated instead of silently
+/// falling back to 0.
+pub fn eval_builtin(name: &str, args: &[Expr], env: &Env) -> Option<u128> {
     let arg = |i: usize| args.get(i).map(|e| eval_value(e, env)).unwrap_or(0);
-    match name {
+    let v = match name {
         "concat" => {
             // First argument is most significant; each contributes its inferred width.
             let we = env.widths();
@@ -248,8 +297,9 @@ fn builtin(name: &str, args: &[Expr], env: &Env) -> u128 {
         "min" => arg(0).min(arg(1)),
         "max" => arg(0).max(arg(1)),
         "mask_from_range" => mask_from_range(arg(0) as u16, arg(1) as u16, arg(2) as u16),
-        _ => 0,
-    }
+        _ => return None,
+    };
+    Some(v)
 }
 
 fn bit_width(v: u128) -> u128 {
@@ -328,6 +378,49 @@ pub fn infer_width_locals(e: &Expr, widths: &std::collections::HashMap<String, u
     )
 }
 
+/// Substitute decode-variable reads with constant values: every `Name` matching an entry of
+/// `vals` becomes an integer literal carrying the variable's declared width. Backends fold host
+/// modes (per combination) and context defaults (word-level entry points) through this before
+/// emission, so the generated code and the oracle agree on what a variable read means.
+pub fn subst_vars(e: &Expr, vals: &[(String, u64, u16)]) -> Expr {
+    use chipi_syntax::ast::IntLit;
+
+    e.map_names(&|n| {
+        vals.iter()
+            .find(|(name, _, _)| *name == n.text)
+            .map(|(_, v, w)| {
+                Expr::Int(IntLit {
+                    value: *v as u128,
+                    width_hint: Some(*w),
+                    span: n.span,
+                })
+            })
+    })
+}
+
+/// Collect every name an expression reads into `out` (fields, `word`, decode variables alike).
+pub fn expr_names(e: &Expr, out: &mut Vec<String>) {
+    e.walk(&mut |x| {
+        if let Expr::Name(n) = x {
+            out.push(n.text.clone());
+        }
+    });
+}
+
+/// Does the expression read any of `names`? Stops checking once a hit is found instead of
+/// collecting every name first.
+pub fn expr_reads_any(e: &Expr, names: &[String]) -> bool {
+    let mut found = false;
+    e.walk(&mut |x| {
+        if !found {
+            if let Expr::Name(n) = x {
+                found = names.contains(&n.text);
+            }
+        }
+    });
+    found
+}
+
 /// Infer a static bit width for an expression (used by `~`, `concat`, `ctz` and the operand mask).
 pub fn infer_width(e: &Expr, env: &WidthEnv) -> u16 {
     match e {
@@ -356,13 +449,63 @@ pub fn infer_width(e: &Expr, env: &WidthEnv) -> u16 {
             _ => infer_width(lhs, env).max(infer_width(rhs, env)),
         },
         Expr::Cond { then, els, .. } => infer_width(then, env).max(infer_width(els, env)),
-        Expr::Call { callee, args, .. } => match callee.text.as_str() {
-            "concat" => args.iter().map(|a| infer_width(a, env)).sum(),
-            "ones" | "zero_extend" | "sign_extend" => 64,
-            "bit_width" | "clz" | "ctz" | "popcount" => 8,
-            "replicate" | "rotate_left" | "rotate_right" | "mask_from_range" => 64,
-            "min" | "max" => args.iter().map(|a| infer_width(a, env)).max().unwrap_or(1),
-            _ => 64,
+        Expr::Call { callee, args, .. } => match builtin_of(&callee.text) {
+            Some(b) => match b.width {
+                WidthRule::SumOfArgWidths => args.iter().map(|a| infer_width(a, env)).sum(),
+                WidthRule::Const(w) => w,
+                WidthRule::MaxOfArgs => args.iter().map(|a| infer_width(a, env)).max().unwrap_or(1),
+            },
+            None => 64,
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chipi_syntax::ast::IntLit;
+    use chipi_syntax::Span;
+
+    fn int(v: u128) -> Expr {
+        Expr::Int(IntLit {
+            value: v,
+            width_hint: Some(4),
+            span: Span::at(0),
+        })
+    }
+
+    /// Sync test: every entry in the canonical table must have an evaluator arm. A builtin
+    /// added to `BUILTINS` but not to `eval_builtin` would otherwise silently evaluate to 0.
+    #[test]
+    fn every_builtin_has_an_evaluator_arm() {
+        let env = Env {
+            word: 0,
+            word_width: 32,
+            field: &|_| None,
+            width: &|_| None,
+            fns: &[],
+        };
+
+        for b in BUILTINS {
+            let args: Vec<Expr> = (0..b.min_args).map(|_| int(1)).collect();
+            assert!(
+                eval_builtin(b.name, &args, &env).is_some(),
+                "builtin `{}` is in BUILTINS but eval_builtin has no arm for it",
+                b.name
+            );
+        }
+    }
+
+    #[test]
+    fn builtin_arities_are_well_formed() {
+        for b in BUILTINS {
+            assert!(
+                b.min_args >= 1 && b.min_args <= b.max_args,
+                "builtin `{}` has a malformed arity range {}..={}",
+                b.name,
+                b.min_args,
+                b.max_args
+            );
+        }
     }
 }

@@ -3,8 +3,8 @@
 [![CI](https://github.com/ioncodes/chipi/actions/workflows/ci.yml/badge.svg)](https://github.com/ioncodes/chipi/actions/workflows/ci.yml)
 
 chipi generates instruction decoders from a small spec. You describe a CPUs encoding once in a
-`.chipi` file and chipi builds a decoder, disassembler, encoder and dispatcher for it. Supports Rust,
-C++ and Python.
+`.chipi` file and chipi builds a decoder, disassembler and dispatcher for it, in Rust, C++ and
+Python. A reference encoder and text assembler live in the core library and the CLI.
 
 ## Minimal Example
 
@@ -33,17 +33,19 @@ From this spec, chipi builds:
 - a decoder that turns a word into the matched instruction and its operands
 - a disassembler that renders the display text, with conditionals and symbol lookups
 - a dispatcher with one handler per instruction, called through a small trait
-- an encoder and a text assembler that encodes asm back into bytes
+- identity metadata: opcode ids, names, tags, and (for dotted leaf names) mnemonic/form enums
 
-> [!WARNING]
-> The encoder and text assembler are still work in progress and may not be fully reliable yet.
+The encoder and text assembler are part of `chipi-core` and the CLI (`chipi asm`,
+`chipi check --roundtrip`); no backend emits encoding into generated code.
 
 ## Advanced Features
 
 There's a lot of advanced features, here's a short list of few:
 
-**Decode modes.** The host picks a mode and chipi keeps a separate table per mode combination, so
-the same opcode can decode differently:
+**Decode variables.** Host `mode`s and prefix-assigned `context` fields are one concept: decode
+variables. Guards and `length` arms read them, `fetch` widths compute from them, and prefixes can
+actually change what decodes. Word-level entry points (`classify(word)`, `disasm(word)`) fold every
+variable to its declared default, matching `decode(word)` in the reference evaluator:
 
 ```text
 decoder MX {
@@ -51,8 +53,55 @@ decoder MX {
     mode m: bool = 1
 }
 
-lda8  m=1 op=0xA9 | "lda #imm8"
+lda8  m=1 op=0xA9 | "lda #imm8"       # per-combination tables, host picks via pack_modes(m)
 lda16 m=0 op=0xA9 | "lda #imm16"
+```
+
+```text
+context { osize:u1 = 0 }
+prefix scan { 0x66 => osize = 1  _ => done }
+
+push16 op=0x50 when osize == 1 | "push ax"    # the 0x66 prefix flips what 0x50 decodes to
+push   op=0x50                 | "push rax"
+```
+
+Each mode combination gets its own decode table (capped at 256 combinations), so modes are for
+small host state, not wide values.
+
+**Expression fetch widths.** A stream operand's width can depend on host modes, collapsing the
+65816-style m8/m16 leaf duplication into one leaf:
+
+```text
+lda_imm op=0xA9 imm:u16 = fetch(m ? 8 : 16) | "lda #{m?${imm:02x}:${imm:04x}}"
+```
+
+**Identity axes.** A dotted leaf name (`lda.dpx`) names the leaf on two axes. Codegen derives
+`Mnemonic` and `Form` enums, `mnemonic()`/`form()` accessors and name tables; leaves of one form
+must bind the same operand shape, so a consumer writes one match over the form axis. Dispatch
+groups accept `lda.*` patterns:
+
+```text
+lda.imm op=0xA9 v:u8[0:7]  | "lda #${v:02x}"
+lda.dp  op=0xA5 dp:u8[0:7] | "lda ${dp:02x}"
+
+dispatch load { lda.*, ldx.* }
+```
+
+**Indexed families.** `for` blocks expand SPC700-style opcode arithmetic, with the index usable in
+the name, constraints and template:
+
+```text
+for n in 0..8 {
+    bbs_b{n} op = 0x03 + n * 0x20 dp:u8[0:7] | "bbs ${dp:02x}.{n}"
+}
+```
+
+**Guard-decided leaves.** Two leaves may share every fixed bit when guards can decide between them
+(at most one unguarded fallback); a failed guard falls through to the next candidate:
+
+```text
+eq  op=0 a:reg[3:0] b:reg[7:4] when a == b | "eq {a}"
+mov op=0 a:reg[3:0] b:reg[7:4]             | "mov {a}, {b}"
 ```
 
 **Computed operands.** Scatter or gather bits with `assemble`, declared once and reused across a
@@ -135,7 +184,7 @@ chipi asm examples/mips.chipi -- 'add $r2, $r4, $r5'
 # Generate a decoder (rust, cpp or python)
 chipi emit --target rust examples/mips.chipi -o mips_decoder.rs
 
-# Check a spec
+# Check a spec, with per-leaf encoder/assembler status
 chipi check --roundtrip examples/mips.chipi
 ```
 
@@ -165,19 +214,25 @@ in the test suite.
 | `rv32i.chipi`           | RV32I and every immediate shape                |
 | `riscv.chipi`           | `assemble` scatter and gather                  |
 | `riscv_rvc.chipi`       | a `length` window: 16bit or 32bit              |
-| `x86_prefix.chipi`      | prefix scan with decode-local context          |
+| `x86_prefix.chipi`      | prefix scan; context read back by guards       |
 | `aarch64.chipi`         | `fn`, builtins, a `when` guard                 |
 | `gekko.chipi`           | 32bit `msb0`, a `form`, residual `xo`          |
 | `gba_arm.chipi`         | ARM7TDMI data processing and branch            |
 | `gb.chipi`              | 8bit opcodes, specific leaf beats general      |
 | `gc_dsp.chipi`          | 16bit fixed words                              |
 | `modes_demo.chipi`      | host modes and the decode tree cross product   |
+| `mode_guard.chipi`      | guards reading a host mode                     |
+| `guard_chain.chipi`     | guard-decided leaves sharing one slot          |
+| `fetch_expr.chipi`      | mode-dependent `fetch` widths                  |
+| `axes_demo.chipi`       | identity axes and `lda.*` dispatch patterns    |
+| `for_demo.chipi`        | `for` expansion of indexed families            |
 | `cond_demo.chipi`       | conditionals in the display template           |
 | `names_demo.chipi`      | `names { ... }` value-to-string display tables |
 | `subdecoder_demo.chipi` | a `subdecoder` spliced in via `{field.output}` |
 | `tags_demo.chipi`       | instruction tags and folded dispatch groups    |
 | `sparse_demo.chipi`     | the sparse residual matcher                    |
 | `snes_disasm.chipi`     | `fetch(N)` operands and `{x:sym}`              |
+| `fn_let_width.chipi`    | `let` width inference inside `fn` bodies       |
 
 ## Build and test
 

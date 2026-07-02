@@ -1,0 +1,17 @@
+# Mode-dependent fetch widths: the 65816 immediate problem. With an 8bit accumulator
+# (m = 1) `lda #` fetches one byte, with a 16bit accumulator two. One leaf expresses
+# both: the fetch width is an expression over the host mode, and the display picks the
+# format the same way. Compare snes_disasm, which needs no modes.
+
+decoder MiniM {
+    width = 8
+    bit_order = lsb0
+    endian = little
+    mode m: bool = 1
+}
+
+selector op [0:7]
+
+nop     op=0xEA                              | "nop"
+lda_imm op=0xA9 imm:u16 = fetch(m ? 8 : 16)  | "lda #{m?${imm:02x}:${imm:04x}}"
+ldx_imm op=0xA2 imm:u16 = fetch(16)          | "ldx #${imm:04x}"

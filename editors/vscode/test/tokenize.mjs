@@ -50,6 +50,11 @@ expect("types", re("type").test("rd:u5"));
 expect("hex numbers", re("number").test("0xFF"));
 expect("binary numbers", re("number").test("0b001101"));
 expect("operators", re("operator").test("=> -> .. == !="));
+expect("axis names", re("axis").test("lda.imm op=0xA9"));
+expect("axis patterns", re("axis").test("dispatch loads { lda.* }"));
+expect("name interpolation", re("interpolation").test("bbs_b{n} op = 0x03"));
+expect("for keyword", re("keyword").test("for n in 0..8 {"));
+expect("fetch keyword", re("keyword").test("fetch(m ? 8 : 16)"));
 expect("fixture parses as text", fixture.includes("decoder Sample"));
 
 if (failures > 0) {

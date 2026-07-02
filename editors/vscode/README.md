@@ -7,8 +7,11 @@ Syntax highlighting, snippets, and a `.chipi` file icon for the
 
 - TextMate grammar for `.chipi`: declarations, keywords, builtins, types, numbers, operators, and
   display-template placeholders (`{field}`, `{cond?a:b}`, `{x:sym}`).
+- The 1.0 language surface: identity axes in leaf names (`lda.dpx`) and dispatch patterns
+  (`lda.*`), `for n in 0..8 { ... }` expansion blocks with name interpolation (`bbs_b{n}`),
+  and expression fetch widths (`fetch(m ? 8 : 16)`).
 - Snippets for the common blocks (`decoder`, `selector`, `operand`, `type`, `instr`, `fn`,
-  `length`, `prefix`).
+  `length`, `prefix`) plus the 1.0 forms (`for`, `axis`, `fetchm`).
 - A file icon for `.chipi` specs.
 
 ## Install from source

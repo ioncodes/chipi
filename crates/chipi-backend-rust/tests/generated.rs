@@ -1,9 +1,11 @@
 //! Compile every example's generated Rust decoder with `rustc` and check that `classify` and the
 //! `Display` disassembler match the oracle on a sample of words.
 
+mod common;
+
 use chipi_core::interp::{decode, decode_mode, Decoded};
 use chipi_core::{compile, Isa};
-use std::path::PathBuf;
+use common::{compile_and_run, out_dir};
 use std::process::Command;
 
 macro_rules! example {
@@ -33,19 +35,38 @@ const VALID_EXAMPLES: &[(&str, &str)] = &[
     example!("gba_arm"),
     example!("x86_prefix"),
     example!("snes_disasm"),
+    example!("fn_let_width"),
+    example!("guard_chain"),
+    example!("mode_guard"),
+    example!("fetch_expr"),
+    example!("axes_demo"),
+    example!("for_demo"),
 ];
 
 fn modal(isa: &Isa) -> bool {
     !isa.modes.is_empty()
 }
 
+/// Mirror of the backend's `Model::emit_display`, built on the core helpers: the static
+/// disassembler exists whenever nothing is fetched from the stream, except that a modal ISA
+/// also loses it to `:sym`/`:rel` (those go through the contextual path).
 fn emit_display(isa: &Isa) -> bool {
-    !modal(isa)
-        && !isa.instrs.iter().any(|i| {
-            i.computed
-                .iter()
-                .any(|c| chipi_core::interp::fetch_width(&c.expr).is_some())
-        })
+    let has_fetch = isa.instrs.iter().any(|i| {
+        i.computed
+            .iter()
+            .any(|c| chipi_core::interp::is_fetch(&c.expr))
+    });
+    let needs_sym = isa.instrs.iter().any(|i| {
+        i.display
+            .iter()
+            .any(|a| chipi_core::render::segs_have_sym(&a.segs))
+    });
+
+    if modal(isa) {
+        !has_fetch && !needs_sym
+    } else {
+        !has_fetch
+    }
 }
 
 fn dec(isa: &Isa, combo: usize, w: u64) -> Decoded {
@@ -96,54 +117,15 @@ fn sample_words(isa: &Isa, combo: usize) -> Vec<u64> {
     valid.into_iter().chain(invalid).collect()
 }
 
-fn out_dir() -> PathBuf {
-    let d = std::env::temp_dir().join("chipi-rustgen-tests");
-    std::fs::create_dir_all(&d).unwrap();
-    d
-}
-
-fn compile_and_run(name: &str, program: &str) -> Vec<String> {
-    let dir = out_dir();
-    let src = dir.join(format!("{name}.rs"));
-    let bin = dir.join(name);
-    std::fs::write(&src, program).unwrap();
-
-    let status = Command::new("rustc")
-        .args([
-            "--edition",
-            "2021",
-            "--cfg",
-            "feature=\"disasm\"",
-            "--cap-lints",
-            "allow",
-            "-o",
-        ])
-        .arg(&bin)
-        .arg(&src)
-        .status()
-        .expect("rustc should be available");
-    assert!(
-        status.success(),
-        "`{name}` generated decoder failed to compile"
-    );
-
-    let output = Command::new(&bin).output().expect("run generated harness");
-    assert!(output.status.success(), "`{name}` harness exited non-zero");
-
-    String::from_utf8(output.stdout)
-        .unwrap()
-        .lines()
-        .map(str::to_string)
-        .collect()
-}
-
 #[test]
 fn generated_decoders_match_oracle() {
     for &(name, src) in VALID_EXAMPLES {
         let isa = compile(src).unwrap_or_else(|_| panic!("`{name}` compile"));
-        let combo = isa.default_combo() as usize;
-        let words = sample_words(&isa, combo);
-        assert!(!words.is_empty(), "`{name}` produced no sample words");
+        let combos = if modal(&isa) {
+            isa.mode_combos() as usize
+        } else {
+            1
+        };
         let disp = emit_display(&isa);
 
         // Build a harness program: the generated module + a main printing classify (and Display).
@@ -151,25 +133,34 @@ fn generated_decoders_match_oracle() {
         prog.push_str("\nfn main() {\n");
 
         let mut expected = Vec::new();
-        for &w in &words {
-            let d = dec(&isa, combo, w);
-            let call = if modal(&isa) {
-                format!("classify({combo}, {w})")
-            } else {
-                format!("classify({w})")
-            };
-            if disp {
-                prog.push_str(&format!(
-                    "    println!(\"{{}}|{{}}\", {call}, format!(\"{{}}\", Instruction({w})));\n"
-                ));
-                expected.push(format!(
-                    "{}|{}",
-                    d.opcode_id,
-                    d.disasm.clone().unwrap_or_else(|| "(invalid)".into())
-                ));
-            } else {
-                prog.push_str(&format!("    println!(\"{{}}\", {call});\n"));
-                expected.push(format!("{}", d.opcode_id));
+        for combo in 0..combos {
+            let words = sample_words(&isa, combo);
+            assert!(!words.is_empty(), "`{name}` produced no sample words");
+            for &w in &words {
+                let d = dec(&isa, combo, w);
+                let call = if modal(&isa) {
+                    format!("classify({combo}, {w})")
+                } else {
+                    format!("classify({w})")
+                };
+                if disp {
+                    let text = if modal(&isa) {
+                        format!("Instruction({w}).disasm_in({combo})")
+                    } else {
+                        format!("Instruction({w})")
+                    };
+                    prog.push_str(&format!(
+                        "    println!(\"{{}}|{{}}\", {call}, format!(\"{{}}\", {text}));\n"
+                    ));
+                    expected.push(format!(
+                        "{}|{}",
+                        d.opcode_id,
+                        d.disasm.clone().unwrap_or_else(|| "(invalid)".into())
+                    ));
+                } else {
+                    prog.push_str(&format!("    println!(\"{{}}\", {call});\n"));
+                    expected.push(format!("{}", d.opcode_id));
+                }
             }
         }
 
@@ -181,6 +172,48 @@ fn generated_decoders_match_oracle() {
             "`{name}` generated output mismatch vs oracle"
         );
     }
+}
+
+/// A prefix-set context field read by guards flips generated classification the same way the
+/// oracle's `decode_stream` flips: REX.B turns 0x90 into the r8 exchange, 0x66 narrows the push.
+#[test]
+fn generated_classify_with_matches_stream_oracle() {
+    let isa = compile(include_str!("../../../examples/x86_prefix.chipi")).unwrap();
+
+    let streams: &[&[u8]] = &[
+        &[0x90],
+        &[0x49, 0x90],
+        &[0x48, 0x90],
+        &[0x66, 0x50],
+        &[0x50],
+        &[0x66, 0x49, 0x90],
+    ];
+
+    let mut prog = chipi_backend_rust::emit_decoder(&isa);
+    assert!(
+        prog.contains("pub fn classify_with"),
+        "context-reading guards should emit classify_with"
+    );
+
+    prog.push_str("\nfn main() {\n");
+    let mut expected = Vec::new();
+    for bytes in streams {
+        let d = chipi_core::interp::decode_stream(&isa, bytes);
+        expected.push(d.opcode_name.clone());
+        let lit = bytes
+            .iter()
+            .map(|b| format!("{b:#04x}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        prog.push_str(&format!(
+            "    {{ let (inst, _len, ctx) = decode_stream(&[{lit}]); \
+             println!(\"{{}}\", inst.opcode_name_with(&ctx)); }}\n"
+        ));
+    }
+    prog.push_str("}\n");
+
+    let got = compile_and_run("x86_prefix_ctx", &prog);
+    assert_eq!(got, expected, "classify_with disagrees with decode_stream");
 }
 
 #[test]
@@ -267,6 +300,78 @@ fn main() {
     );
 }
 
+/// Expression fetch widths: the generated contextual disassembler, stream operand accessors and
+/// stream_len must follow the host-supplied mode exactly like the oracle does.
+#[test]
+fn generated_fetch_expr_matches_oracle() {
+    let isa = compile(include_str!("../../../examples/fetch_expr.chipi")).unwrap();
+
+    // lda #imm; ldx #imm; nop, disassembled under both accumulator widths.
+    let image: [u8; 7] = [0xA9, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA];
+    let pcs = [0u64, 3, 6];
+
+    struct Mem(u64);
+    impl chipi_core::interp::DisasmCtx for Mem {
+        fn read_u8(&self, addr: u64) -> u8 {
+            [0xA9u8, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA]
+                .get(addr as usize)
+                .copied()
+                .unwrap_or(0)
+        }
+        fn mode(&self, _name: &str) -> u64 {
+            self.0
+        }
+    }
+
+    let mut expected = Vec::new();
+    for m in [0u64, 1] {
+        for &pc in &pcs {
+            let (text, len) = chipi_core::interp::disasm_ctx(&isa, pc, &Mem(m));
+            expected.push(format!("{text}|{len}"));
+        }
+        // stream_len for the modal classify at each pc.
+        for &pc in &pcs {
+            let combo = m as usize;
+            let word = image[pc as usize];
+            let d = chipi_core::interp::decode_mode(&isa, combo, word as u64);
+            let inst = &isa.instrs[d.instr_index.unwrap()];
+            let extra = chipi_core::interp::fetched_bytes_combo(&isa, inst, m);
+            expected.push(format!("len {}", 1 + extra));
+        }
+    }
+
+    let mut prog = chipi_backend_rust::emit_decoder(&isa);
+    prog.push_str(
+        r#"
+struct Mem(u64);
+impl DisasmCtx for Mem {
+    fn read_u8(&self, addr: u64) -> u8 {
+        [0xA9u8, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA].get(addr as usize).copied().unwrap_or(0)
+    }
+    fn mode(&self, _name: &str) -> u64 {
+        self.0
+    }
+}
+fn main() {
+    let image: [u8; 7] = [0xA9, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA];
+    for m in [0u64, 1] {
+        for pc in [0u64, 3, 6] {
+            let (text, len) = disasm_ctx(pc, &Mem(m));
+            println!("{}|{}", text, len);
+        }
+        for pc in [0u64, 3, 6] {
+            let combo = pack_modes(m);
+            println!("len {}", stream_len(combo, image[pc as usize]));
+        }
+    }
+}
+"#,
+    );
+
+    let got = compile_and_run("fetch_expr_ctx", &prog);
+    assert_eq!(got, expected, "fetch(expr) generated output mismatch");
+}
+
 /// Exercises how `disasm_ctx` delegates to `Display`. The spec emits both renderers (it has `:sym`
 /// but no `fetch`), so plain arms delegate to `Display`. The `:sym` arm and the
 /// signed-explicit-hex arm keep their own renderers. All paths must still match the oracle.
@@ -330,6 +435,52 @@ fn main() {
     );
 }
 
+/// A modal ISA without `fetch`/`:sym` gets the static disassembler, keyed by the mode combination
+/// (`Instruction::disasm_in`). Its text must match the oracle's `decode_mode` for every combo and
+/// every word of the 8-bit window.
+#[test]
+fn modal_static_disasm_matches_oracle() {
+    let isa = compile(include_str!("../../../examples/modes_demo.chipi")).unwrap();
+    assert!(modal(&isa), "modes_demo should be modal");
+    assert!(
+        emit_display(&isa),
+        "modes_demo should get the static disassembler"
+    );
+
+    let mut expected = Vec::new();
+    for combo in 0..isa.mode_combos() as usize {
+        for w in 0u64..256 {
+            let d = decode_mode(&isa, combo, w);
+            expected.push(format!(
+                "{}|{}",
+                d.opcode_id,
+                d.disasm.clone().unwrap_or_else(|| "(invalid)".into())
+            ));
+        }
+    }
+
+    let mut prog = chipi_backend_rust::emit_decoder(&isa);
+    assert!(
+        prog.contains("pub fn disasm_in(self, combo: usize) -> String"),
+        "modal spec should emit `disasm_in`:\n{prog}"
+    );
+    prog.push_str(
+        r#"
+fn main() {
+    for combo in 0..MODE_COMBOS {
+        for w in 0u32..256 {
+            let inst = Instruction(w as u8);
+            println!("{}|{}", classify(combo, inst.0), inst.disasm_in(combo));
+        }
+    }
+}
+"#,
+    );
+
+    let got = compile_and_run("modes_static_disasm", &prog);
+    assert_eq!(got, expected, "modal static disasm mismatch vs oracle");
+}
+
 fn emit_enum(isa: &Isa) -> String {
     chipi_backend_rust::emit_decoder_with(
         isa,
@@ -391,9 +542,9 @@ fn main() {
     assert_eq!(got, expected, "enum decode/render mismatch vs oracle");
 }
 
-/// Regression: an operand named `r` must not shadow the enum renderer's output `String`. `sparse_demo`
-/// binds `r:reg`, which previously collided with a hardcoded `r` accumulator. Compile the emitted enum
-/// module as a library (a pure compile check).
+/// An operand named `r` must not shadow the enum renderer's output `String`. `sparse_demo` binds
+/// `r:reg`, so the emitted enum module must sanitize the binding rather than clash with the
+/// renderer's accumulator. Compile it as a library (a pure compile check).
 #[test]
 fn enum_render_survives_operand_named_r() {
     let isa = compile(include_str!("../../../examples/sparse_demo.chipi")).unwrap();
@@ -538,15 +689,110 @@ fn main() {{
     );
 }
 
-/// Unsupported spec shapes must produce a clear `compile_error!`, not silently wrong output. The
-/// `x86_prefix` example carries a `prefix` scan, which the single-window enum decoder cannot model.
+/// Unsupported spec shapes must produce a clear `compile_error!`, not silently wrong output, and
+/// the message must state the enum backend's scope and point at the newtype backend. `x86_prefix`
+/// carries a `prefix` scan and `riscv_rvc` a variable `length`, neither of which the single-window
+/// eager decoder can model.
 #[test]
 fn enum_gates_unsupported_specs() {
     let isa = compile(include_str!("../../../examples/x86_prefix.chipi")).unwrap();
     assert!(isa.prefix.is_some(), "x86_prefix should have a prefix scan");
     let out = emit_enum(&isa);
     assert!(
-        out.contains("compile_error!"),
-        "prefix spec should be gated in enum mode"
+        out.contains("compile_error!") && out.contains("does not support `prefix` specs"),
+        "prefix spec should be gated in enum mode:\n{out}"
     );
+    assert!(
+        out.contains("newtype"),
+        "the refusal should point at the newtype backend:\n{out}"
+    );
+
+    let isa = compile(include_str!("../../../examples/riscv_rvc.chipi")).unwrap();
+    assert!(isa.length.is_some(), "riscv_rvc should have a length rule");
+    let out = emit_enum(&isa);
+    assert!(
+        out.contains("compile_error!")
+            && out.contains("does not support `length` (variable-window) specs"),
+        "length spec should be gated in enum mode:\n{out}"
+    );
+    assert!(
+        out.contains("newtype"),
+        "the refusal should point at the newtype backend:\n{out}"
+    );
+}
+
+/// In-template display conditionals in the enum renderer evaluate from the variant's bound
+/// operands (plus a raw `word` re-read through `ctx` when a condition references it) and must
+/// match the interp oracle's contextual disassembler exactly.
+#[test]
+fn enum_cond_render_matches_oracle() {
+    // cond_demo: `{oe?o}{rc?.}` suffixes and a full `{s == 1 ?.{rd}:}` ternary with a nested
+    // field. The extra `chk` leaf reads the raw `word` in its condition.
+    const SPEC: &str = r#"
+decoder CondE {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [28:31]
+
+operand greg = u4 { display("r{}") }
+
+add op=0 rc:u1[0] oe:u1[10] rd:greg[20:23] ra:greg[16:19] rb:greg[12:15]
+    | "add{oe?o}{rc?.} {rd}, {ra}, {rb}"
+mov op=1 s:u1[0] rd:greg[20:23] | "mov{s == 1 ?.{rd}:} {rd}"
+chk op=2 rd:greg[20:23] | "chk{word[24:24]?w} {rd}"
+"#;
+    let isa = compile(SPEC).expect("cond spec compiles");
+
+    // add rc=1 oe=1 rd=3 ra=1 rb=2; mov s=1 rd=5; mov s=0 rd=5; chk word-bit set; chk clear.
+    let words: [u32; 5] = [
+        0x0031_2401,
+        0x1050_0001,
+        0x1050_0000,
+        0x2130_0000,
+        0x2030_0000,
+    ];
+    let mut image = Vec::new();
+    for w in words {
+        image.extend_from_slice(&w.to_le_bytes());
+    }
+
+    struct Mem(Vec<u8>);
+    impl chipi_core::interp::DisasmCtx for Mem {
+        fn read_u8(&self, addr: u64) -> u8 {
+            self.0.get(addr as usize).copied().unwrap_or(0)
+        }
+    }
+    let mem = Mem(image.clone());
+
+    let expected: Vec<String> = (0..words.len())
+        .map(|i| {
+            let (text, len) = chipi_core::interp::disasm_ctx(&isa, (i * 4) as u64, &mem);
+            format!("{len}|{text}")
+        })
+        .collect();
+
+    let mut prog = emit_enum(&isa);
+    prog.push_str(&format!(
+        r#"
+struct Mem;
+impl DisasmCtx for Mem {{
+    fn read_u8(&self, addr: u64) -> u8 {{
+        const IMAGE: [u8; 20] = {image:?};
+        IMAGE.get(addr as usize).copied().unwrap_or(0)
+    }}
+}}
+fn main() {{
+    for i in 0..5u64 {{
+        let (inst, len) = decode(i * 4, &Mem);
+        println!("{{}}|{{}}", len, inst.render(i * 4, &Mem));
+    }}
+}}
+"#
+    ));
+
+    let got = compile_and_run("enum_cond_render", &prog);
+    assert_eq!(got, expected, "enum cond render mismatch vs oracle");
 }

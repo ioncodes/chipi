@@ -42,18 +42,28 @@ impl Decoded {
     }
 }
 
-/// Decode a fetched `word` with the default-mode tree.
+/// Decode a fetched `word` with the default-mode tree. Decode variables (host modes and
+/// prefix-assigned context fields) sit at their declared defaults.
 pub fn decode(isa: &Isa, word: u64) -> Decoded {
-    decode_with(isa, &isa.tree, word)
+    decode_with(isa, &isa.tree, word, &isa.vars_default)
 }
 
-/// Decode with the tree for mode combination `combo`.
+/// Decode with the tree for mode combination `combo` (context fields at defaults).
 pub fn decode_mode(isa: &Isa, combo: usize, word: u64) -> Decoded {
-    let tree = isa.mode_trees.get(combo).unwrap_or(&isa.tree);
-    decode_with(isa, tree, word)
+    // The per-combination tables are precomputed at compile(); an out-of-range combination
+    // (tolerated by `tree_for`) falls back to computing its wrapped values on the spot.
+    let fallback;
+    let vars: &[(String, u64)] = match isa.vars_combo.get(combo) {
+        Some(v) => v,
+        None => {
+            fallback = isa.combo_var_values(combo as u64);
+            &fallback
+        }
+    };
+    decode_with(isa, isa.tree_for(combo), word, vars)
 }
 
-fn decode_with(isa: &Isa, tree: &Tree, word: u64) -> Decoded {
+fn decode_with(isa: &Isa, tree: &Tree, word: u64, vars: &[(String, u64)]) -> Decoded {
     let mut path = Vec::new();
 
     let p_lo = tree.primary.range.lo;
@@ -88,9 +98,23 @@ fn decode_with(isa: &Isa, tree: &Tree, word: u64) -> Decoded {
                 id
             }
             Residual::Sparse { lowering, arms } => {
+                // A guard-checked arm only matches when its leaf's guard passes; failure falls
+                // through to the next arm.
                 let id = arms
                     .iter()
-                    .find(|a| (word & a.mask) == a.val)
+                    .find(|a| {
+                        if (word & a.mask) != a.val {
+                            return false;
+                        }
+                        if !a.check_guard {
+                            return true;
+                        }
+                        let inst = &isa.instrs[tree.opcodes[a.opcode].instr];
+                        match &inst.guard {
+                            Some(g) => eval_in_word(isa, g, inst, word, None, vars) != 0,
+                            None => true,
+                        }
+                    })
                     .map(|a| a.opcode)
                     .unwrap_or(0);
                 let name = if id == 0 {
@@ -111,7 +135,7 @@ fn decode_with(isa: &Isa, tree: &Tree, word: u64) -> Decoded {
     if opcode_id != 0 {
         let inst = &isa.instrs[tree.opcodes[opcode_id].instr];
         if let Some(g) = &inst.guard {
-            if eval_in_word(isa, g, inst, word, None) == 0 {
+            if eval_in_word(isa, g, inst, word, None, vars) == 0 {
                 opcode_id = 0;
                 path.push("guard failed -> reserved".to_string());
             }
@@ -120,7 +144,8 @@ fn decode_with(isa: &Isa, tree: &Tree, word: u64) -> Decoded {
 
     if opcode_id == 0 {
         path.push("-> decode_invalid".to_string());
-        let len_bytes = window_bits(isa, word, isa.max_len_bytes as u16 * 8).div_ceil(8) as u8;
+        let len_bytes =
+            window_bits(isa, word, isa.max_len_bytes as u16 * 8, vars).div_ceil(8) as u8;
         return Decoded {
             opcode_id: 0,
             opcode_name: "Invalid".to_string(),
@@ -158,7 +183,7 @@ fn decode_with(isa: &Isa, tree: &Tree, word: u64) -> Decoded {
 
     // computed operands: evaluated over the word plus the already-decoded bound fields.
     for c in &inst.computed {
-        let raw = eval_in_word(isa, &c.expr, inst, word, Some(&fields));
+        let raw = eval_in_word(isa, &c.expr, inst, word, Some(&fields), vars);
         let vw = c.ty.value_width;
 
         let value: i128 = if c.ty.signed {
@@ -181,8 +206,8 @@ fn decode_with(isa: &Isa, tree: &Tree, word: u64) -> Decoded {
         });
     }
 
-    let disasm = render_disasm(isa, inst, &fields, word);
-    let len_bits = window_bits(isa, word, isa.window_bits());
+    let disasm = render_disasm(isa, inst, &fields, word, vars);
+    let len_bits = window_bits(isa, word, isa.window_bits(), vars);
 
     Decoded {
         opcode_id,
@@ -206,25 +231,44 @@ fn eval_in_word(
     inst: &Insn,
     word: u64,
     current: Option<&[FieldValue]>,
+    vars: &[(String, u64)],
 ) -> u64 {
     // Resolve names by searching the leaf's fields (or the already-decoded operand
     // raws) on demand, so no per-call lookup tables are allocated. `decode` runs this
     // tens of thousands of times per roundtrip check.
     let field = |n: &str| -> Option<u128> {
-        match current {
+        let bound = match current {
             Some(fs) => fs.iter().find(|f| f.name == n).map(|f| f.raw as u128),
             None => inst
                 .fields
                 .iter()
                 .find(|f| f.name == n)
                 .map(|f| ((word >> f.range.lo) & mask(f.range.width())) as u128),
-        }
+        };
+        bound.or_else(|| {
+            vars.iter()
+                .find(|(vn, _)| *vn == n)
+                .map(|(_, v)| *v as u128)
+        })
     };
     let width = |n: &str| {
         inst.fields
             .iter()
             .find(|f| f.name == n)
             .map(|f| f.range.width())
+            .or_else(|| {
+                isa.modes
+                    .iter()
+                    .find(|m| m.name == n)
+                    .map(|m| m.value_width())
+            })
+            .or_else(|| {
+                isa.decoder
+                    .context
+                    .iter()
+                    .find(|c| c.name == n)
+                    .map(|c| c.width)
+            })
     };
 
     let env = Env {
@@ -280,16 +324,25 @@ pub fn decode_stream(isa: &Isa, bytes: &[u8]) -> Decoded {
 
     let word = read_window(isa, bytes, cursor);
 
-    let mut d = decode_with(isa, &isa.tree, word);
+    // Decode variables: modes at defaults, context fields at their scanned values, so guards
+    // and length arms see what the prefix scan produced. The precomputed default table already
+    // has the right names and order; only the context tail needs the scanned values.
+    let mut vars = isa.vars_default.clone();
+    let n_modes = isa.modes.len();
+    for (slot, scanned) in vars[n_modes..].iter_mut().zip(&ctx) {
+        slot.1 = scanned.1;
+    }
+
+    let mut d = decode_with(isa, &isa.tree, word, &vars);
     d.prefix_len = cursor as u8;
     d.len_bytes = (cursor as u8).saturating_add(d.len_bytes);
     d.context = ctx;
     d
 }
 
-fn window_bits(isa: &Isa, word: u64, fallback: u16) -> u16 {
+fn window_bits(isa: &Isa, word: u64, fallback: u16, vars: &[(String, u64)]) -> u16 {
     match &isa.length {
-        Some(l) => l.bits_for(word),
+        Some(l) => l.bits_for_vars(word, vars),
         None => fallback,
     }
 }
@@ -326,16 +379,27 @@ fn eval_prefix(e: &Expr, byte: u64) -> u64 {
 }
 
 /// The first display arm whose guard passes (an unconditional arm always passes).
-fn first_arm<'a>(inst: &'a Insn, fields: &[FieldValue], word: u64) -> Option<&'a DisplayArm> {
+fn first_arm<'a>(
+    inst: &'a Insn,
+    fields: &[FieldValue],
+    word: u64,
+    vars: &[(String, u64)],
+) -> Option<&'a DisplayArm> {
     inst.display.iter().find(|arm| match &arm.cond {
         None => true,
-        Some(e) => eval_cond(e, fields, word) != 0,
+        Some(e) => eval_cond(e, fields, word, vars) != 0,
     })
 }
 
-fn render_disasm(isa: &Isa, inst: &Insn, fields: &[FieldValue], word: u64) -> String {
-    match first_arm(inst, fields, word) {
-        Some(arm) => render_arm(isa, &arm.segs, fields, word, None),
+fn render_disasm(
+    isa: &Isa,
+    inst: &Insn,
+    fields: &[FieldValue],
+    word: u64,
+    vars: &[(String, u64)],
+) -> String {
+    match first_arm(inst, fields, word, vars) {
+        Some(arm) => render_arm(isa, &arm.segs, fields, word, vars, None),
         None => inst.name.clone(),
     }
 }
@@ -345,6 +409,7 @@ fn render_arm(
     segs: &[Seg],
     fields: &[FieldValue],
     word: u64,
+    vars: &[(String, u64)],
     ctx: Option<&dyn DisasmCtx>,
 ) -> String {
     let mut out = String::new();
@@ -352,15 +417,15 @@ fn render_arm(
         match seg {
             Seg::Lit(s) => out.push_str(s),
             Seg::Cond { cond, then, els } => {
-                let branch = if eval_cond(cond, fields, word) != 0 {
+                let branch = if eval_cond(cond, fields, word, vars) != 0 {
                     then
                 } else {
                     els
                 };
-                out.push_str(&render_arm(isa, branch, fields, word, ctx));
+                out.push_str(&render_arm(isa, branch, fields, word, vars, ctx));
             }
             Seg::SubField { field, output } => {
-                out.push_str(&render_sub(isa, fields, field, output, ctx))
+                out.push_str(&render_sub(isa, fields, field, output, vars, ctx))
             }
             Seg::Field { name, fmt } => {
                 let Some(f) = fields.iter().find(|f| &f.name == name) else {
@@ -391,6 +456,7 @@ fn render_sub(
     fields: &[FieldValue],
     field: &str,
     output: &str,
+    vars: &[(String, u64)],
     ctx: Option<&dyn DisasmCtx>,
 ) -> String {
     let Some(fv) = fields.iter().find(|f| f.name == field) else {
@@ -429,11 +495,16 @@ fn render_sub(
         })
         .collect();
 
-    render_arm(isa, segs, &sub_fields, value, ctx)
+    render_arm(isa, segs, &sub_fields, value, vars, ctx)
 }
 
-fn pick_arm<'a>(inst: &'a Insn, fields: &[FieldValue], word: u64) -> &'a [Seg] {
-    first_arm(inst, fields, word)
+fn pick_arm<'a>(
+    inst: &'a Insn,
+    fields: &[FieldValue],
+    word: u64,
+    vars: &[(String, u64)],
+) -> &'a [Seg] {
+    first_arm(inst, fields, word, vars)
         .or_else(|| inst.display.last())
         .map(|a| a.segs.as_slice())
         .unwrap_or(&[])
@@ -452,24 +523,95 @@ pub trait DisasmCtx {
     }
 }
 
-/// The bit width of a `fetch(N)` computed-operand expression.
-pub fn fetch_width(e: &Expr) -> Option<u16> {
+/// The width expression of a `fetch(expr)` computed operand: the whole computed value is a
+/// single top-level `fetch` call whose one argument is the bit width.
+pub fn fetch_expr(e: &Expr) -> Option<&Expr> {
     if let Expr::Call { callee, args, .. } = e {
         if callee.text == "fetch" && args.len() == 1 {
-            if let Expr::Int(i) = &args[0] {
-                return Some(i.value as u16);
-            }
+            return Some(&args[0]);
         }
     }
     None
 }
 
-/// Contextual disassembly: classify the opcode at `pc`, fetch `fetch(N)` operands from the stream,
-/// render the display (resolving `:sym` operands) and return `(text, total length in bytes)`.
+/// Whether a computed operand is a stream `fetch`, constant width or not.
+pub fn is_fetch(e: &Expr) -> bool {
+    fetch_expr(e).is_some()
+}
+
+/// The constant bit width of a `fetch(N)` computed-operand expression, when the width is a
+/// literal. Expression widths (`fetch(m ? 8 : 16)`) return `None` here; evaluate those with
+/// [`fetch_width_vars`].
+pub fn fetch_width(e: &Expr) -> Option<u16> {
+    if let Some(Expr::Int(i)) = fetch_expr(e) {
+        return Some(i.value as u16);
+    }
+    None
+}
+
+/// The bit width of a `fetch` operand under the given decode-variable values. Width expressions
+/// may read host modes only (validated at compile time), so `vars` fully determines the result.
+pub fn fetch_width_vars(e: &Expr, vars: &[(String, u64)]) -> Option<u16> {
+    let arg = fetch_expr(e)?;
+    Some(eval_cond(arg, &[], 0, vars) as u16)
+}
+
+/// Extra bytes fetched beyond the decode window by an instruction's constant-width `fetch`
+/// operands. Only meaningful when the instruction has no expression-width fetches.
+pub fn fetched_bytes(inst: &Insn) -> usize {
+    inst.computed
+        .iter()
+        .filter_map(|c| fetch_width(&c.expr))
+        .map(|b| (b as usize).div_ceil(8))
+        .sum()
+}
+
+/// Extra fetched bytes at mode combination `combo` (expression widths folded to that combo).
+pub fn fetched_bytes_combo(isa: &Isa, inst: &Insn, combo: u64) -> usize {
+    let fallback;
+    let vars: &[(String, u64)] = match isa.vars_combo.get(combo as usize) {
+        Some(v) => v,
+        None => {
+            fallback = isa.combo_var_values(combo);
+            &fallback
+        }
+    };
+    inst.computed
+        .iter()
+        .filter_map(|c| fetch_width_vars(&c.expr, vars))
+        .map(|b| (b as usize).div_ceil(8))
+        .sum()
+}
+
+/// Whether any fetch operand of the instruction has an expression (mode-dependent) width.
+pub fn fetch_has_expr(inst: &Insn) -> bool {
+    inst.computed
+        .iter()
+        .any(|c| is_fetch(&c.expr) && fetch_width(&c.expr).is_none())
+}
+
+/// Contextual disassembly: classify the opcode at `pc` (through the mode combination the host
+/// context reports), fetch `fetch` operands from the stream, render the display (resolving `:sym`
+/// operands) and return `(text, total length in bytes)`.
 pub fn disasm_ctx(isa: &Isa, pc: u64, ctx: &dyn DisasmCtx) -> (String, u8) {
     let wb = (isa.window_bits() as usize).div_ceil(8);
     let word = read_bytes(ctx, pc, wb, isa.decoder.endian);
-    let d = decode(isa, word);
+
+    // Modes resolve through the host context; prefix context fields sit at defaults (the
+    // contextual disassembler has no prefix scan). Reuse the precomputed default table and
+    // only fill in the per-call mode values.
+    let mode_vals: Vec<u64> = isa
+        .modes
+        .iter()
+        .map(|m| ctx.mode(&m.name) % m.cardinality)
+        .collect();
+    let mut vars = isa.vars_default.clone();
+    for (slot, v) in vars.iter_mut().zip(&mode_vals) {
+        slot.1 = *v;
+    }
+
+    let combo = isa.pack_modes(&mode_vals) as usize;
+    let d = decode_mode(isa, combo, word);
     let Some(idx) = d.instr_index else {
         return ("(invalid)".to_string(), wb as u8);
     };
@@ -478,9 +620,10 @@ pub fn disasm_ctx(isa: &Isa, pc: u64, ctx: &dyn DisasmCtx) -> (String, u8) {
     let mut fields = d.fields.clone();
     let mut cursor = pc + wb as u64;
 
-    // fetch trailing `fetch(N)` operands from the stream past the opcode window.
+    // fetch trailing `fetch` operands from the stream past the opcode window; expression widths
+    // resolve against the host-supplied modes.
     for c in &inst.computed {
-        if let Some(bits) = fetch_width(&c.expr) {
+        if let Some(bits) = fetch_width_vars(&c.expr, &vars) {
             let nb = (bits as usize).div_ceil(8);
             let raw = read_bytes(ctx, cursor, nb, isa.decoder.endian);
             cursor += nb as u64;
@@ -493,7 +636,14 @@ pub fn disasm_ctx(isa: &Isa, pc: u64, ctx: &dyn DisasmCtx) -> (String, u8) {
     }
     let total = (cursor - pc) as u8;
 
-    let text = render_arm(isa, pick_arm(inst, &fields, word), &fields, word, Some(ctx));
+    let text = render_arm(
+        isa,
+        pick_arm(inst, &fields, word, &vars),
+        &fields,
+        word,
+        &vars,
+        Some(ctx),
+    );
     (text, total)
 }
 
@@ -551,29 +701,35 @@ pub fn apply_xforms(raw: u64, ty: &FieldTy) -> i128 {
 
 /// The signed (i128) evaluator used for display-arm conditions and `length` conditions. Distinct
 /// from the unsigned `compute::eval_value` used for operands/guards/fn bodies.
-pub(crate) fn eval_cond(e: &Expr, fields: &[FieldValue], word: u64) -> i128 {
+pub(crate) fn eval_cond(
+    e: &Expr,
+    fields: &[FieldValue],
+    word: u64,
+    vars: &[(String, u64)],
+) -> i128 {
     match e {
         Expr::Int(i) => i.value as i128,
         Expr::Name(n) => {
             if n.text == "word" {
                 word as i128
+            } else if let Some(f) = fields.iter().find(|f| f.name == n.text) {
+                f.value
             } else {
-                fields
-                    .iter()
-                    .find(|f| f.name == n.text)
-                    .map(|f| f.value)
+                vars.iter()
+                    .find(|(vn, _)| *vn == n.text)
+                    .map(|(_, v)| *v as i128)
                     .unwrap_or(0)
             }
         }
         Expr::Unary { op, rhs, .. } => {
-            let v = eval_cond(rhs, fields, word);
+            let v = eval_cond(rhs, fields, word, vars);
             match op {
                 UnOp::Not => !v,
                 UnOp::Neg => v.wrapping_neg(),
             }
         }
         Expr::Slice { base, hi, lo, .. } => {
-            let v = eval_cond(base, fields, word) as u128;
+            let v = eval_cond(base, fields, word, vars) as u128;
             if *lo >= 128 {
                 0
             } else {
@@ -582,8 +738,8 @@ pub(crate) fn eval_cond(e: &Expr, fields: &[FieldValue], word: u64) -> i128 {
             }
         }
         Expr::Binary { op, lhs, rhs, .. } => {
-            let a = eval_cond(lhs, fields, word);
-            let b = eval_cond(rhs, fields, word);
+            let a = eval_cond(lhs, fields, word, vars);
+            let b = eval_cond(rhs, fields, word, vars);
 
             let yn = |x: bool| if x { 1 } else { 0 };
             let sh = |b: i128| if (0..128).contains(&b) { b as u32 } else { 0 };
@@ -624,10 +780,10 @@ pub(crate) fn eval_cond(e: &Expr, fields: &[FieldValue], word: u64) -> i128 {
         Expr::Cond {
             cond, then, els, ..
         } => {
-            if eval_cond(cond, fields, word) != 0 {
-                eval_cond(then, fields, word)
+            if eval_cond(cond, fields, word, vars) != 0 {
+                eval_cond(then, fields, word, vars)
             } else {
-                eval_cond(els, fields, word)
+                eval_cond(els, fields, word, vars)
             }
         }
         Expr::Assemble { .. } | Expr::Call { .. } => 0,

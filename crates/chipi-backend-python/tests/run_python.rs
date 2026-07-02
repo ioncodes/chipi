@@ -18,23 +18,68 @@ fn python_bin() -> String {
     std::env::var("PYTHON").unwrap_or_else(|_| "python3".to_string())
 }
 
-/// Regression: the Python backend has no stream context, so a `fetch(N)` operand must produce a
-/// module that raises on import rather than a call to an undefined `fn_fetch`.
+/// `fetch(N)` operands emit the contextual-disassembly surface: a duck-typed `ctx` object,
+/// stream accessors, `stream_len` and `disasm_ctx`.
 #[test]
-fn python_refuses_fetch_operands() {
+fn python_supports_fetch_operands() {
     let src = "decoder T { width = 8 bit_order = lsb0 endian = little }\n\
                selector op [0:7]\n\
                a op=0x01 x:u16 = fetch(16) | \"a ${x:04x}\"\n";
     let isa = compile(src).expect("spec compiles");
     let out = emit_python(&isa);
     assert!(
-        out.contains("NotImplementedError"),
-        "python should refuse fetch specs:\n{out}"
+        !out.contains("NotImplementedError"),
+        "fetch specs must emit:\n{out}"
     );
     assert!(
         !out.contains("fn_fetch"),
         "python must not emit an undefined fn_fetch:\n{out}"
     );
+    for needle in ["def stream_len", "def disasm_ctx"] {
+        assert!(out.contains(needle), "`{needle}` missing:\n{out}");
+    }
+}
+
+/// The one shape still refused: `length` arms reading decode variables (no runtime source for
+/// them in the emitted word-level `inst_len`). Must raise on import, never diverge silently.
+#[test]
+fn python_refuses_var_reading_length_arms() {
+    let src = "decoder T { width = 8 bit_order = lsb0 endian = little mode m: bool = 0 }\n\
+               length =\n\
+               \x20 | m == 1 : 16\n\
+               \x20 | else : 8\n\
+               selector op [0:7]\n\
+               a op=0x01 | \"a\"\n";
+    let isa = compile(src).expect("spec compiles");
+    let out = emit_python(&isa);
+    assert!(
+        out.contains("NotImplementedError") && out.contains("length"),
+        "python should refuse var-reading length arms:\n{out}"
+    );
+}
+
+/// Tags and identity-axis metadata mirror the Rust backend (see the C++ twin test).
+#[test]
+fn python_emits_tags_and_axes() {
+    let isa =
+        compile(include_str!("../../../examples/tags_demo.chipi")).expect("tags_demo compiles");
+    let out = emit_python(&isa);
+    assert!(out.contains("OPCODE_TAGS"), "tags table missing:\n{out}");
+    assert!(out.contains("\"arith\""), "tag name missing");
+
+    let isa =
+        compile(include_str!("../../../examples/axes_demo.chipi")).expect("axes_demo compiles");
+    let out = emit_python(&isa);
+    for needle in [
+        "MNEMONIC_NAMES",
+        "FORM_NAMES",
+        "OPCODE_MNEMONIC",
+        "OPCODE_FORM",
+        "def mnemonic",
+        "def form",
+    ] {
+        assert!(out.contains(needle), "`{needle}` missing:\n{out}");
+    }
 }
 
 /// Word sample for a window: all words up to 16bit, else a 200k LCG sweep.
@@ -231,3 +276,168 @@ case!(python_decodes_tags_demo, "tags_demo");
 case!(python_decodes_cond_demo, "cond_demo");
 case!(python_decodes_riscv_rvc, "riscv_rvc");
 case!(python_decodes_modes_demo, "modes_demo");
+case!(python_decodes_fn_let_width, "fn_let_width");
+case!(python_decodes_guard_chain, "guard_chain");
+case!(python_decodes_mode_guard, "mode_guard");
+case!(python_decodes_axes_demo, "axes_demo");
+case!(python_decodes_for_demo, "for_demo");
+case!(python_decodes_x86_prefix, "x86_prefix");
+// `snes_disasm` and `fetch_expr` use `fetch(N)` stream operands, so they have no word-level
+// `disasm`; they are covered by the contextual-harness tests below instead.
+
+// ---- contextual disassembly (fetch/:sym) and prefix streams ----
+
+/// The generated contextual disassembler (`fetch(N)` operands + `:sym`) must match the oracle's
+/// `interp::disasm_ctx`, mirroring the Rust backend's `generated_disasm_ctx_matches_oracle`.
+#[test]
+fn python_disasm_ctx_matches_oracle() {
+    let isa = compile(example!("snes_disasm")).expect("snes_disasm compiles");
+    let pcs = [0u64, 1, 4];
+
+    // A small program image: nop; lda #$1234; jmp $9000.
+    struct Mem;
+    impl chipi_core::interp::DisasmCtx for Mem {
+        fn read_u8(&self, addr: u64) -> u8 {
+            [0xEAu8, 0xA9, 0x34, 0x12, 0x4C, 0x00, 0x90]
+                .get(addr as usize)
+                .copied()
+                .unwrap_or(0)
+        }
+    }
+
+    let expected: Vec<String> = pcs
+        .iter()
+        .map(|&pc| {
+            let (text, len) = chipi_core::interp::disasm_ctx(&isa, pc, &Mem);
+            format!("{text}|{len}")
+        })
+        .collect();
+
+    const HARNESS: &str = r#"import dec
+
+class Mem:
+    img = [0xEA, 0xA9, 0x34, 0x12, 0x4C, 0x00, 0x90]
+
+    def read_u8(self, addr):
+        return self.img[addr] if addr < len(self.img) else 0
+
+    def symbol(self, addr):
+        return None
+
+for pc in [0, 1, 4]:
+    (text, ln) = dec.disasm_ctx(pc, Mem())
+    print(text + "|" + str(ln))
+"#;
+
+    let got = run_harness("snes_ctx", &emit_python(&isa), HARNESS, &[]);
+    assert_eq!(got, expected, "python disasm_ctx mismatch vs oracle");
+}
+
+/// Expression fetch widths: `disasm_ctx` and `stream_len` must follow the host-supplied mode
+/// exactly like the oracle, mirroring the Rust backend's `generated_fetch_expr_matches_oracle`.
+#[test]
+fn python_fetch_expr_matches_oracle() {
+    let isa = compile(example!("fetch_expr")).expect("fetch_expr compiles");
+
+    // lda #imm; ldx #imm; nop, disassembled under both accumulator widths.
+    let image: [u8; 7] = [0xA9, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA];
+    let pcs = [0u64, 3, 6];
+
+    struct Mem(u64);
+    impl chipi_core::interp::DisasmCtx for Mem {
+        fn read_u8(&self, addr: u64) -> u8 {
+            [0xA9u8, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA]
+                .get(addr as usize)
+                .copied()
+                .unwrap_or(0)
+        }
+        fn mode(&self, _name: &str) -> u64 {
+            self.0
+        }
+    }
+
+    let mut expected = Vec::new();
+    for m in [0u64, 1] {
+        for &pc in &pcs {
+            let (text, len) = chipi_core::interp::disasm_ctx(&isa, pc, &Mem(m));
+            expected.push(format!("{text}|{len}"));
+        }
+        // stream_len for the modal classify at each pc.
+        for &pc in &pcs {
+            let combo = m as usize;
+            let word = image[pc as usize];
+            let d = decode_mode(&isa, combo, word as u64);
+            let inst = &isa.instrs[d.instr_index.unwrap()];
+            let extra = chipi_core::interp::fetched_bytes_combo(&isa, inst, m);
+            expected.push(format!("len {}", 1 + extra));
+        }
+    }
+
+    const HARNESS: &str = r#"import dec
+
+class Mem:
+    img = [0xA9, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA]
+
+    def __init__(self, m):
+        self.m = m
+
+    def read_u8(self, addr):
+        return self.img[addr] if addr < len(self.img) else 0
+
+    def mode(self, name):
+        return self.m
+
+for m in [0, 1]:
+    for pc in [0, 3, 6]:
+        (text, ln) = dec.disasm_ctx(pc, Mem(m))
+        print(text + "|" + str(ln))
+    for pc in [0, 3, 6]:
+        combo = dec.pack_modes(m)
+        print("len " + str(dec.stream_len(combo, Mem.img[pc])))
+"#;
+
+    let got = run_harness("fetch_expr_ctx", &emit_python(&isa), HARNESS, &[]);
+    assert_eq!(got, expected, "python fetch(expr) mismatch vs oracle");
+}
+
+/// Prefix streams: `decode_stream` + `classify_with` must agree with the oracle's
+/// `interp::decode_stream` on opcode name and total length for every probe stream.
+#[test]
+fn python_decode_stream_matches_oracle() {
+    let isa = compile(example!("x86_prefix")).expect("x86_prefix compiles");
+
+    let streams: &[&[u8]] = &[
+        &[0x90],
+        &[0x49, 0x90],
+        &[0x48, 0x90],
+        &[0x66, 0x50],
+        &[0x50],
+        &[0x66, 0x49, 0x90],
+    ];
+
+    let expected: Vec<String> = streams
+        .iter()
+        .map(|bytes| {
+            let d = chipi_core::interp::decode_stream(&isa, bytes);
+            format!("{}|{}", d.opcode_name, d.len_bytes)
+        })
+        .collect();
+
+    let module = emit_python(&isa);
+    assert!(
+        module.contains("def classify_with"),
+        "context-reading guards should emit classify_with:\n{module}"
+    );
+
+    let mut harness = String::from("import dec\n\nstreams = [\n");
+    for bytes in streams {
+        let lit: Vec<String> = bytes.iter().map(|b| format!("{b:#04x}")).collect();
+        harness.push_str(&format!("    [{}],\n", lit.join(", ")));
+    }
+    harness.push_str(
+        "]\n\nfor s in streams:\n    (word, ln, ctx) = dec.decode_stream(bytes(s))\n    print(dec.OPCODE_NAMES[dec.classify_with(word, ctx)] + \"|\" + str(ln))\n",
+    );
+
+    let got = run_harness("x86_stream", &module, &harness, &[]);
+    assert_eq!(got, expected, "python decode_stream mismatch vs oracle");
+}

@@ -2,6 +2,11 @@
 //! lowers the decode tree and exposes the reference evaluator, the encoder, the text assembler and
 //! the backend-neutral program model.
 //!
+//! The model's load-bearing concepts: decode variables (host `mode`s and prefix-assigned
+//! `context` fields, readable by guards and `length` arms and foldable per mode combination),
+//! identity axes (dotted leaf names carrying a mnemonic and a form), and one decode tree per
+//! DISTINCT mode-filtered leaf set. `interp` is the oracle every backend is validated against.
+//!
 //! Depends only on `chipi-syntax`; free of `unsafe`.
 
 #![forbid(unsafe_code)]
@@ -52,13 +57,16 @@ pub fn compile(src: &str) -> Result<Isa, Vec<Diag>> {
         .max(resolved.decoder.unit_bits as u16);
     let max_len_bytes = max_bits.div_ceil(8) as u8;
 
-    // default-mode tree index (mixed radix over mode defaults)
+    // default-mode tree index (mixed radix over mode defaults, resolved through the
+    // combination-to-distinct-tree map)
     let default_combo = model::default_combo(&resolved.modes) as usize;
 
     let mode_trees = built.trees;
-    let tree = mode_trees[default_combo.min(mode_trees.len() - 1)].clone();
+    let combo_tree = built.combo_tree;
+    let default_tree = combo_tree.get(default_combo).copied().unwrap_or(0);
+    let tree = mode_trees[default_tree.min(mode_trees.len() - 1)].clone();
 
-    Ok(Isa {
+    let mut isa = Isa {
         decoder: resolved.decoder,
         selectors: resolved.selectors,
         types: resolved.types,
@@ -73,9 +81,21 @@ pub fn compile(src: &str) -> Result<Isa, Vec<Diag>> {
         prefix: resolved.prefix,
         tree,
         mode_trees,
+        combo_tree,
         max_len_bytes,
         warnings,
-    })
+        vars_default: Vec::new(),
+        vars_combo: Vec::new(),
+    };
+
+    // Precompute the decode-variable value tables so the word-level decode entry points can
+    // borrow them instead of rebuilding a Vec of names per call.
+    isa.vars_default = isa.default_var_values();
+    isa.vars_combo = (0..isa.mode_combos())
+        .map(|combo| isa.combo_var_values(combo))
+        .collect();
+
+    Ok(isa)
 }
 
 /// Render diagnostics against a named source into one string.

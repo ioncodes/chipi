@@ -111,6 +111,26 @@ fn unknown_form() {
 }
 
 #[test]
+fn builtin_bad_arity_in_computed_operand() {
+    // `ones` takes exactly one argument.
+    expect_code(
+        &format!("{HEADER}x op=0 a:u5[20:16] y:u64 = ones(a, 2) | \"x {{y}}\""),
+        "BadArity",
+    );
+}
+
+#[test]
+fn builtin_bad_arity_in_fn_body() {
+    // `min` takes exactly two arguments.
+    expect_code(
+        &format!(
+            "{HEADER}fn f(a:u8) -> u8 {{ return min(a) }}\nx op=0 a:u5[20:16] y:u64 = f(a) | \"x {{y}}\""
+        ),
+        "BadArity",
+    );
+}
+
+#[test]
 fn bad_length_without_else() {
     expect_code(
         &format!("{HEADER}length = | word[0:0] != 0 : 16\nx op=0 | \"x\""),

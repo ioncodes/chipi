@@ -4,7 +4,7 @@
 //! fails if any error was produced. Range and name diagnostics live here, leaf and overlap checks
 //! live in `check` and ambiguity in `tree`.
 
-use crate::check::{check_expr, check_fn_expr};
+use crate::check::{check_expr, check_fetch, check_fn_expr};
 use crate::compute::mask_u64;
 use crate::model::*;
 use chipi_syntax::ast::{self, Item, SrcRange};
@@ -244,11 +244,21 @@ pub fn resolve(spec: &ast::Spec) -> Result<Resolved, Vec<Diag>> {
             }
         };
 
-        // body: sequential scope (params, then each let visible to later lets and the return)
+        // body: sequential scope (params, then each let visible to later lets and the return).
+        // Each let's width is inferred here, once, so the evaluator and every backend read the
+        // same stored width instead of re-running inference per use.
         let mut scope: Vec<String> = f.params.iter().map(|(n, _)| n.text.clone()).collect();
+        let mut widths: HashMap<String, u16> = params
+            .iter()
+            .map(|(n, ty)| (n.clone(), ty.width()))
+            .collect();
+        let mut lets: Vec<(String, ast::Expr, u16)> = Vec::new();
         for (ln, le) in &f.lets {
             check_fn_expr(le, &scope, &fn_names, &mut errs);
             scope.push(ln.text.clone());
+            let w = crate::compute::infer_width_locals(le, &widths);
+            widths.insert(ln.text.clone(), w);
+            lets.push((ln.text.clone(), le.clone(), w));
         }
         check_fn_expr(&f.ret_expr, &scope, &fn_names, &mut errs);
 
@@ -256,11 +266,7 @@ pub fn resolve(spec: &ast::Spec) -> Result<Resolved, Vec<Diag>> {
             name: f.name.text.clone(),
             params,
             ret,
-            lets: f
-                .lets
-                .iter()
-                .map(|(n, e)| (n.text.clone(), e.clone()))
-                .collect(),
+            lets,
             ret_expr: f.ret_expr.clone(),
             span: f.span,
         });
@@ -295,6 +301,7 @@ pub fn resolve(spec: &ast::Spec) -> Result<Resolved, Vec<Diag>> {
         }
         let mut arms = Vec::new();
         let n = ld.arms.len();
+        let vars = var_widths(&modes, &decoder.context);
         for (i, arm) in ld.arms.iter().enumerate() {
             if arm.bits == 0 || arm.bits > 64 {
                 errs.push(Diag::error(
@@ -309,6 +316,9 @@ pub fn resolve(spec: &ast::Spec) -> Result<Resolved, Vec<Diag>> {
                     "an `else` length arm must be last",
                     arm.span,
                 ));
+            }
+            if let Some(c) = &arm.cond {
+                check_expr(c, &[], window, &fn_names, &vars, &mut errs);
             }
             arms.push(LengthArm {
                 cond: arm.cond.clone(),
@@ -382,6 +392,7 @@ pub fn resolve(spec: &ast::Spec) -> Result<Resolved, Vec<Diag>> {
     }
 
     // ---- instructions ----
+    let vars = var_widths(&modes, &decoder.context);
     let mut instrs: Vec<Insn> = Vec::new();
     for inst in spec.items.iter().filter_map(as_instr) {
         match resolve_instr(
@@ -390,6 +401,7 @@ pub fn resolve(spec: &ast::Spec) -> Result<Resolved, Vec<Diag>> {
             &types,
             &forms,
             &modes,
+            &vars,
             &fn_names,
             &subdecoders,
             bit_order,
@@ -419,8 +431,40 @@ pub fn resolve(spec: &ast::Spec) -> Result<Resolved, Vec<Diag>> {
             ));
         }
         all_tags.insert(g.tag.text.clone());
-        let mut members = Vec::new();
+
+        // Expand axis patterns first: `lda.*` means every leaf whose mnemonic is `lda`,
+        // in declaration order.
+        let mut expanded: Vec<ast::Ident> = Vec::new();
         for m in &g.members {
+            match m.text.strip_suffix(".*") {
+                Some(mnem) => {
+                    let mut hit = false;
+                    for inst in instrs.iter() {
+                        if inst.mnemonic == mnem {
+                            hit = true;
+                            expanded.push(ast::Ident {
+                                text: inst.name.clone(),
+                                span: m.span,
+                            });
+                        }
+                    }
+                    if !hit {
+                        errs.push(Diag::error(
+                            "UnknownInstruction",
+                            format!(
+                                "group `{}` lists `{}`, but no instruction has mnemonic `{mnem}`",
+                                g.tag.text, m.text
+                            ),
+                            m.span,
+                        ));
+                    }
+                }
+                None => expanded.push(m.clone()),
+            }
+        }
+
+        let mut members = Vec::new();
+        for m in &expanded {
             match name_to_idx.get(m.text.as_str()) {
                 Some(&idx) => {
                     let inst = &mut instrs[idx];
@@ -490,6 +534,7 @@ fn resolve_instr(
     types: &[TypeDef],
     forms: &[Form],
     modes: &[Mode],
+    vars: &[(String, u16)],
     fn_names: &[String],
     subdecoders: &[SubDecoder],
     bit_order: BitOrder,
@@ -688,7 +733,8 @@ fn resolve_instr(
             continue;
         };
         let mut cerrs = Vec::new();
-        check_expr(&c.expr, &fields, window, fn_names, &mut cerrs);
+        check_expr(&c.expr, &fields, window, fn_names, &[], &mut cerrs);
+        check_fetch(&c.expr, c.span, modes, &mut cerrs);
         if !cerrs.is_empty() {
             errs.append(&mut cerrs);
             continue;
@@ -731,7 +777,8 @@ fn resolve_instr(
     for (b, td) in sourced {
         let src = td.source.as_ref().expect("sourced operand has a source");
         let mut cerrs = Vec::new();
-        check_expr(src, &fields, window, fn_names, &mut cerrs);
+        check_expr(src, &fields, window, fn_names, &[], &mut cerrs);
+        check_fetch(src, b.span, modes, &mut cerrs);
         if !cerrs.is_empty() {
             errs.append(&mut cerrs);
             continue;
@@ -769,9 +816,9 @@ fn resolve_instr(
         });
     }
 
-    // guard
+    // guard: decode variables (modes, context fields) are readable here.
     if let Some(g) = &inst.guard {
-        check_expr(g, &fields, window, fn_names, &mut errs);
+        check_expr(g, &fields, window, fn_names, vars, &mut errs);
     }
 
     // display arms
@@ -838,8 +885,14 @@ fn resolve_instr(
     }
 
     if errs.is_empty() {
+        let (mnemonic, form) = match inst.name.text.split_once('.') {
+            Some((m, f)) => (m.to_string(), Some(f.to_string())),
+            None => (inst.name.text.clone(), None),
+        };
         Ok(Insn {
             name: inst.name.text.clone(),
+            mnemonic,
+            form,
             fixed,
             fields,
             computed,

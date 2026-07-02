@@ -1,0 +1,256 @@
+0 0x0 nop|nop
+0 0x1 tcall_0|tcall 0
+0 0x2 set1_b0|set1 $00.0
+0 0x3 bbs_b0|bbs $00.0, $0
+0 0x4 or.a_dp|or a, $00
+0 0x5 or.a_abs|or a, $0000
+0 0x6 or.a_xind|or a, (x)
+0 0x7 or.a_idx|or a, [$00+x]
+0 0x8 or.a_imm|or a, #$00
+0 0x9 or.dp_dp|or $00, $00
+0 0xa or1.mb|or1 c, $0000
+0 0xb asl.dp|asl $00
+0 0xc asl.abs|asl $0000
+0 0xd push.psw|push psw
+0 0xe tset1.abs|tset1 $0000
+0 0xf brk|brk
+0 0x10 bpl.rel|bpl $0
+0 0x11 tcall_1|tcall 1
+0 0x12 clr1_b0|clr1 $00.0
+0 0x13 bbc_b0|bbc $00.0, $0
+0 0x14 or.a_dpx|or a, $00,x
+0 0x15 or.a_absx|or a, $0000,x
+0 0x16 or.a_absy|or a, $0000,y
+0 0x17 or.a_idy|or a, [$00]+y
+0 0x18 or.dp_imm|or $00, #$00
+0 0x19 or.xy|or (x), (y)
+0 0x1a decw.dp|decw $00
+0 0x1b asl.dpx|asl $00,x
+0 0x1c asl.a|asl a
+0 0x1d dec.x|dec x
+0 0x1e cmp.x_abs|cmp x, $0000
+0 0x1f jmp.iax|jmp [$0000+x]
+0 0x20 clrp|clrp
+0 0x21 tcall_2|tcall 2
+0 0x22 set1_b1|set1 $00.1
+0 0x23 bbs_b1|bbs $00.1, $0
+0 0x24 and.a_dp|and a, $00
+0 0x25 and.a_abs|and a, $0000
+0 0x26 and.a_xind|and a, (x)
+0 0x27 and.a_idx|and a, [$00+x]
+0 0x28 and.a_imm|and a, #$00
+0 0x29 and.dp_dp|and $00, $00
+0 0x2a or1n.mb|or1 c, /$0000
+0 0x2b rol.dp|rol $00
+0 0x2c rol.abs|rol $0000
+0 0x2d push.a|push a
+0 0x2e cbne_dp|cbne $00, $0
+0 0x2f bra.rel|bra $0
+0 0x30 bmi.rel|bmi $0
+0 0x31 tcall_3|tcall 3
+0 0x32 clr1_b1|clr1 $00.1
+0 0x33 bbc_b1|bbc $00.1, $0
+0 0x34 and.a_dpx|and a, $00,x
+0 0x35 and.a_absx|and a, $0000,x
+0 0x36 and.a_absy|and a, $0000,y
+0 0x37 and.a_idy|and a, [$00]+y
+0 0x38 and.dp_imm|and $00, #$00
+0 0x39 and.xy|and (x), (y)
+0 0x3a incw.dp|incw $00
+0 0x3b rol.dpx|rol $00,x
+0 0x3c rol.a|rol a
+0 0x3d inc.x|inc x
+0 0x3e cmp.x_dp|cmp x, $00
+0 0x3f call.abs|call $0000
+0 0x40 setp|setp
+0 0x41 tcall_4|tcall 4
+0 0x42 set1_b2|set1 $00.2
+0 0x43 bbs_b2|bbs $00.2, $0
+0 0x44 eor.a_dp|eor a, $00
+0 0x45 eor.a_abs|eor a, $0000
+0 0x46 eor.a_xind|eor a, (x)
+0 0x47 eor.a_idx|eor a, [$00+x]
+0 0x48 eor.a_imm|eor a, #$00
+0 0x49 eor.dp_dp|eor $00, $00
+0 0x4a and1.mb|and1 c, $0000
+0 0x4b lsr.dp|lsr $00
+0 0x4c lsr.abs|lsr $0000
+0 0x4d push.x|push x
+0 0x4e tclr1.abs|tclr1 $0000
+0 0x4f pcall|pcall $00
+0 0x50 bvc.rel|bvc $0
+0 0x51 tcall_5|tcall 5
+0 0x52 clr1_b2|clr1 $00.2
+0 0x53 bbc_b2|bbc $00.2, $0
+0 0x54 eor.a_dpx|eor a, $00,x
+0 0x55 eor.a_absx|eor a, $0000,x
+0 0x56 eor.a_absy|eor a, $0000,y
+0 0x57 eor.a_idy|eor a, [$00]+y
+0 0x58 eor.dp_imm|eor $00, #$00
+0 0x59 eor.xy|eor (x), (y)
+0 0x5a cmpw.ya_dp|cmpw ya, $00
+0 0x5b lsr.dpx|lsr $00,x
+0 0x5c lsr.a|lsr a
+0 0x5d mov.x_a|mov x, a
+0 0x5e cmp.y_abs|cmp y, $0000
+0 0x5f jmp.abs|jmp $0000
+0 0x60 clrc|clrc
+0 0x61 tcall_6|tcall 6
+0 0x62 set1_b3|set1 $00.3
+0 0x63 bbs_b3|bbs $00.3, $0
+0 0x64 cmp.a_dp|cmp a, $00
+0 0x65 cmp.a_abs|cmp a, $0000
+0 0x66 cmp.a_xind|cmp a, (x)
+0 0x67 cmp.a_idx|cmp a, [$00+x]
+0 0x68 cmp.a_imm|cmp a, #$00
+0 0x69 cmp.dp_dp|cmp $00, $00
+0 0x6a and1n.mb|and1 c, /$0000
+0 0x6b ror.dp|ror $00
+0 0x6c ror.abs|ror $0000
+0 0x6d push.y|push y
+0 0x6e dbnz_dp|dbnz $00, $0
+0 0x6f ret|ret
+0 0x70 bvs.rel|bvs $0
+0 0x71 tcall_7|tcall 7
+0 0x72 clr1_b3|clr1 $00.3
+0 0x73 bbc_b3|bbc $00.3, $0
+0 0x74 cmp.a_dpx|cmp a, $00,x
+0 0x75 cmp.a_absx|cmp a, $0000,x
+0 0x76 cmp.a_absy|cmp a, $0000,y
+0 0x77 cmp.a_idy|cmp a, [$00]+y
+0 0x78 cmp.dp_imm|cmp $00, #$00
+0 0x79 cmp.xy|cmp (x), (y)
+0 0x7a addw.ya_dp|addw ya, $00
+0 0x7b ror.dpx|ror $00,x
+0 0x7c ror.a|ror a
+0 0x7d mov.a_x|mov a, x
+0 0x7e cmp.y_dp|cmp y, $00
+0 0x7f reti|reti
+0 0x80 setc|setc
+0 0x81 tcall_8|tcall 8
+0 0x82 set1_b4|set1 $00.4
+0 0x83 bbs_b4|bbs $00.4, $0
+0 0x84 adc.a_dp|adc a, $00
+0 0x85 adc.a_abs|adc a, $0000
+0 0x86 adc.a_xind|adc a, (x)
+0 0x87 adc.a_idx|adc a, [$00+x]
+0 0x88 adc.a_imm|adc a, #$00
+0 0x89 adc.dp_dp|adc $00, $00
+0 0x8a eor1.mb|eor1 c, $0000
+0 0x8b dec.dp|dec $00
+0 0x8c dec.abs|dec $0000
+0 0x8d mov.y_imm|mov y, #$00
+0 0x8e pop.psw|pop psw
+0 0x8f mov.dp_imm|mov $00, #$00
+0 0x90 bcc.rel|bcc $0
+0 0x91 tcall_9|tcall 9
+0 0x92 clr1_b4|clr1 $00.4
+0 0x93 bbc_b4|bbc $00.4, $0
+0 0x94 adc.a_dpx|adc a, $00,x
+0 0x95 adc.a_absx|adc a, $0000,x
+0 0x96 adc.a_absy|adc a, $0000,y
+0 0x97 adc.a_idy|adc a, [$00]+y
+0 0x98 adc.dp_imm|adc $00, #$00
+0 0x99 adc.xy|adc (x), (y)
+0 0x9a subw.ya_dp|subw ya, $00
+0 0x9b dec.dpx|dec $00,x
+0 0x9c dec.a|dec a
+0 0x9d mov.x_sp|mov x, sp
+0 0x9e div.ya_x|div ya, x
+0 0x9f xcn.a|xcn a
+0 0xa0 ei|ei
+0 0xa1 tcall_10|tcall 10
+0 0xa2 set1_b5|set1 $00.5
+0 0xa3 bbs_b5|bbs $00.5, $0
+0 0xa4 sbc.a_dp|sbc a, $00
+0 0xa5 sbc.a_abs|sbc a, $0000
+0 0xa6 sbc.a_xind|sbc a, (x)
+0 0xa7 sbc.a_idx|sbc a, [$00+x]
+0 0xa8 sbc.a_imm|sbc a, #$00
+0 0xa9 sbc.dp_dp|sbc $00, $00
+0 0xaa mov1.c_mb|mov1 c, $0000
+0 0xab inc.dp|inc $00
+0 0xac inc.abs|inc $0000
+0 0xad cmp.y_imm|cmp y, #$00
+0 0xae pop.a|pop a
+0 0xaf mov.xinc_a|mov (x)+, a
+0 0xb0 bcs.rel|bcs $0
+0 0xb1 tcall_11|tcall 11
+0 0xb2 clr1_b5|clr1 $00.5
+0 0xb3 bbc_b5|bbc $00.5, $0
+0 0xb4 sbc.a_dpx|sbc a, $00,x
+0 0xb5 sbc.a_absx|sbc a, $0000,x
+0 0xb6 sbc.a_absy|sbc a, $0000,y
+0 0xb7 sbc.a_idy|sbc a, [$00]+y
+0 0xb8 sbc.dp_imm|sbc $00, #$00
+0 0xb9 sbc.xy|sbc (x), (y)
+0 0xba movw.ya_dp|movw ya, $00
+0 0xbb inc.dpx|inc $00,x
+0 0xbc inc.a|inc a
+0 0xbd mov.sp_x|mov sp, x
+0 0xbe das.a|das a
+0 0xbf mov.a_xinc|mov a, (x)+
+0 0xc0 di|di
+0 0xc1 tcall_12|tcall 12
+0 0xc2 set1_b6|set1 $00.6
+0 0xc3 bbs_b6|bbs $00.6, $0
+0 0xc4 mov.dp_a|mov $00, a
+0 0xc5 mov.abs_a|mov $0000, a
+0 0xc6 mov.xind_a|mov (x), a
+0 0xc7 mov.idx_a|mov [$00+x], a
+0 0xc8 cmp.x_imm|cmp x, #$00
+0 0xc9 mov.abs_x|mov $0000, x
+0 0xca mov1.mb_c|mov1 $0000, c
+0 0xcb mov.dp_y|mov $00, y
+0 0xcc mov.abs_y|mov $0000, y
+0 0xcd mov.x_imm|mov x, #$00
+0 0xce pop.x|pop x
+0 0xcf mul.ya|mul ya
+0 0xd0 bne.rel|bne $0
+0 0xd1 tcall_13|tcall 13
+0 0xd2 clr1_b6|clr1 $00.6
+0 0xd3 bbc_b6|bbc $00.6, $0
+0 0xd4 mov.dpx_a|mov $00,x, a
+0 0xd5 mov.absx_a|mov $0000,x, a
+0 0xd6 mov.absy_a|mov $0000,y, a
+0 0xd7 mov.idy_a|mov [$00]+y, a
+0 0xd8 mov.dp_x|mov $00, x
+0 0xd9 mov.dpy_x|mov $00,y, x
+0 0xda movw.dp_ya|movw $00, ya
+0 0xdb mov.dpx_y|mov $00,x, y
+0 0xdc dec.y|dec y
+0 0xdd mov.a_y|mov a, y
+0 0xde cbne_dpx|cbne $00,x, $0
+0 0xdf daa.a|daa a
+0 0xe0 clrv|clrv
+0 0xe1 tcall_14|tcall 14
+0 0xe2 set1_b7|set1 $00.7
+0 0xe3 bbs_b7|bbs $00.7, $0
+0 0xe4 mov.a_dp|mov a, $00
+0 0xe5 mov.a_abs|mov a, $0000
+0 0xe6 mov.a_xind|mov a, (x)
+0 0xe7 mov.a_idx|mov a, [$00+x]
+0 0xe8 mov.a_imm|mov a, #$00
+0 0xe9 mov.x_abs|mov x, $0000
+0 0xea not1.mb|not1 $0000
+0 0xeb mov.y_dp|mov y, $00
+0 0xec mov.y_abs|mov y, $0000
+0 0xed notc|notc
+0 0xee pop.y|pop y
+0 0xef sleep|sleep
+0 0xf0 beq.rel|beq $0
+0 0xf1 tcall_15|tcall 15
+0 0xf2 clr1_b7|clr1 $00.7
+0 0xf3 bbc_b7|bbc $00.7, $0
+0 0xf4 mov.a_dpx|mov a, $00,x
+0 0xf5 mov.a_absx|mov a, $0000,x
+0 0xf6 mov.a_absy|mov a, $0000,y
+0 0xf7 mov.a_idy|mov a, [$00]+y
+0 0xf8 mov.x_dp|mov x, $00
+0 0xf9 mov.x_dpy|mov x, $00,y
+0 0xfa mov.dp_dp|mov $00, $00
+0 0xfb mov.y_dpx|mov y, $00,x
+0 0xfc inc.y|inc y
+0 0xfd mov.y_a|mov y, a
+0 0xfe dbnz_y|dbnz y, $0
+0 0xff stop|stop

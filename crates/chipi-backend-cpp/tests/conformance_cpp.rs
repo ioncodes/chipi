@@ -14,23 +14,65 @@ macro_rules! example {
     };
 }
 
-/// Regression: the C++ backend has no stream context, so a `fetch(N)` operand must produce a clear
-/// `#error` rather than a call to an undefined `fn_fetch`.
+/// `fetch(N)` operands emit the contextual-disassembly surface: a `DisasmCtx` interface,
+/// stream accessors, `stream_len` and `disasm_ctx`.
 #[test]
-fn cpp_refuses_fetch_operands() {
+fn cpp_supports_fetch_operands() {
     let src = "decoder T { width = 8 bit_order = lsb0 endian = little }\n\
                selector op [0:7]\n\
                a op=0x01 x:u16 = fetch(16) | \"a ${x:04x}\"\n";
     let isa = compile(src).expect("spec compiles");
     let out = emit_cpp(&isa);
-    assert!(
-        out.contains("#error"),
-        "cpp should refuse fetch specs:\n{out}"
-    );
+    assert!(!out.contains("#error"), "fetch specs must emit:\n{out}");
     assert!(
         !out.contains("fn_fetch"),
         "cpp must not emit an undefined fn_fetch:\n{out}"
     );
+    for needle in ["struct DisasmCtx", "stream_len", "disasm_ctx"] {
+        assert!(out.contains(needle), "`{needle}` missing:\n{out}");
+    }
+}
+
+/// The one shape still refused: `length` arms reading decode variables (no runtime source for
+/// them in the emitted word-level `inst_len`). Must be a loud `#error`, never silent divergence.
+#[test]
+fn cpp_refuses_var_reading_length_arms() {
+    let src = "decoder T { width = 8 bit_order = lsb0 endian = little mode m: bool = 0 }\n\
+               length =\n\
+               \x20 | m == 1 : 16\n\
+               \x20 | else : 8\n\
+               selector op [0:7]\n\
+               a op=0x01 | \"a\"\n";
+    let isa = compile(src).expect("spec compiles");
+    let out = emit_cpp(&isa);
+    assert!(
+        out.contains("#error") && out.contains("length"),
+        "cpp should refuse var-reading length arms:\n{out}"
+    );
+}
+
+/// Tags and identity-axis metadata mirror the Rust backend: OPCODE_TAGS for tagged specs,
+/// Mnemonic/Form enums and tables for dotted leaf names. (Their decode behavior is covered by
+/// the conformance runs; this pins the emitted surface.)
+#[test]
+fn cpp_emits_tags_and_axes() {
+    let isa = compile(example!("tags_demo")).expect("tags_demo compiles");
+    let out = emit_cpp(&isa);
+    assert!(out.contains("OPCODE_TAGS"), "tags table missing:\n{out}");
+    assert!(out.contains("\"arith\""), "tag name missing");
+
+    let isa = compile(example!("axes_demo")).expect("axes_demo compiles");
+    let out = emit_cpp(&isa);
+    for needle in [
+        "enum Mnemonic",
+        "MN_LDA",
+        "enum Form",
+        "FORM_IMM",
+        "OPCODE_MNEMONIC",
+        "OPCODE_FORM",
+    ] {
+        assert!(out.contains(needle), "`{needle}` missing:\n{out}");
+    }
 }
 
 /// Fixed word sample, matching `crates/chipi-core/tests/conformance.rs`:
@@ -240,8 +282,225 @@ conformance_tests! {
     cpp_subdecoder_demo => "subdecoder_demo",
     cpp_riscv_rvc => "riscv_rvc",
     cpp_modes_demo => "modes_demo",
-    // `snes_disasm` is left out because it uses `fetch(N)` stream operands, which the
-    // C++17 backend does not support (no contextual-disasm / stream plumbing; see spec section 12).
+    cpp_fn_let_width => "fn_let_width",
+    cpp_guard_chain => "guard_chain",
+    cpp_mode_guard => "mode_guard",
+    cpp_axes_demo => "axes_demo",
+    cpp_for_demo => "for_demo",
+    cpp_x86_prefix => "x86_prefix",
+    // `snes_disasm` and `fetch_expr` use `fetch(N)` stream operands, so they have no word-level
+    // `disasm`; they are covered by the contextual-harness tests below instead.
+}
+
+// ---- contextual disassembly (fetch/:sym) and prefix streams ----
+
+/// Compile `header` plus `main_src` with g++ and return the harness stdout lines.
+fn compile_and_run(tag: &str, header: &str, main_src: &str) -> Vec<String> {
+    let dir = target_dir().join(format!("cpp_{tag}_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("dec.hpp"), header).unwrap();
+    std::fs::write(dir.join("main.cpp"), main_src).unwrap();
+
+    let out = Command::new("g++")
+        .args(["-std=c++17", "-O1", "-w", "-o"])
+        .arg(dir.join("a.out"))
+        .arg(dir.join("main.cpp"))
+        .output()
+        .expect("failed to invoke g++");
+    assert!(
+        out.status.success(),
+        "`{tag}`: g++ failed:\n{}\n(scratch: {})",
+        String::from_utf8_lossy(&out.stderr),
+        dir.display()
+    );
+
+    let run = Command::new(dir.join("a.out"))
+        .output()
+        .expect("failed to run compiled harness");
+    assert!(
+        run.status.success(),
+        "`{tag}`: harness crashed (scratch: {})",
+        dir.display()
+    );
+
+    let got: Vec<String> = String::from_utf8(run.stdout)
+        .expect("non-utf8 harness output")
+        .lines()
+        .map(str::to_string)
+        .collect();
+
+    let _ = std::fs::remove_dir_all(&dir);
+    got
+}
+
+/// The generated contextual disassembler (`fetch(N)` operands + `:sym`) must match the oracle's
+/// `interp::disasm_ctx`, mirroring the Rust backend's `generated_disasm_ctx_matches_oracle`.
+#[test]
+fn cpp_disasm_ctx_matches_oracle() {
+    let isa = compile(example!("snes_disasm")).expect("snes_disasm compiles");
+    let pcs = [0u64, 1, 4];
+
+    // A small program image: nop; lda #$1234; jmp $9000.
+    struct Mem;
+    impl chipi_core::interp::DisasmCtx for Mem {
+        fn read_u8(&self, addr: u64) -> u8 {
+            [0xEAu8, 0xA9, 0x34, 0x12, 0x4C, 0x00, 0x90]
+                .get(addr as usize)
+                .copied()
+                .unwrap_or(0)
+        }
+    }
+
+    let expected: Vec<String> = pcs
+        .iter()
+        .map(|&pc| {
+            let (text, len) = chipi_core::interp::disasm_ctx(&isa, pc, &Mem);
+            format!("{text}|{len}")
+        })
+        .collect();
+
+    let main_src = r#"#include "dec.hpp"
+#include <cstdio>
+struct Mem : chipi::DisasmCtx {
+    uint8_t read_u8(uint64_t addr) const override {
+        static const uint8_t img[7] = {0xEA, 0xA9, 0x34, 0x12, 0x4C, 0x00, 0x90};
+        return addr < 7 ? img[addr] : 0;
+    }
+};
+int main() {
+    Mem mem;
+    for (uint64_t pc : {0ull, 1ull, 4ull}) {
+        std::pair<std::string, uint8_t> r = chipi::disasm_ctx(pc, mem);
+        printf("%s|%d\n", r.first.c_str(), (int)r.second);
+    }
+    return 0;
+}
+"#;
+
+    let got = compile_and_run("snes_ctx", &emit_cpp(&isa), main_src);
+    assert_eq!(got, expected, "cpp disasm_ctx mismatch vs oracle");
+}
+
+/// Expression fetch widths: `disasm_ctx` and `stream_len` must follow the host-supplied mode
+/// exactly like the oracle, mirroring the Rust backend's `generated_fetch_expr_matches_oracle`.
+#[test]
+fn cpp_fetch_expr_matches_oracle() {
+    let isa = compile(example!("fetch_expr")).expect("fetch_expr compiles");
+
+    // lda #imm; ldx #imm; nop, disassembled under both accumulator widths.
+    let image: [u8; 7] = [0xA9, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA];
+    let pcs = [0u64, 3, 6];
+
+    struct Mem(u64);
+    impl chipi_core::interp::DisasmCtx for Mem {
+        fn read_u8(&self, addr: u64) -> u8 {
+            [0xA9u8, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA]
+                .get(addr as usize)
+                .copied()
+                .unwrap_or(0)
+        }
+        fn mode(&self, _name: &str) -> u64 {
+            self.0
+        }
+    }
+
+    let mut expected = Vec::new();
+    for m in [0u64, 1] {
+        for &pc in &pcs {
+            let (text, len) = chipi_core::interp::disasm_ctx(&isa, pc, &Mem(m));
+            expected.push(format!("{text}|{len}"));
+        }
+        // stream_len for the modal classify at each pc.
+        for &pc in &pcs {
+            let combo = m as usize;
+            let word = image[pc as usize];
+            let d = chipi_core::interp::decode_mode(&isa, combo, word as u64);
+            let inst = &isa.instrs[d.instr_index.unwrap()];
+            let extra = chipi_core::interp::fetched_bytes_combo(&isa, inst, m);
+            expected.push(format!("len {}", 1 + extra));
+        }
+    }
+
+    let main_src = r#"#include "dec.hpp"
+#include <cstdio>
+struct Mem : chipi::DisasmCtx {
+    uint64_t m;
+    uint8_t read_u8(uint64_t addr) const override {
+        static const uint8_t img[7] = {0xA9, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA};
+        return addr < 7 ? img[addr] : 0;
+    }
+    uint64_t mode(const char*) const override { return m; }
+};
+int main() {
+    static const uint8_t img[7] = {0xA9, 0x42, 0x99, 0xA2, 0xCD, 0xAB, 0xEA};
+    Mem mem;
+    for (uint64_t m : {0ull, 1ull}) {
+        mem.m = m;
+        for (uint64_t pc : {0ull, 3ull, 6ull}) {
+            std::pair<std::string, uint8_t> r = chipi::disasm_ctx(pc, mem);
+            printf("%s|%d\n", r.first.c_str(), (int)r.second);
+        }
+        for (uint64_t pc : {0ull, 3ull, 6ull}) {
+            unsigned combo = chipi::pack_modes(m);
+            printf("len %d\n", (int)chipi::stream_len(combo, img[pc]));
+        }
+    }
+    return 0;
+}
+"#;
+
+    let got = compile_and_run("fetch_expr_ctx", &emit_cpp(&isa), main_src);
+    assert_eq!(got, expected, "cpp fetch(expr) mismatch vs oracle");
+}
+
+/// Prefix streams: `decode_stream` + `classify_with` must agree with the oracle's
+/// `interp::decode_stream` on opcode name and total length for every probe stream.
+#[test]
+fn cpp_decode_stream_matches_oracle() {
+    let isa = compile(example!("x86_prefix")).expect("x86_prefix compiles");
+
+    let streams: &[&[u8]] = &[
+        &[0x90],
+        &[0x49, 0x90],
+        &[0x48, 0x90],
+        &[0x66, 0x50],
+        &[0x50],
+        &[0x66, 0x49, 0x90],
+    ];
+
+    let expected: Vec<String> = streams
+        .iter()
+        .map(|bytes| {
+            let d = chipi_core::interp::decode_stream(&isa, bytes);
+            format!("{}|{}", d.opcode_name, d.len_bytes)
+        })
+        .collect();
+
+    let header = emit_cpp(&isa);
+    assert!(
+        header.contains("classify_with"),
+        "context-reading guards should emit classify_with:\n{header}"
+    );
+
+    let mut main_src = String::from(
+        "#include \"dec.hpp\"\n#include <cstdio>\n#include <vector>\nint main() {\n    std::vector<std::vector<uint8_t>> streams = {\n",
+    );
+    for bytes in streams {
+        let lit: Vec<String> = bytes.iter().map(|b| format!("{b:#04x}")).collect();
+        main_src.push_str(&format!("        {{{}}},\n", lit.join(", ")));
+    }
+    main_src.push_str(
+        "    };\n\
+         \x20   for (const std::vector<uint8_t>& s : streams) {\n\
+         \x20       chipi::StreamInsn r = chipi::decode_stream(s.data(), s.size());\n\
+         \x20       printf(\"%s|%d\\n\", chipi::OPCODE_NAMES[chipi::classify_with(r.inst, r.ctx)], (int)r.len);\n\
+         \x20   }\n\
+         \x20   return 0;\n}\n",
+    );
+
+    let got = compile_and_run("x86_stream", &header, &main_src);
+    assert_eq!(got, expected, "cpp decode_stream mismatch vs oracle");
 }
 
 // ---- inline-spec regressions (16bit windows, every word) ----

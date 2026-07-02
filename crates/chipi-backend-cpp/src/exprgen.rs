@@ -5,7 +5,7 @@
 //! bodies. [`emit_cond`] uses signed `__int128` for display conditions.
 
 use crate::names::{i128_lit, ident, u128_lit, u128_mask_lit};
-use chipi_core::compute::{infer_width_fields, infer_width_locals, mask128};
+use chipi_core::compute::{infer_width, infer_width_locals, mask128, WidthEnv};
 use chipi_core::model::Field;
 use chipi_syntax::ast::{BinOp, Expr, UnOp};
 use std::collections::{BTreeMap, HashMap};
@@ -13,10 +13,14 @@ use std::collections::{BTreeMap, HashMap};
 /// Name-resolution scope for the `u128` value evaluator.
 pub enum Scope<'a> {
     /// Operand/guard/length context: `word` and the leaf's bound fields, read off `base`.
+    /// `vars` maps decode-variable names to runtime C++ expressions (e.g. a context field read
+    /// as `ctx.osize` or a host mode as `ctx.mode("m")`); host modes and word-level context reads
+    /// are constant-folded before emission and never reach this map.
     Computed {
         fields: &'a [Field],
         window: u16,
         base: &'a str,
+        vars: &'a [(String, String, u16)],
     },
     /// `fn` body context: params and `let`s, bound to `v_<name>` locals with tracked widths.
     Fn { widths: HashMap<String, u16> },
@@ -25,7 +29,9 @@ pub enum Scope<'a> {
 impl Scope<'_> {
     fn resolve(&self, name: &str) -> String {
         match self {
-            Scope::Computed { fields, base, .. } => {
+            Scope::Computed {
+                fields, base, vars, ..
+            } => {
                 if name == "word" {
                     format!("((u128){base})")
                 } else if let Some(f) = fields.iter().find(|f| f.name == name) {
@@ -34,6 +40,8 @@ impl Scope<'_> {
                         f.range.lo,
                         f.range.width()
                     )
+                } else if let Some((_, expr, _)) = vars.iter().find(|(n, _, _)| n == name) {
+                    format!("((u128)({expr}))")
                 } else {
                     "(u128)0".to_string()
                 }
@@ -44,7 +52,27 @@ impl Scope<'_> {
 
     fn width_of(&self, e: &Expr) -> u16 {
         match self {
-            Scope::Computed { fields, window, .. } => infer_width_fields(e, fields, *window),
+            Scope::Computed {
+                fields,
+                window,
+                vars,
+                ..
+            } => {
+                let fw = |n: &str| {
+                    fields
+                        .iter()
+                        .find(|f| f.name == n)
+                        .map(|f| f.range.width())
+                        .or_else(|| vars.iter().find(|(vn, _, _)| vn == n).map(|(_, _, w)| *w))
+                };
+                infer_width(
+                    e,
+                    &WidthEnv {
+                        word_width: *window,
+                        field_width: &fw,
+                    },
+                )
+            }
             Scope::Fn { widths } => infer_width_locals(e, widths),
         }
     }
@@ -266,5 +294,117 @@ fn cond_binop(op: BinOp, a: &str, b: &str) -> String {
         BinOp::Ge => format!("((__int128)(({a}) >= ({b})))"),
         BinOp::LAnd => format!("((__int128)((({a}) != 0) && (({b}) != 0)))"),
         BinOp::LOr => format!("((__int128)((({a}) != 0) || (({b}) != 0)))"),
+    }
+}
+
+/// Lower a prefix-arm assignment expression to a `uint64_t`-valued C++ expression (`byte` is the
+/// unit). Mirrors the Rust backend's `emit_prefix` and the oracle's `eval_prefix`.
+pub fn emit_prefix(e: &Expr) -> String {
+    match e {
+        Expr::Int(i) => format!("{}ull", i.value),
+        Expr::Name(n) => {
+            if n.text == "byte" || n.text == "word" {
+                "byte".to_string()
+            } else {
+                "0ull".to_string()
+            }
+        }
+        Expr::Slice { base, hi, lo, .. } => {
+            let mask = if hi - lo + 1 >= 64 {
+                u64::MAX
+            } else {
+                (1u64 << (hi - lo + 1)) - 1
+            };
+            format!("((({}) >> {lo}) & {mask:#x}ull)", emit_prefix(base))
+        }
+        Expr::Unary { op, rhs, .. } => {
+            let r = emit_prefix(rhs);
+            match op {
+                UnOp::Not => format!("(~({r}))"),
+                UnOp::Neg => format!("((uint64_t)0 - ({r}))"),
+            }
+        }
+        Expr::Binary { op, lhs, rhs, .. } => {
+            prefix_binop(*op, &emit_prefix(lhs), &emit_prefix(rhs))
+        }
+        Expr::Cond {
+            cond, then, els, ..
+        } => format!(
+            "((({}) != 0) ? ({}) : ({}))",
+            emit_prefix(cond),
+            emit_prefix(then),
+            emit_prefix(els)
+        ),
+        Expr::Assemble { .. } | Expr::Call { .. } => "0ull".to_string(),
+    }
+}
+
+fn prefix_binop(op: BinOp, a: &str, b: &str) -> String {
+    match op {
+        BinOp::Add => format!("(({a}) + ({b}))"),
+        BinOp::Sub => format!("(({a}) - ({b}))"),
+        BinOp::Mul => format!("(({a}) * ({b}))"),
+        BinOp::Div => {
+            format!("({{ uint64_t __d = {b}; (__d == 0) ? (uint64_t)0 : (({a}) / __d); }})")
+        }
+        BinOp::Rem => {
+            format!("({{ uint64_t __d = {b}; (__d == 0) ? (uint64_t)0 : (({a}) % __d); }})")
+        }
+        BinOp::BitAnd => format!("(({a}) & ({b}))"),
+        BinOp::BitOr => format!("(({a}) | ({b}))"),
+        BinOp::BitXor => format!("(({a}) ^ ({b}))"),
+        BinOp::Shl => {
+            format!("({{ uint64_t __s = {b}; (__s < 64) ? (uint64_t)(({a}) << (unsigned)__s) : (uint64_t)0; }})")
+        }
+        BinOp::Shr => {
+            format!("({{ uint64_t __s = {b}; (__s < 64) ? (uint64_t)(({a}) >> (unsigned)__s) : (uint64_t)0; }})")
+        }
+        BinOp::Eq => format!("((uint64_t)(({a}) == ({b})))"),
+        BinOp::Ne => format!("((uint64_t)(({a}) != ({b})))"),
+        BinOp::Lt => format!("((uint64_t)(({a}) < ({b})))"),
+        BinOp::Le => format!("((uint64_t)(({a}) <= ({b})))"),
+        BinOp::Gt => format!("((uint64_t)(({a}) > ({b})))"),
+        BinOp::Ge => format!("((uint64_t)(({a}) >= ({b})))"),
+        BinOp::LAnd => format!("((uint64_t)((({a}) != 0) && (({b}) != 0)))"),
+        BinOp::LOr => format!("((uint64_t)((({a}) != 0) || (({b}) != 0)))"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chipi_core::compute::BUILTINS;
+    use chipi_syntax::ast::IntLit;
+    use chipi_syntax::Span;
+
+    fn int(v: u128) -> Expr {
+        Expr::Int(IntLit {
+            value: v,
+            width_hint: Some(4),
+            span: Span::at(0),
+        })
+    }
+
+    /// Sync test against the canonical table in `chipi_core::compute`: every builtin must
+    /// have an `emit_call` arm here. The unknown-name fallback emits a user-fn call
+    /// (`fn_<name>(...)`), so any builtin producing that shape was forgotten.
+    #[test]
+    fn every_builtin_has_an_emit_call_arm() {
+        let scope = Scope::Computed {
+            fields: &[],
+            window: 32,
+            base: "word",
+            vars: &[],
+        };
+
+        for b in BUILTINS {
+            let args: Vec<Expr> = (0..b.min_args).map(|_| int(1)).collect();
+            let out = emit_call(b.name, &args, &scope);
+            assert!(
+                !out.starts_with("fn_"),
+                "builtin `{}` fell through to the user-fn fallback in the C++ backend: {out}",
+                b.name
+            );
+        }
     }
 }

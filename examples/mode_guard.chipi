@@ -1,0 +1,19 @@
+# Guards reading a host mode. Unlike modes_demo (which splits leaves with `m=1` mode
+# constraints), `wide` and `narrow` share every fixed bit and are separated by guards
+# over the decode variable `m`: the per-combination classify folds `m` to that
+# combination's value, so the pair costs no extra leaves. `add` shows a guard mixing a
+# mode read with a field read.
+
+decoder ModeGuard {
+    width = 16
+    bit_order = lsb0
+    endian = little
+    mode m: bool = 0
+}
+
+selector op [12:15]
+
+wide   op=1 v:u8[7:0] when m == 0 | "wide ${v:02x}"
+narrow op=1 v:u8[7:0] when m == 1 | "narrow ${v:02x}"
+
+add op=2 a:u4[3:0] b:u4[7:4] when m == 0 || a == b | "add {a}, {b}"

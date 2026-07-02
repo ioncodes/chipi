@@ -16,7 +16,7 @@
 //! The returned names are the logical (pre-sanitisation) identifiers. Each backend applies its own
 //! identifier rules on top.
 
-use crate::interp::fetch_width;
+use crate::interp::fetch_expr;
 use crate::model::{FieldTy, Insn, Isa};
 use chipi_syntax::ast::Expr;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -39,15 +39,30 @@ pub fn computed_accessor_names(isa: &Isa) -> HashMap<(String, String), String> {
     let wb = (isa.window_bits() as usize).div_ceil(8);
     let mut occs: Vec<Occ> = Vec::new();
     for inst in &isa.instrs {
-        // `fetch(N)` operands read stream bytes past the opcode window, at a running byte offset.
+        // `fetch` operands read stream bytes past the opcode window, at a running byte offset.
         // Two equally-shaped fetches at different offsets (e.g. `mvn`'s second operand) extract
-        // different bytes, so the offset is part of the body and must split the accessor.
+        // different bytes, so the offset is part of the body and must split the accessor. The
+        // offset stays numeric while widths are constant; once an expression width appears the
+        // offset (and the width itself) becomes part of the key symbolically.
         let mut off = wb;
+        let mut off_key: Option<String> = None;
         for c in &inst.computed {
-            let body = match fetch_width(&c.expr) {
-                Some(bits) => {
-                    let key = format!("fetch@{off}");
-                    off += (bits as usize).div_ceil(8);
+            let body = match fetch_expr(&c.expr) {
+                Some(arg) => {
+                    let key = match (&off_key, arg) {
+                        (None, Expr::Int(i)) => {
+                            let k = format!("fetch@{off}");
+                            off += (i.value as usize).div_ceil(8);
+                            k
+                        }
+                        _ => {
+                            let base = off_key.clone().unwrap_or_else(|| off.to_string());
+                            let wk = expr_key(arg, inst);
+                            let k = format!("fetch@{base}|w={wk}");
+                            off_key = Some(format!("{base}+{wk}"));
+                            k
+                        }
+                    };
                     key
                 }
                 None => expr_key(&c.expr, inst),
@@ -56,11 +71,29 @@ pub fn computed_accessor_names(isa: &Isa) -> HashMap<(String, String), String> {
                 "{}|s={}|w={}|{}",
                 c.name, c.ty.signed, c.ty.value_width, body
             );
+
+            // An expression-width fetch folds the decode variables it reads into the
+            // disambiguating suffix (`imm_u16_m` vs `imm_u16_x`), so which accessor gets
+            // which name never depends on leaf declaration order.
+            let mut suffix = disambiguator(&c.ty);
+            if let Some(arg) = fetch_expr(&c.expr) {
+                if !matches!(arg, Expr::Int(_)) {
+                    let mut names = Vec::new();
+                    crate::compute::expr_names(arg, &mut names);
+                    names.sort();
+                    names.dedup();
+                    for n in names {
+                        suffix.push('_');
+                        suffix.push_str(&n);
+                    }
+                }
+            }
+
             occs.push(Occ {
                 instr: inst.name.clone(),
                 operand: c.name.clone(),
                 identity,
-                suffix: disambiguator(&c.ty),
+                suffix,
             });
         }
     }
@@ -133,7 +166,10 @@ fn disambiguator(ty: &FieldTy) -> String {
 /// expressions with the same key produce byte-identical accessor bodies. A field reference is keyed
 /// by its bit range only, because the value evaluator reads a field as raw `(word >> lo) & mask`
 /// (see `exprgen::Scope::resolve`), ignoring the field's declared transforms.
-fn expr_key(e: &Expr, inst: &Insn) -> String {
+/// A span-insensitive structural key for a computed-operand expression. Also used by the
+/// FormShape check: leaves of one form must compute their operands the same way, or the
+/// form's accessors would not be uniform.
+pub(crate) fn expr_key(e: &Expr, inst: &Insn) -> String {
     match e {
         Expr::Int(i) => format!("#{}", i.value),
         Expr::Name(n) => {

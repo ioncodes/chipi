@@ -1,0 +1,23 @@
+# Indexed instruction families. `for n in lo..hi { ... }` expands its body once per
+# index: `n` folds inside constraint values, interpolates into leaf names (`bbs_b{n}`)
+# and substitutes into display templates ("{n}"). This is the SPC700 shape, where the
+# bit index lives in the opcode (bbs dp.0 is 0x03, dp.1 is 0x23, ...) and tcall packs
+# its target the same way.
+
+decoder ForDemo {
+    width = 16
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [8:15]
+
+for n in 0..8 {
+    bbs_b{n} op = 0x03 + n * 0x20 dp:u8[0:7] | "bbs ${dp:02x}.{n}"
+}
+
+for n in 0..16 {
+    tcall_{n} op = 0x01 + n * 0x10 | "tcall {n}"
+}
+
+nop op=0xEA | "nop"

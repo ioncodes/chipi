@@ -18,6 +18,13 @@ use std::path::Path;
 /// chipi_macros::isa!("isa/cpu.chipi");                 // newtype dispatch (default)
 /// chipi_macros::isa!("isa/cpu.chipi", style = enum);   // nested-enum dispatch
 /// ```
+///
+/// The default (newtype) style is the full-feature target: lazy accessors, per-combination
+/// classification for modal specs, `Mnemonic`/`Form` enums for dotted leaf names, the `Ops` and
+/// `Handler` dispatch layers, the contextual disassembler (`disasm_ctx`) for `fetch`/`:sym`
+/// specs and the prefix-scan surface. The enum style eagerly decodes one fixed window into a
+/// payload-carrying `Instruction` enum; it is the fixed-width simple-ISA path and refuses
+/// `length`, `prefix`, subdecoders and expression-width `fetch` with a `compile_error!`.
 #[proc_macro]
 pub fn isa(input: TokenStream) -> TokenStream {
     let mut trees = input.into_iter();

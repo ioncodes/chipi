@@ -2,7 +2,7 @@
   "name": "chipi",
   "displayName": "chipi",
   "description": "Syntax highlighting, snippets and a file icon for the chipi instruction-set DSL (.chipi).",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "publisher": "ioncodes",
   "license": "MIT OR Apache-2.0",
   "repository": {
@@ -12,13 +12,20 @@
   "engines": {
     "vscode": "^1.75.0"
   },
-  "categories": ["Programming Languages"],
+  "categories": [
+    "Programming Languages"
+  ],
   "contributes": {
     "languages": [
       {
         "id": "chipi",
-        "aliases": ["chipi", "Chipi"],
-        "extensions": [".chipi"],
+        "aliases": [
+          "chipi",
+          "Chipi"
+        ],
+        "extensions": [
+          ".chipi"
+        ],
         "configuration": "./language-configuration.json",
         "icon": {
           "light": "./icons/chipi-file.svg",

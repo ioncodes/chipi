@@ -29,6 +29,10 @@ pub fn parse_expr_str(src: &str) -> PResult<Expr> {
 struct Parser {
     toks: Vec<Token>,
     pos: usize,
+    /// Bound `for` expansion variables (name, value), innermost last. While non-empty,
+    /// instruction names interpolate `{var}`, constraint values fold constant expressions and
+    /// display templates substitute `{var}` textually.
+    loop_env: Vec<(String, u128)>,
     /// While set, a top-level `|` ends an instruction-body expression (display delimiter) rather
     /// than acting as bitwise-or. Parentheses clear it.
     pipe_is_delim: bool,
@@ -42,6 +46,7 @@ impl Parser {
         Parser {
             toks,
             pos: 0,
+            loop_env: Vec::new(),
             pipe_is_delim: false,
             inside_assemble: false,
         }
@@ -55,6 +60,24 @@ impl Parser {
 
     fn peek2(&self) -> Option<&TokenKind> {
         self.toks.get(self.pos + 1).map(|t| &t.kind)
+    }
+
+    /// Whether `{ var }` (with `var` a bound `for` variable) starts at `self.pos + at`, i.e.
+    /// a name interpolation rather than a group or block header.
+    fn interpolation_at(&self, at: usize) -> bool {
+        if self.loop_env.is_empty() {
+            return false;
+        }
+        matches!(
+            self.toks.get(self.pos + at).map(|t| &t.kind),
+            Some(TokenKind::LBrace)
+        ) && matches!(
+            self.toks.get(self.pos + at + 1).map(|t| &t.kind),
+            Some(TokenKind::Ident(v)) if self.loop_env.iter().any(|(n, _)| n == v)
+        ) && matches!(
+            self.toks.get(self.pos + at + 2).map(|t| &t.kind),
+            Some(TokenKind::RBrace)
+        )
     }
 
     fn here(&self) -> Span {
@@ -136,6 +159,22 @@ impl Parser {
         }
     }
 
+    /// A constraint value: a plain integer, or (inside a `for` block) a constant expression
+    /// over the loop variables (`0x03 + n * 0x20`).
+    fn constraint_value(&mut self) -> PResult<IntLit> {
+        if self.loop_env.is_empty() {
+            return self.int();
+        }
+        let e = self.instr_expr()?;
+        let span = e.span();
+        let value = self.fold_const(&e)?;
+        Ok(IntLit {
+            value,
+            width_hint: None,
+            span,
+        })
+    }
+
     fn string(&mut self) -> PResult<StrLit> {
         match self.peek().clone() {
             TokenKind::Str(text) => {
@@ -171,9 +210,157 @@ impl Parser {
     fn spec(&mut self) -> PResult<Spec> {
         let mut items = Vec::new();
         while !self.eof() {
-            items.push(self.item()?);
+            if matches!(self.peek(), TokenKind::Ident(s) if s == "for") {
+                self.for_items(&mut items)?;
+            } else {
+                items.push(self.item()?);
+            }
         }
         Ok(Spec { items })
+    }
+
+    /// `for n in lo..hi { <instructions> }`: expand an indexed instruction family. The body is
+    /// re-parsed once per index with `n` bound, so `n` folds inside constraint values and
+    /// expressions, interpolates in leaf names (`bbs_b{n}`) and substitutes in templates.
+    fn for_items(&mut self, items: &mut Vec<Item>) -> PResult<()> {
+        self.bump(); // 'for'
+        let var = self.ident()?;
+        let kw = self.ident()?;
+        if kw.text != "in" {
+            return Err(Diag::error(
+                "ParseError",
+                "expected `in` after the `for` variable",
+                kw.span,
+            ));
+        }
+        let lo = self.int()?;
+        self.want(TokenKind::DotDot, "`..`")?;
+        let hi = self.int()?;
+        if lo.value >= hi.value || hi.value - lo.value > 4096 {
+            return Err(Diag::error(
+                "ParseError",
+                "`for` range must be non-empty and at most 4096 wide",
+                lo.span.to(hi.span),
+            ));
+        }
+        self.want(TokenKind::LBrace, "`{` after the `for` range")?;
+
+        let body_start = self.pos;
+        for v in lo.value..hi.value {
+            self.pos = body_start;
+            self.loop_env.push((var.text.clone(), v));
+            while !matches!(self.peek(), TokenKind::RBrace | TokenKind::Eof) {
+                match self.item()? {
+                    Item::Instr(i) => items.push(Item::Instr(i)),
+                    _ => {
+                        return Err(Diag::error(
+                            "ParseError",
+                            "only instructions may appear inside a `for` block",
+                            self.last(),
+                        ))
+                    }
+                }
+            }
+            self.loop_env.pop();
+        }
+        self.want(TokenKind::RBrace, "`}`")?;
+        Ok(())
+    }
+
+    /// Fold a parsed expression to a constant, resolving `for` variables. Used for constraint
+    /// values inside `for` blocks.
+    fn fold_const(&self, e: &Expr) -> PResult<u128> {
+        match e {
+            Expr::Int(i) => Ok(i.value),
+            Expr::Name(n) => self
+                .loop_env
+                .iter()
+                .rev()
+                .find(|(v, _)| *v == n.text)
+                .map(|(_, val)| *val)
+                .ok_or_else(|| {
+                    Diag::error(
+                        "ParseError",
+                        format!(
+                            "`{}` is not a `for` variable; constraint values must be constant",
+                            n.text
+                        ),
+                        n.span,
+                    )
+                }),
+            Expr::Unary {
+                op: UnOp::Neg,
+                rhs,
+                span,
+            } => {
+                let v = self.fold_const(rhs)?;
+                if v != 0 {
+                    return Err(Diag::error(
+                        "ParseError",
+                        "negative constraint values are not supported",
+                        *span,
+                    ));
+                }
+                Ok(0)
+            }
+            Expr::Binary { op, lhs, rhs, span } => {
+                let a = self.fold_const(lhs)?;
+                let b = self.fold_const(rhs)?;
+                let v = match op {
+                    BinOp::Add => a.checked_add(b),
+                    BinOp::Sub => a.checked_sub(b),
+                    BinOp::Mul => a.checked_mul(b),
+                    BinOp::Shl => a.checked_shl(b.min(127) as u32),
+                    BinOp::Shr => a.checked_shr(b.min(127) as u32),
+                    BinOp::BitOr => Some(a | b),
+                    BinOp::BitAnd => Some(a & b),
+                    BinOp::BitXor => Some(a ^ b),
+                    _ => None,
+                };
+                v.ok_or_else(|| {
+                    Diag::error(
+                        "ParseError",
+                        "constraint value does not fold to a constant",
+                        *span,
+                    )
+                })
+            }
+            _ => Err(Diag::error(
+                "ParseError",
+                "constraint value does not fold to a constant",
+                e.span(),
+            )),
+        }
+    }
+
+    /// Substitute bound `for` variables into an expression (guards, computed operands, display
+    /// conditions parsed inside a `for` block).
+    fn subst_loop_vars(&self, e: &Expr) -> Expr {
+        if self.loop_env.is_empty() {
+            return e.clone();
+        }
+        e.map_names(&|n| {
+            self.loop_env
+                .iter()
+                .rev()
+                .find(|(v, _)| *v == n.text)
+                .map(|(_, val)| {
+                    Expr::Int(IntLit {
+                        value: *val,
+                        width_hint: None,
+                        span: n.span,
+                    })
+                })
+        })
+    }
+
+    /// Substitute `{var}` for each bound `for` variable in a template string.
+    fn subst_loop_template(&self, text: &str) -> String {
+        let mut out = text.to_string();
+        for (v, val) in &self.loop_env {
+            out = out.replace(&format!("{{{v}}}"), &val.to_string());
+        }
+        out
     }
 
     fn item(&mut self) -> PResult<Item> {
@@ -190,8 +377,11 @@ impl Parser {
                 "dispatch" => Ok(Item::Group(self.group(true)?)),
                 "subdecoder" => Ok(Item::SubDecoder(self.subdecoder()?)),
                 // `name { ... }` (the next token is `{`) is a tag or dispatch group. An instruction
-                // never opens a brace right after its mnemonic.
-                _ if matches!(self.peek2(), Some(TokenKind::LBrace)) => {
+                // never opens a brace right after its mnemonic, except a `for`-block name
+                // interpolation like `bbs_b{n}`.
+                _ if matches!(self.peek2(), Some(TokenKind::LBrace))
+                    && !self.interpolation_at(1) =>
+                {
                     Ok(Item::Group(self.group(false)?))
                 }
                 _ => Ok(Item::Instr(self.instr()?)),
@@ -784,7 +974,27 @@ impl Parser {
 
         let mut members = Vec::new();
         while !matches!(self.peek(), TokenKind::RBrace | TokenKind::Eof) {
-            members.push(self.ident()?);
+            let mut m = self.ident()?;
+            if matches!(self.peek(), TokenKind::Dot) {
+                self.bump();
+                match self.peek() {
+                    TokenKind::Star => {
+                        let star = self.bump().span;
+                        m = Ident {
+                            text: format!("{}.*", m.text),
+                            span: m.span.to(star),
+                        };
+                    }
+                    _ => {
+                        let axis = self.ident()?;
+                        m = Ident {
+                            text: format!("{}.{}", m.text, axis.text),
+                            span: m.span.to(axis.span),
+                        };
+                    }
+                }
+            }
+            members.push(m);
             self.eat_comma();
         }
 
@@ -869,7 +1079,7 @@ impl Parser {
                 TokenKind::LBracket => {
                     let range = self.src_range()?;
                     self.want(TokenKind::Assign, "`=`")?;
-                    let value = self.int()?;
+                    let value = self.constraint_value()?;
                     constraints.push(Constraint::Range { range, value });
                 }
                 TokenKind::Ident(_) => {
@@ -877,7 +1087,7 @@ impl Parser {
                     match self.peek() {
                         TokenKind::Assign => {
                             self.bump();
-                            let value = self.int()?;
+                            let value = self.constraint_value()?;
                             constraints.push(Constraint::Named { name: lhs, value });
                         }
                         TokenKind::Colon => {
@@ -935,7 +1145,37 @@ impl Parser {
     // -------- instructions --------
 
     fn instr(&mut self) -> PResult<Instr> {
-        let name = self.ident()?;
+        let mut name = self.ident()?;
+
+        // An optional form axis: `lda.dpx` names the leaf on two axes (mnemonic, form).
+        // The full dotted string stays the unique leaf name; `lower` splits it.
+        if matches!(self.peek(), TokenKind::Dot) {
+            self.bump();
+            let axis = self.ident()?;
+            name = Ident {
+                text: format!("{}.{}", name.text, axis.text),
+                span: name.span.to(axis.span),
+            };
+        }
+
+        // Inside a `for` block, `bbs_b{n}` interpolates the loop variable into the name.
+        while self.interpolation_at(0) {
+            self.bump(); // '{'
+            let var = self.ident()?;
+            let end = self.want(TokenKind::RBrace, "`}`")?;
+            let val = self
+                .loop_env
+                .iter()
+                .rev()
+                .find(|(v, _)| *v == var.text)
+                .map(|(_, val)| *val)
+                .unwrap_or(0);
+            name = Ident {
+                text: format!("{}{val}", name.text),
+                span: name.span.to(end),
+            };
+        }
+
         let mut constraints = Vec::new();
         let mut bindings = Vec::new();
         let mut uses = None;
@@ -951,7 +1191,7 @@ impl Parser {
                 TokenKind::LBracket => {
                     let range = self.src_range()?;
                     self.want(TokenKind::Assign, "`=`")?;
-                    let value = self.int()?;
+                    let value = self.constraint_value()?;
                     constraints.push(Constraint::Range { range, value });
                 }
                 TokenKind::Ident(t) if t == "uses" => {
@@ -960,14 +1200,15 @@ impl Parser {
                 }
                 TokenKind::Ident(t) if t == "when" => {
                     self.bump();
-                    guard = Some(self.instr_expr()?);
+                    let g = self.instr_expr()?;
+                    guard = Some(self.subst_loop_vars(&g));
                 }
                 TokenKind::Ident(_) => {
                     let lhs = self.ident()?;
                     match self.peek() {
                         TokenKind::Assign => {
                             self.bump();
-                            let value = self.int()?;
+                            let value = self.constraint_value()?;
                             constraints.push(Constraint::Named { name: lhs, value });
                         }
                         TokenKind::Colon => {
@@ -976,6 +1217,7 @@ impl Parser {
                             if matches!(self.peek(), TokenKind::Assign) {
                                 self.bump();
                                 let expr = self.instr_expr()?;
+                                let expr = self.subst_loop_vars(&expr);
                                 computed.push(Computed {
                                     span: lhs.span.to(expr.span()),
                                     name: lhs,
@@ -1022,9 +1264,12 @@ impl Parser {
             } else {
                 let e = self.expr()?;
                 self.want(TokenKind::Colon, "`:` after a display condition")?;
-                Some(e)
+                Some(self.subst_loop_vars(&e))
             };
-            let template = self.string()?;
+            let mut template = self.string()?;
+            if !self.loop_env.is_empty() {
+                template.text = self.subst_loop_template(&template.text);
+            }
             display.push(DisplayArm {
                 span: bar.to(template.span),
                 cond,

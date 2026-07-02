@@ -3,33 +3,20 @@
 //! same sampling (full or LCG). The two negative fixtures must be rejected with a
 //! `FieldOverlap` error.
 
+mod common;
+
 use chipi_core::{compile, inverse, Isa};
 
 /// Reproduce the oracle's `check --roundtrip` count. Use a full sweep for windows of 16 bits or
 /// fewer, otherwise a 200k-word LCG sample. Returns `(valid, ok)`.
 fn roundtrip_count(isa: &Isa) -> (u64, u64) {
-    let bits = isa.window_bits();
     let (mut valid, mut ok) = (0u64, 0u64);
-    let tally = |word: u64, valid: &mut u64, ok: &mut u64| {
-        if let Some(b) = inverse::roundtrip(isa, word) {
-            *valid += 1;
+    for w in common::sample_words(isa.window_bits(), 16, 200_000) {
+        if let Some(b) = inverse::roundtrip(isa, w) {
+            valid += 1;
             if b {
-                *ok += 1;
+                ok += 1;
             }
-        }
-    };
-    if bits <= 16 {
-        for w in 0..(1u64 << bits) {
-            tally(w, &mut valid, &mut ok);
-        }
-    } else {
-        let mask = ((1u128 << bits) - 1) as u64;
-        let mut w = 0u64;
-        for _ in 0..200_000u64 {
-            w = w
-                .wrapping_mul(6364136223846793005)
-                .wrapping_add(1442695040888963407);
-            tally(w & mask, &mut valid, &mut ok);
         }
     }
     (valid, ok)
@@ -66,6 +53,12 @@ fn examples_roundtrip_matches_oracle() {
         ("gba_arm", example!("gba_arm"), 32714),
         ("x86_prefix", example!("x86_prefix"), 4),
         ("snes_disasm", example!("snes_disasm"), 3),
+        ("fn_let_width", example!("fn_let_width"), 4096),
+        ("guard_chain", example!("guard_chain"), 7168),
+        ("mode_guard", example!("mode_guard"), 8192),
+        ("fetch_expr", example!("fetch_expr"), 3),
+        ("axes_demo", example!("axes_demo"), 1280),
+        ("for_demo", example!("for_demo"), 6400),
     ];
     for &(name, src, expected) in cases {
         let isa = isa_of(name, src);

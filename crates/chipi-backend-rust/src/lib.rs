@@ -1,9 +1,19 @@
 //! Emit Rust source from a resolved [`chipi_core::Isa`].
 //!
 //! [`emit_decoder`] produces one self-contained module with no dependencies: opcode constants, a
-//! dense classification path, shift/mask accessors, a full `[Handler; N]` dispatch table, an
-//! operand-signature `Ops` trait, an optional prefix scan and a feature-gated disassembler. The
-//! hot path does not allocate. Text rendering sits behind `feature = "disasm"`.
+//! dense classification path (one table per distinct mode tree, with guards folded per
+//! combination), shift/mask accessors, identity-axis metadata for dotted leaf names (`Mnemonic`
+//! and `Form` enums with `mnemonic()`/`form()` accessors), a full `[Handler; N]` dispatch table,
+//! an operand-signature `Ops` trait, an optional prefix scan (`scan_prefixes`/`decode_stream`,
+//! plus `classify_with(word, &Context)` when guards read context fields) and a feature-gated
+//! disassembler. Specs with `fetch` or `:sym`/`:rel` operands get the contextual surface: a
+//! `DisasmCtx` trait, per-operand stream accessors (mode-dependent widths resolve through
+//! `ctx.mode`), `stream_len` and `disasm_ctx(pc, ctx)`. The hot path does not allocate. Text
+//! rendering sits behind `feature = "disasm"`.
+//!
+//! Word-level entry points (`classify(word)`, `Display`) evaluate every decode variable at its
+//! declared default, matching the oracle's `decode(word)`; the `_in(combo)` and `_with(ctx)`
+//! variants carry real mode and context values.
 
 mod exprgen;
 mod names;
@@ -13,9 +23,11 @@ mod names;
 pub use names::sanitize;
 
 use chipi_core::accessor::computed_accessor_names;
-use chipi_core::interp::fetch_width;
+use chipi_core::interp::{
+    fetch_expr, fetch_has_expr, fetch_width, fetched_bytes, fetched_bytes_combo, is_fetch,
+};
 use chipi_core::model::*;
-use chipi_core::render::{FmtSpec, Seg};
+use chipi_core::render::{segs_have_sym, FmtSpec, Seg};
 use chipi_core::Isa;
 use chipi_syntax::ast::{BinOp, Expr, UnOp};
 use exprgen::{emit_cond, emit_prefix, emit_value, Scope};
@@ -57,10 +69,15 @@ pub fn emit_decoder_with(isa: &Isa, opts: EmitOptions) -> String {
 fn emit_newtype(isa: &Isa) -> String {
     let m = Model::new(isa);
 
+    if let Some(reason) = unsupported_var_reads(isa, &m) {
+        return format!("{}compile_error!(\"chipi: {reason}\");\n", header(isa));
+    }
+
     let mut s = String::new();
     s.push_str(&header(isa));
     s.push_str(&preamble(&m));
     s.push_str(&opcode_consts(isa));
+    s.push_str(&axis_consts(isa, &m));
     s.push_str(&classify(isa, &m));
     s.push_str(&handle_impl(isa, &m));
     s.push_str(&user_fns(isa));
@@ -75,7 +92,7 @@ fn emit_newtype(isa: &Isa) -> String {
         s.push_str(&disasm_ctx_support(isa, &m));
     }
     if m.emit_display {
-        s.push_str(&display_impl(isa));
+        s.push_str(&display_impl(isa, &m));
     }
     if m.needs_disasm_ctx {
         s.push_str(&disasm_ctx_fn(isa, &m));
@@ -88,6 +105,9 @@ fn emit_newtype(isa: &Isa) -> String {
 struct Model {
     modal: bool,
     has_guard: bool,
+    /// Some guard reads a prefix-assigned context field, so a `classify_with(word, &Context)`
+    /// entry point is emitted next to the default-context `classify(word)`.
+    ctx_guards: bool,
     needs_disasm_ctx: bool,
     emit_display: bool,
     needs_preamble128: bool,
@@ -103,16 +123,30 @@ impl Model {
         let has_fetch = isa
             .instrs
             .iter()
-            .any(|i| i.computed.iter().any(|c| fetch_width(&c.expr).is_some()));
+            .any(|i| i.computed.iter().any(|c| is_fetch(&c.expr)));
         let needs_sym = isa
             .instrs
             .iter()
             .any(|i| i.display.iter().any(|a| segs_have_sym(&a.segs)));
 
         let needs_disasm_ctx = has_fetch || needs_sym;
-        let emit_display = !modal && !has_fetch;
+        // The static disassembler needs no host context. Non-modal ISAs get it whenever nothing is
+        // fetched from the stream (a `:sym` field just renders unresolved). A modal ISA gets it
+        // only when it needs no `DisasmCtx` at all; with `:sym` in play the contextual path already
+        // covers modal rendering and a second modal renderer would be dead weight.
+        let emit_display = if modal { !needs_disasm_ctx } else { !has_fetch };
         let needs_preamble128 =
             has_computed || !isa.fns.is_empty() || isa.length.is_some() || has_guard;
+
+        let ctx_names: Vec<String> = isa.decoder.context.iter().map(|c| c.name.clone()).collect();
+        let ctx_guards = !ctx_names.is_empty()
+            && isa.prefix.is_some()
+            && !modal
+            && isa.instrs.iter().any(|i| {
+                i.guard
+                    .as_ref()
+                    .is_some_and(|g| chipi_core::compute::expr_reads_any(g, &ctx_names))
+            });
 
         let mut grouped = HashMap::new();
         for g in &isa.groups {
@@ -124,20 +158,13 @@ impl Model {
         Model {
             modal,
             has_guard,
+            ctx_guards,
             needs_disasm_ctx,
             emit_display,
             needs_preamble128,
             grouped,
         }
     }
-}
-
-fn segs_have_sym(segs: &[Seg]) -> bool {
-    segs.iter().any(|s| match s {
-        Seg::Field { fmt, .. } => fmt.sym || fmt.rel,
-        Seg::Cond { then, els, .. } => segs_have_sym(then) || segs_have_sym(els),
-        Seg::SubField { .. } | Seg::Lit(_) => false,
-    })
 }
 
 /// Opcode ids in tree order (slot 0 = Invalid, rest sorted by name). Ids index `instrs` via `instr`.
@@ -159,13 +186,46 @@ fn len_expr(isa: &Isa) -> &'static str {
     }
 }
 
-/// Extra bytes fetched beyond the decode window by an instruction's `fetch(N)` computed operands.
-fn fetched_bytes(inst: &Insn) -> usize {
-    inst.computed
+/// A reason string if the spec reads decode variables somewhere this backend cannot evaluate
+/// them at runtime yet: `length` arms are emitted as a pure function of the word, and the
+/// static `Display` path has no variable source (the contextual disassembler resolves them
+/// through `ctx.mode(..)`).
+fn unsupported_var_reads(isa: &Isa, m: &Model) -> Option<&'static str> {
+    if isa.display_reads_vars() && !(m.needs_disasm_ctx && !m.emit_display) {
+        return Some(
+            "display conditions reading decode variables outside the contextual \
+             disassembler path are not supported yet",
+        );
+    }
+    if isa.length_reads_vars() {
+        return Some("`length` arms reading decode variables are not supported yet");
+    }
+    None
+}
+
+/// A `u64` Rust expression for a fetch width in bits, resolving mode reads via `ctx.mode(..)`.
+fn fetch_bits_rust(isa: &Isa, arg: &chipi_syntax::ast::Expr) -> String {
+    if let chipi_syntax::ast::Expr::Int(i) = arg {
+        return format!("{}u64", i.value);
+    }
+    let vars: Vec<(String, String, u16)> = isa
+        .modes
         .iter()
-        .filter_map(|c| fetch_width(&c.expr))
-        .map(|b| (b as usize).div_ceil(8))
-        .sum()
+        .map(|m| {
+            (
+                m.name.clone(),
+                format!("ctx.mode({:?})", m.name),
+                m.value_width(),
+            )
+        })
+        .collect();
+    let scope = Scope::Computed {
+        fields: &[],
+        window: isa.window_bits(),
+        base: "0u64",
+        vars: &vars,
+    };
+    format!("(({}) as u64)", emit_value(arg, &scope))
 }
 
 // ---------------------------------------------------------------- sections
@@ -262,7 +322,7 @@ fn opcode_consts(isa: &Isa) -> String {
     s.push_str("}\n\n");
 
     let _ = writeln!(s, "pub static OPCODE_NAMES: [&str; OPCODE_COUNT] = [");
-    for op in &isa.tree.opcodes {
+    for op in isa.tree.opcodes.iter() {
         let _ = writeln!(s, "    {:?},", op.name);
     }
     s.push_str("];\n\n");
@@ -272,7 +332,7 @@ fn opcode_consts(isa: &Isa) -> String {
             "/// Tags carried by each opcode (by id); `Invalid` and untagged opcodes are `&[]`.\n",
         );
         let _ = writeln!(s, "pub static OPCODE_TAGS: [&[&str]; OPCODE_COUNT] = [");
-        for op in &isa.tree.opcodes {
+        for op in isa.tree.opcodes.iter() {
             let tags = if op.instr == usize::MAX {
                 &[][..]
             } else {
@@ -335,7 +395,15 @@ fn primary_table(tree: &chipi_core::tree::Tree, suffix: &str) -> String {
 }
 
 /// The body of a classification routine for one tree (everything inside the `fn` braces).
-fn routing_body(isa: &Isa, tree: &chipi_core::tree::Tree, table: &str) -> String {
+/// Decode-variable reads inside chain guards fold through `subst` (mode combo values, context
+/// defaults); names left over resolve through `ctx_vars` as runtime expressions.
+fn routing_body(
+    isa: &Isa,
+    tree: &chipi_core::tree::Tree,
+    table: &str,
+    subst: &[(String, u64, u16)],
+    ctx_vars: &[(String, String, u16)],
+) -> String {
     use chipi_core::tree::Residual;
 
     let base = tree.opcode_count();
@@ -385,9 +453,23 @@ fn routing_body(isa: &Isa, tree: &chipi_core::tree::Tree, table: &str) -> String
                     lowering.label()
                 );
                 for a in arms {
+                    let guard = isa
+                        .sparse_arm_guard(tree, a)
+                        .map(|g| {
+                            let inst = &isa.instrs[tree.opcodes[a.opcode].instr];
+                            let g = chipi_core::compute::subst_vars(g, subst);
+                            let scope = Scope::Computed {
+                                fields: &inst.fields,
+                                window: isa.window_bits(),
+                                base: "word",
+                                vars: ctx_vars,
+                            };
+                            format!(" && ({}) != 0", emit_value(&g, &scope))
+                        })
+                        .unwrap_or_default();
                     let _ = writeln!(
                         s,
-                        "            if (word as u64 & {:#x}) == {:#x} {{ return {}; }}",
+                        "            if (word as u64 & {:#x}) == {:#x}{guard} {{ return {}; }}",
                         a.mask,
                         a.val,
                         id_const(isa, a.opcode)
@@ -401,24 +483,211 @@ fn routing_body(isa: &Isa, tree: &chipi_core::tree::Tree, table: &str) -> String
     s
 }
 
+/// Identity axes: when leaf names are dotted (`lda.dpx`), derive the `Mnemonic` and `Form`
+/// enums plus per-opcode tables and accessors. Undotted leaves map to `Form::None`.
+fn axis_consts(isa: &Isa, m: &Model) -> String {
+    if !isa.has_axes() {
+        return String::new();
+    }
+    let mut s = axis_tables(isa);
+
+    s.push_str("impl Instruction {\n");
+    if m.modal {
+        s.push_str("    #[inline]\n    pub fn mnemonic_in(self, combo: usize) -> Mnemonic { OPCODE_MNEMONIC[self.opcode_in(combo)] }\n");
+        s.push_str("    #[inline]\n    pub fn form_in(self, combo: usize) -> Form { OPCODE_FORM[self.opcode_in(combo)] }\n");
+    } else {
+        s.push_str("    #[inline]\n    pub fn mnemonic(self) -> Mnemonic { OPCODE_MNEMONIC[self.opcode()] }\n");
+        s.push_str("    #[inline]\n    pub fn form(self) -> Form { OPCODE_FORM[self.opcode()] }\n");
+    }
+    s.push_str("}\n\n");
+
+    s
+}
+
+/// The identity-axis accessors for the nested-enum decoder. The decoded variant already fixes the
+/// leaf, so the lookup goes through `opcode_id()` and needs no mode combo even in modal specs.
+fn axis_consts_enum(isa: &Isa) -> String {
+    if !isa.has_axes() {
+        return String::new();
+    }
+    let mut s = axis_tables(isa);
+
+    s.push_str("impl Instruction {\n");
+    s.push_str("    /// The mnemonic axis of this leaf (`Invalid` maps to `Mnemonic::Invalid`).\n");
+    s.push_str(
+        "    #[inline]\n    pub fn mnemonic(&self) -> Mnemonic { OPCODE_MNEMONIC[self.opcode_id()] }\n",
+    );
+    s.push_str(
+        "    /// The form axis of this leaf (undotted leaves and `Invalid` map to `Form::None`).\n",
+    );
+    s.push_str("    #[inline]\n    pub fn form(&self) -> Form { OPCODE_FORM[self.opcode_id()] }\n");
+    s.push_str("}\n\n");
+
+    s
+}
+
+/// The axis enums and per-opcode tables shared by both dispatch styles: `Mnemonic`, `Form`, their
+/// name tables and `OPCODE_MNEMONIC` / `OPCODE_FORM`.
+fn axis_tables(isa: &Isa) -> String {
+    let mnems = isa.mnemonics();
+    let forms = isa.form_axes();
+
+    let mut s = String::new();
+
+    s.push_str("/// The mnemonic axis of the leaf names (`lda.dpx` -> `Lda`).\n");
+    s.push_str(
+        "#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]\npub enum Mnemonic {\n    Invalid,\n",
+    );
+    for mn in &mnems {
+        let _ = writeln!(s, "    {},", pascal(mn));
+    }
+    s.push_str("}\n\n");
+
+    let _ = writeln!(
+        s,
+        "pub const MNEMONIC_NAMES: [&str; {}] = [",
+        mnems.len() + 1
+    );
+    s.push_str("    \"Invalid\",\n");
+    for mn in &mnems {
+        let _ = writeln!(s, "    {mn:?},");
+    }
+    s.push_str("];\n\n");
+
+    s.push_str("impl Mnemonic {\n    #[inline]\n    pub fn name(self) -> &'static str { MNEMONIC_NAMES[self as usize] }\n}\n\n");
+
+    s.push_str(
+        "/// The form axis of the leaf names (`lda.dpx` -> `Dpx`; undotted leaves -> `None`).\n",
+    );
+    s.push_str("#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]\npub enum Form {\n    None,\n");
+    for f in &forms {
+        let _ = writeln!(s, "    {},", pascal(f));
+    }
+    s.push_str("}\n\n");
+
+    let _ = writeln!(s, "pub const FORM_NAMES: [&str; {}] = [", forms.len() + 1);
+    s.push_str("    \"none\",\n");
+    for f in &forms {
+        let _ = writeln!(s, "    {f:?},");
+    }
+    s.push_str("];\n\n");
+
+    s.push_str("impl Form {\n    #[inline]\n    pub fn name(self) -> &'static str { FORM_NAMES[self as usize] }\n}\n\n");
+
+    let n = isa.tree.opcodes.len();
+    let _ = writeln!(s, "pub const OPCODE_MNEMONIC: [Mnemonic; {n}] = [");
+    for op in isa.tree.opcodes.iter() {
+        if op.instr == usize::MAX {
+            s.push_str("    Mnemonic::Invalid,\n");
+        } else {
+            let _ = writeln!(
+                s,
+                "    Mnemonic::{},",
+                pascal(&isa.instrs[op.instr].mnemonic)
+            );
+        }
+    }
+    s.push_str("];\n\n");
+
+    let _ = writeln!(s, "pub const OPCODE_FORM: [Form; {n}] = [");
+    for op in isa.tree.opcodes.iter() {
+        let form = if op.instr == usize::MAX {
+            None
+        } else {
+            isa.instrs[op.instr].form.as_deref()
+        };
+        match form {
+            Some(f) => {
+                let _ = writeln!(s, "    Form::{},", pascal(f));
+            }
+            None => s.push_str("    Form::None,\n"),
+        }
+    }
+    s.push_str("];\n\n");
+
+    s
+}
+
 fn classify(isa: &Isa, m: &Model) -> String {
     let handle = isa.handle_ty();
     let mut s = String::new();
 
     if m.modal {
-        for (i, tree) in isa.mode_trees.iter().enumerate() {
-            s.push_str(&primary_table(tree, &format!("_{i}")));
-            let _ = writeln!(s, "#[inline]\nfn classify_{i}(word: {handle}) -> usize {{");
-            s.push_str(&routing_body(isa, tree, &format!("PRIMARY_{i}")));
-            s.push_str("}\n\n");
+        // One primary table per distinct tree (combinations with identical leaf sets share it).
+        // When the tree's chain guards read no decode variable, the routing function is shared
+        // too; otherwise routing folds per combination over the shared table.
+        let chain_reads: Vec<bool> = isa
+            .mode_trees
+            .iter()
+            .map(|t| isa.tree_chain_reads_vars(t))
+            .collect();
+
+        for (t, tree) in isa.mode_trees.iter().enumerate() {
+            s.push_str(&primary_table(tree, &format!("_{t}")));
+
+            if !chain_reads[t] {
+                let first = isa.combo_tree.iter().position(|&x| x == t).unwrap_or(0);
+                let subst = isa.combo_subst(first as u64);
+
+                let _ = writeln!(
+                    s,
+                    "#[inline]\nfn classify_tree_{t}(word: {handle}) -> usize {{"
+                );
+                s.push_str(&routing_body(
+                    isa,
+                    tree,
+                    &format!("PRIMARY_{t}"),
+                    &subst,
+                    &[],
+                ));
+                s.push_str("}\n\n");
+            }
+        }
+
+        // Per-combination wrappers: guard folding is per combination even when a tree is shared.
+        let combos = isa.mode_combos() as usize;
+        let mut dispatch_arms = Vec::with_capacity(combos);
+
+        for i in 0..combos {
+            let t = isa.combo_tree[i];
+            let tree = &isa.mode_trees[t];
+            let subst = isa.combo_subst(i as u64);
+
+            let raw_call = if chain_reads[t] {
+                let _ = writeln!(
+                    s,
+                    "#[inline]\nfn classify_raw_{i}(word: {handle}) -> usize {{"
+                );
+                s.push_str(&routing_body(
+                    isa,
+                    tree,
+                    &format!("PRIMARY_{t}"),
+                    &subst,
+                    &[],
+                ));
+                s.push_str("}\n\n");
+                format!("classify_raw_{i}(word)")
+            } else {
+                format!("classify_tree_{t}(word)")
+            };
+
+            if m.has_guard {
+                let _ = writeln!(s, "#[inline]\nfn classify_{i}(word: {handle}) -> usize {{");
+                let _ = writeln!(s, "    let __id = {raw_call};\n    match __id {{");
+                s.push_str(&guard_arms(isa, &subst, &[]));
+                s.push_str("        _ => __id,\n    }\n}\n\n");
+                dispatch_arms.push(format!("classify_{i}(word)"));
+            } else {
+                dispatch_arms.push(raw_call);
+            }
         }
 
         let _ = writeln!(s, "pub const MODE_COMBOS: usize = {};\n", isa.mode_combos());
 
         s.push_str("/// Classify `word` for mode combination `combo` (see `pack_modes`).\n");
         s.push_str(&format!("#[inline]\npub fn classify(combo: usize, word: {handle}) -> usize {{\n    match combo {{\n"));
-        for i in 0..isa.mode_trees.len() {
-            let _ = writeln!(s, "        {i} => classify_{i}(word),");
+        for (i, arm) in dispatch_arms.iter().enumerate() {
+            let _ = writeln!(s, "        {i} => {arm},");
         }
         s.push_str("        _ => 0,\n    }\n}\n\n");
 
@@ -451,34 +720,83 @@ fn classify(isa: &Isa, m: &Model) -> String {
 
     s.push_str(&primary_table(&isa.tree, ""));
 
+    // Word-level classify folds every decode variable to its default, matching the oracle's
+    // `decode(word)`. Context-dependent classification goes through `classify_with`.
+    let subst = isa.default_subst();
+
     if m.has_guard {
         let _ = writeln!(s, "#[inline]\nfn classify_raw(word: {handle}) -> usize {{");
-        s.push_str(&routing_body(isa, &isa.tree, "PRIMARY"));
+        s.push_str(&routing_body(isa, &isa.tree, "PRIMARY", &subst, &[]));
         s.push_str("}\n\n");
 
+        if !isa.decoder.context.is_empty() {
+            s.push_str(
+                "/// Classify `word` with every decode variable at its default (as if no prefix\n\
+                 /// was seen). Use `classify_with` after a prefix scan.\n",
+            );
+        }
         let _ = writeln!(s, "#[inline]\npub fn classify(word: {handle}) -> usize {{");
         s.push_str("    let __id = classify_raw(word);\n    match __id {\n");
-        for &idx in &isa.instr_order() {
-            let inst = &isa.instrs[idx];
-            if let Some(g) = &inst.guard {
-                let scope = Scope::Computed {
-                    fields: &inst.fields,
-                    window: isa.window_bits(),
-                    base: "word",
-                };
-                let _ = writeln!(
-                    s,
-                    "        opcode::{} => if ({}) != 0 {{ __id }} else {{ opcode::INVALID }},",
-                    const_name(&inst.name),
-                    emit_value(g, &scope)
-                );
-            }
-        }
+        s.push_str(&guard_arms(isa, &subst, &[]));
         s.push_str("        _ => __id,\n    }\n}\n\n");
     } else {
         let _ = writeln!(s, "#[inline]\npub fn classify(word: {handle}) -> usize {{");
-        s.push_str(&routing_body(isa, &isa.tree, "PRIMARY"));
+        s.push_str(&routing_body(isa, &isa.tree, "PRIMARY", &subst, &[]));
         s.push_str("}\n\n");
+    }
+
+    if m.ctx_guards {
+        let ctx_vars: Vec<(String, String, u16)> = isa
+            .decoder
+            .context
+            .iter()
+            .map(|c| (c.name.clone(), format!("ctx.{}", ident(&c.name)), c.width))
+            .collect();
+
+        let _ = writeln!(
+            s,
+            "#[inline]\nfn classify_raw_with(word: {handle}, ctx: &Context) -> usize {{"
+        );
+        s.push_str(&routing_body(isa, &isa.tree, "PRIMARY", &[], &ctx_vars));
+        s.push_str("}\n\n");
+
+        s.push_str("/// Classify `word` under a scanned prefix context.\n");
+        let _ = writeln!(
+            s,
+            "#[inline]\npub fn classify_with(word: {handle}, ctx: &Context) -> usize {{"
+        );
+        s.push_str("    let __id = classify_raw_with(word, ctx);\n    match __id {\n");
+        s.push_str(&guard_arms(isa, &[], &ctx_vars));
+        s.push_str("        _ => __id,\n    }\n}\n\n");
+    }
+    s
+}
+
+/// The `match __id` guard arms shared by every classify wrapper: each guarded opcode re-checks
+/// its guard, with decode variables folded through `subst` or resolved through `ctx_vars`.
+fn guard_arms(
+    isa: &Isa,
+    subst: &[(String, u64, u16)],
+    ctx_vars: &[(String, String, u16)],
+) -> String {
+    let mut s = String::new();
+    for &idx in &isa.instr_order() {
+        let inst = &isa.instrs[idx];
+        if let Some(g) = &inst.guard {
+            let g = chipi_core::compute::subst_vars(g, subst);
+            let scope = Scope::Computed {
+                fields: &inst.fields,
+                window: isa.window_bits(),
+                base: "word",
+                vars: ctx_vars,
+            };
+            let _ = writeln!(
+                s,
+                "        opcode::{} => if ({}) != 0 {{ __id }} else {{ opcode::INVALID }},",
+                const_name(&inst.name),
+                emit_value(&g, &scope)
+            );
+        }
     }
     s
 }
@@ -536,6 +854,11 @@ fn handle_impl(isa: &Isa, m: &Model) -> String {
             "    #[inline(always)]\n    pub fn opcode(self) -> usize { classify(self.0) }\n",
         );
         s.push_str("    #[inline]\n    pub fn opcode_name(self) -> &'static str { OPCODE_NAMES[self.opcode()] }\n");
+        if m.ctx_guards {
+            s.push_str("    /// `opcode` under a scanned prefix context (see `scan_prefixes`).\n");
+            s.push_str("    #[inline]\n    pub fn opcode_with(self, ctx: &Context) -> usize { classify_with(self.0, ctx) }\n");
+            s.push_str("    #[inline]\n    pub fn opcode_name_with(self, ctx: &Context) -> &'static str { OPCODE_NAMES[self.opcode_with(ctx)] }\n");
+        }
         if !isa.tags.is_empty() {
             s.push_str("    #[inline]\n    pub fn tags(self) -> &'static [&'static str] { OPCODE_TAGS[self.opcode()] }\n");
         }
@@ -593,7 +916,7 @@ fn user_fns(isa: &Isa) -> String {
             .iter()
             .map(|(n, ty)| (n.clone(), ty.width()))
             .collect();
-        for (ln, le) in &f.lets {
+        for (ln, le, lw) in &f.lets {
             let scope = Scope::Fn {
                 widths: widths.clone(),
             };
@@ -603,16 +926,7 @@ fn user_fns(isa: &Isa) -> String {
                 sanitize(ln),
                 emit_value(le, &scope)
             );
-            widths.insert(
-                ln.clone(),
-                chipi_core::compute::infer_width(
-                    le,
-                    &chipi_core::compute::WidthEnv {
-                        word_width: 64,
-                        field_width: &|n: &str| widths.get(n).copied(),
-                    },
-                ),
-            );
+            widths.insert(ln.clone(), *lw);
         }
 
         let scope = Scope::Fn { widths };
@@ -640,7 +954,7 @@ fn computed_accessors(isa: &Isa) -> String {
     for &idx in &isa.instr_order() {
         let inst = &isa.instrs[idx];
         for c in &inst.computed {
-            if fetch_width(&c.expr).is_some() {
+            if is_fetch(&c.expr) {
                 continue;
             }
             // Folded operands share one accessor; emit each unique name once.
@@ -656,6 +970,7 @@ fn computed_accessors(isa: &Isa) -> String {
                 fields: &inst.fields,
                 window: isa.window_bits(),
                 base: "self.0",
+                vars: &[],
             };
             let body = emit_value(&c.expr, &scope);
 
@@ -704,6 +1019,7 @@ fn decode_dispatch(isa: &Isa, m: &Model) -> String {
                         fields: &[],
                         window: isa.window_bits(),
                         base: "word",
+                        vars: &[],
                     };
                     let _ = writeln!(
                         s,
@@ -1429,13 +1745,17 @@ fn intern(lit: String, table: &mut Vec<String>) -> usize {
     }
 }
 
-fn display_impl(isa: &Isa) -> String {
+fn display_impl(isa: &Isa, m: &Model) -> String {
     let acc_names = computed_accessor_names(isa);
     let mut drends: Vec<String> = Vec::new();
     let mut prog_consts = String::new();
     let mut fns = String::new();
     let mut match_arms = String::new();
     let any = !isa.instrs.is_empty();
+
+    // For a modal ISA the renderer lives behind a (word, combo) wrapper instead of `Display` on
+    // `Instruction`, so classification uses the caller's mode combination.
+    let recv = if m.modal { "self.0" } else { "self" };
 
     for &idx in &isa.instr_order() {
         let inst = &isa.instrs[idx];
@@ -1485,7 +1805,7 @@ fn display_impl(isa: &Isa) -> String {
                 match &arm.cond {
                     Some(c) => chain.push_str(&format!(
                         "if ({}) != 0 {{ d_render(f, self.0 as i128, {gather_ref}, {}) }} else ",
-                        emit_cond(c, "self", &acc_map),
+                        emit_cond(c, "self", &acc_map, &BTreeMap::new()),
                         arm_consts[ai]
                     )),
                     None => {
@@ -1510,7 +1830,7 @@ fn display_impl(isa: &Isa) -> String {
         );
         let _ = writeln!(
             match_arms,
-            "            opcode::{} => self.fmt_{name}(f),",
+            "            opcode::{} => {recv}.fmt_{name}(f),",
             const_name(&inst.name)
         );
     }
@@ -1529,11 +1849,32 @@ fn display_impl(isa: &Isa) -> String {
     s.push_str("\n#[cfg(feature = \"disasm\")]\nimpl Instruction {\n");
     s.push_str(&fns);
     s.push_str("}\n");
-    s.push_str("\n#[cfg(feature = \"disasm\")]\nimpl core::fmt::Display for Instruction {\n");
-    s.push_str("    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {\n");
-    s.push_str("        match self.opcode() {\n");
-    s.push_str(&match_arms);
-    s.push_str("            _ => write!(f, \"(invalid)\"),\n        }\n    }\n}\n");
+
+    if m.modal {
+        s.push_str("\n#[cfg(feature = \"disasm\")]\n");
+        s.push_str(
+            "/// An `Instruction` paired with the mode combination it should render under.\n",
+        );
+        s.push_str("struct DisasmIn(Instruction, usize);\n");
+        s.push_str("\n#[cfg(feature = \"disasm\")]\nimpl core::fmt::Display for DisasmIn {\n");
+        s.push_str("    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {\n");
+        s.push_str("        match self.0.opcode_in(self.1) {\n");
+        s.push_str(&match_arms);
+        s.push_str("            _ => write!(f, \"(invalid)\"),\n        }\n    }\n}\n");
+        s.push_str("\n#[cfg(feature = \"disasm\")]\nimpl Instruction {\n");
+        s.push_str(
+            "    /// Render the textual form under mode combination `combo` (see `pack_modes`).\n",
+        );
+        s.push_str("    pub fn disasm_in(self, combo: usize) -> String {\n");
+        s.push_str("        DisasmIn(self, combo).to_string()\n");
+        s.push_str("    }\n}\n");
+    } else {
+        s.push_str("\n#[cfg(feature = \"disasm\")]\nimpl core::fmt::Display for Instruction {\n");
+        s.push_str("    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {\n");
+        s.push_str("        match self.opcode() {\n");
+        s.push_str(&match_arms);
+        s.push_str("            _ => write!(f, \"(invalid)\"),\n        }\n    }\n}\n");
+    }
     s
 }
 
@@ -1555,62 +1896,147 @@ fn disasm_ctx_support(isa: &Isa, m: &Model) -> String {
     s.push_str("impl Instruction {\n");
     for &idx in &isa.instr_order() {
         let inst = &isa.instrs[idx];
+        // The running stream offset: a static byte count plus, once an expression-width fetch
+        // precedes, dynamic byte-count terms over `ctx.mode(..)`.
         let mut off = wb;
+        let mut dyn_terms: Vec<String> = Vec::new();
         for c in &inst.computed {
-            let Some(bits) = fetch_width(&c.expr) else {
+            let Some(arg) = fetch_expr(&c.expr) else {
                 continue;
             };
-            let nb = (bits as usize).div_ceil(8);
+            let const_bits = fetch_width(&c.expr);
             let method = comp_acc(&acc_names, inst, c);
 
             // Folded fetch operands share one accessor. Emit each unique name once, but always
             // advance the per-instruction stream offset.
             if emitted.insert(method.clone()) {
-                let raw = byte_read(off, nb, isa.decoder.endian);
                 let mask = mask_u64(c.ty.value_width);
+                let ret = ret_type(&c.ty);
 
-                let val = if c.ty.signed {
-                    format!(
-                        "sext64(({raw}) & {mask:#x}, {}) as {}",
-                        c.ty.value_width,
-                        ret_type(&c.ty)
-                    )
-                } else {
-                    format!("(({raw}) & {mask:#x}) as {}", ret_type(&c.ty))
-                };
                 let _ = writeln!(
                     s,
                     "    /// stream operand `{}` of `{}`, read at `pc`.",
                     c.name, inst.name
                 );
-                let _ = writeln!(
-                    s,
-                    "    #[inline]\n    pub fn {method}<C: DisasmCtx>(self, pc: u64, ctx: &C) -> {} {{ {val} }}",
-                    ret_type(&c.ty)
-                );
+
+                if let (Some(bits), true) = (const_bits, dyn_terms.is_empty()) {
+                    // Static offset and width: a single-expression body.
+                    let nb = (bits as usize).div_ceil(8);
+                    let raw = byte_read(off, nb, isa.decoder.endian);
+                    let val = if c.ty.signed {
+                        format!("sext64(({raw}) & {mask:#x}, {}) as {ret}", c.ty.value_width)
+                    } else {
+                        format!("(({raw}) & {mask:#x}) as {ret}")
+                    };
+                    let _ = writeln!(
+                        s,
+                        "    #[inline]\n    pub fn {method}<C: DisasmCtx>(self, pc: u64, ctx: &C) -> {ret} {{ {val} }}"
+                    );
+                } else {
+                    // Mode-dependent offset or width: compute both at runtime.
+                    let off_expr = if dyn_terms.is_empty() {
+                        format!("{off}u64")
+                    } else {
+                        format!("{off}u64 + {}", dyn_terms.join(" + "))
+                    };
+                    let bits_expr = fetch_bits_rust(isa, arg);
+                    let shift = match isa.decoder.endian {
+                        Endian::Little => "8 * i",
+                        Endian::Big => "8 * (nb - 1 - i)",
+                    };
+                    let val = if c.ty.signed {
+                        format!("sext64(raw & {mask:#x}, {}) as {ret}", c.ty.value_width)
+                    } else {
+                        format!("(raw & {mask:#x}) as {ret}")
+                    };
+                    let _ = writeln!(
+                        s,
+                        "    #[inline]\n    pub fn {method}<C: DisasmCtx>(self, pc: u64, ctx: &C) -> {ret} {{\n\
+                         \x20       let off = {off_expr};\n\
+                         \x20       let nb = ({bits_expr} + 7) / 8;\n\
+                         \x20       let mut raw: u64 = 0;\n\
+                         \x20       let mut i: u64 = 0;\n\
+                         \x20       while i < nb {{\n\
+                         \x20           raw |= (ctx.read_u8(pc + off + i) as u64) << ({shift});\n\
+                         \x20           i += 1;\n\
+                         \x20       }}\n\
+                         \x20       {val}\n\
+                         \x20   }}"
+                    );
+                }
             }
-            off += nb;
+
+            match (const_bits, dyn_terms.is_empty()) {
+                (Some(bits), true) => off += (bits as usize).div_ceil(8),
+                _ => dyn_terms.push(format!("(({} + 7) / 8)", fetch_bits_rust(isa, arg))),
+            }
         }
     }
     s.push_str("}\n\n");
 
-    // stream_len
+    // stream_len, id-keyed so callers already holding an opcode id skip the re-classify.
     let (lp, la) = combo_threads(m);
-    s.push_str("/// Total byte length of the instruction at `word` (window + fetched operands).\n");
-    let _ = writeln!(s, "#[inline]\npub fn stream_len({lp}word: {handle}) -> u8 {{\n    match classify({la}word) {{");
-    for &idx in &isa.instr_order() {
-        let inst = &isa.instrs[idx];
-        let extra = fetched_bytes(inst);
-        if extra > 0 {
+    let combos = if m.modal { isa.mode_combos() } else { 1 };
+    let per_inst: Vec<(usize, Vec<usize>)> = isa
+        .instr_order()
+        .iter()
+        .map(|&idx| {
+            let inst = &isa.instrs[idx];
+            let extras = (0..combos)
+                .map(|c| fetched_bytes_combo(isa, inst, c))
+                .collect();
+            (idx, extras)
+        })
+        .collect();
+    // A combo-independent table leaves the combo parameter unread; underscore it then.
+    let combo_used = per_inst
+        .iter()
+        .any(|(_, extras)| !extras.iter().all(|&e| e == extras[0]));
+    let id_lp = if m.modal && !combo_used {
+        "_combo: usize, "
+    } else {
+        lp
+    };
+
+    s.push_str("/// Total byte length of opcode `id` (window + fetched operands).\n");
+    let _ = writeln!(
+        s,
+        "#[inline]\npub fn stream_len_of({id_lp}id: usize) -> u8 {{\n    match id {{"
+    );
+    for (idx, extras) in &per_inst {
+        let inst = &isa.instrs[*idx];
+        if extras.iter().all(|&e| e == 0) {
+            continue;
+        }
+        if extras.iter().all(|&e| e == extras[0]) {
             let _ = writeln!(
                 s,
                 "        opcode::{} => {},",
                 const_name(&inst.name),
-                wb + extra
+                wb + extras[0]
+            );
+        } else {
+            // Mode-dependent fetch widths: one arm per combination.
+            let arms: Vec<String> = extras
+                .iter()
+                .enumerate()
+                .map(|(c, e)| format!("{c} => {}", wb + e))
+                .collect();
+            let _ = writeln!(
+                s,
+                "        opcode::{} => match combo {{ {}, _ => {wb} }},",
+                const_name(&inst.name),
+                arms.join(", ")
             );
         }
     }
     let _ = writeln!(s, "        _ => {wb},\n    }}\n}}\n");
+
+    s.push_str("/// Total byte length of the instruction at `word` (window + fetched operands).\n");
+    let _ = writeln!(
+        s,
+        "#[inline]\npub fn stream_len({lp}word: {handle}) -> u8 {{ stream_len_of({la}classify({la}word)) }}\n"
+    );
     s
 }
 
@@ -1636,7 +2062,7 @@ fn byte_read(off: usize, nb: usize, endian: Endian) -> String {
 /// at all). This roughly halves the disassembly code emitted for symbol-only ISAs.
 fn ctx_delegatable(m: &Model, inst: &Insn) -> bool {
     m.emit_display
-        && inst.computed.iter().all(|c| fetch_width(&c.expr).is_none())
+        && inst.computed.iter().all(|c| !is_fetch(&c.expr))
         && inst.display.len() == 1
         && inst.display[0].cond.is_none()
         && !segs_have_sym(&inst.display[0].segs)
@@ -1683,11 +2109,9 @@ fn disasm_ctx_fn(isa: &Isa, m: &Model) -> String {
         if ctx_delegatable(m, inst) {
             continue;
         }
-        let total = wb + fetched_bytes(inst);
-
         let mut body = String::new();
         for c in &inst.computed {
-            if fetch_width(&c.expr).is_some() {
+            if is_fetch(&c.expr) {
                 let _ = writeln!(
                     body,
                     "    let __op_{}: i128 = inst.{}(pc, ctx) as i128;",
@@ -1696,8 +2120,27 @@ fn disasm_ctx_fn(isa: &Isa, m: &Model) -> String {
                 );
             }
         }
+
+        // The instruction's total byte length: static unless a fetch width is mode-dependent.
+        let total = if fetch_has_expr(inst) {
+            let terms: Vec<String> = inst
+                .computed
+                .iter()
+                .filter_map(|c| fetch_expr(&c.expr))
+                .map(|arg| format!("(({} + 7) / 8)", fetch_bits_rust(isa, arg)))
+                .collect();
+            let _ = writeln!(
+                body,
+                "    let __total = ({wb}u64 + {}) as u8;",
+                terms.join(" + ")
+            );
+            "__total".to_string()
+        } else {
+            format!("{}", wb + fetched_bytes(inst))
+        };
+
         body.push_str("    let mut __r = String::new();\n");
-        body.push_str(&ctx_seg_stmts(&acc_names, inst, total));
+        body.push_str(&ctx_seg_stmts(isa, &acc_names, inst, &total));
         let _ = writeln!(body, "    (__r, {total})");
 
         let _ = writeln!(
@@ -1749,41 +2192,48 @@ fn disasm_ctx_fn(isa: &Isa, m: &Model) -> String {
     s
 }
 
-/// Pick the arm rendered by `disasm_ctx` (first unconditional, else first, else empty).
-fn ctx_pick_arm(inst: &Insn) -> &[Seg] {
-    inst.display
-        .iter()
-        .find(|a| a.cond.is_none())
-        .or_else(|| inst.display.first())
-        .map(|a| a.segs.as_slice())
-        .unwrap_or(&[])
-}
-
 fn ctx_seg_stmts(
+    isa: &Isa,
     acc_names: &HashMap<(String, String), String>,
     inst: &Insn,
-    total: usize,
+    total: &str,
 ) -> String {
     let acc = op_acc(acc_names, inst);
     let cond_acc = acc_methods(&acc);
+    // Mode reads inside display conditions resolve through the host context at runtime.
+    let mode_raw: BTreeMap<String, String> = isa
+        .modes
+        .iter()
+        .map(|m| (m.name.clone(), format!("ctx.mode({:?})", m.name)))
+        .collect();
     let fetched: BTreeSet<String> = inst
         .computed
         .iter()
-        .filter(|c| fetch_width(&c.expr).is_some())
+        .filter(|c| is_fetch(&c.expr))
         .map(|c| c.name.clone())
         .collect();
 
     let mut s = String::new();
-    ctx_render_segs(ctx_pick_arm(inst), &acc, &cond_acc, &fetched, total, &mut s);
+    ctx_render_segs(
+        inst.ctx_pick_arm(),
+        &acc,
+        &cond_acc,
+        &mode_raw,
+        &fetched,
+        total,
+        &mut s,
+    );
     s
 }
 
+#[allow(clippy::too_many_arguments)]
 fn ctx_render_segs(
     segs: &[Seg],
     acc: &BTreeMap<String, (String, FieldTy)>,
     cond_acc: &BTreeMap<String, String>,
+    mode_raw: &BTreeMap<String, String>,
     fetched: &BTreeSet<String>,
-    total: usize,
+    total: &str,
     s: &mut String,
 ) {
     for seg in segs {
@@ -1795,11 +2245,11 @@ fn ctx_render_segs(
                 let _ = writeln!(
                     s,
                     "            if ({}) != 0 {{",
-                    emit_cond(cond, "inst", cond_acc)
+                    emit_cond(cond, "inst", cond_acc, mode_raw)
                 );
-                ctx_render_segs(then, acc, cond_acc, fetched, total, s);
+                ctx_render_segs(then, acc, cond_acc, mode_raw, fetched, total, s);
                 s.push_str("            } else {\n");
-                ctx_render_segs(els, acc, cond_acc, fetched, total, s);
+                ctx_render_segs(els, acc, cond_acc, mode_raw, fetched, total, s);
                 s.push_str("            }\n");
             }
             Seg::SubField { field, output } => {
@@ -1824,6 +2274,8 @@ fn ctx_render_segs(
                     format!("__op_{}", sanitize(name))
                 } else if let Some((method, _)) = acc.get(name) {
                     format!("(inst.{method} as i128)")
+                } else if let Some(raw) = mode_raw.get(name) {
+                    format!("(({raw}) as i128)")
                 } else {
                     let _ = writeln!(s, "            __r.push_str(\"{{{name}}}\");");
                     continue;
@@ -1845,11 +2297,11 @@ fn sym_hit_arms(indent: &str) -> String {
     )
 }
 
-fn ctx_field_render(fmt: &FmtSpec, val: &str, ty: Option<&FieldTy>, total: usize, s: &mut String) {
+fn ctx_field_render(fmt: &FmtSpec, val: &str, ty: Option<&FieldTy>, total: &str, s: &mut String) {
     if fmt.rel {
         let _ = writeln!(
             s,
-            "            {{ let __abs = (((pc as i128) + {total} + ({val})) as u64) & 0xffff;"
+            "            {{ let __abs = (((pc as i128) + ({total}) as i128 + ({val})) as u64) & 0xffff;"
         );
         s.push_str("              match ctx.symbol(__abs) {\n");
         s.push_str(&sym_hit_arms("                  "));
@@ -1956,15 +2408,26 @@ pub fn emit_stubs(isa: &Isa) -> String {
 }
 
 // ---------------------------------------------------------------- nested-enum dispatch
+//
+// The enum backend is the fixed-width simple-ISA path: it decodes one fixed opcode window (plus
+// fixed-size fetched operands) eagerly into a nested `Instruction` enum with every operand
+// pre-extracted, so consumers match on variants instead of calling accessors. That eager shape is
+// the point, and it fixes the scope. Everything that makes the instruction stream non-uniform
+// stays out: variable `length` windows, `prefix` scans, expression-width fetches and subdecoder
+// string outputs are refused with a `compile_error!` that points at the newtype backend, which
+// supports all of them. Identity metadata (opcode ids, names, tags, mnemonic/form axes) and
+// in-template display conditionals are supported; conditionals evaluate from the variant's bound
+// operands, with a raw `word` re-read through `ctx` for conditions that reference it.
 
-/// A spec feature the enum backend does not yet model, if any. The enum decoder reads a single fixed
-/// window through `ctx`, so variable `length` windows and `prefix` scans are out of scope, as are
-/// in-template display conditionals (the rendered value would depend on the raw `word`, which the
-/// enum does not retain). Subdecoders are simply not yet wired into the enum render path. Such specs
-/// get a clear `compile_error!` rather than subtly wrong output.
+/// A spec feature outside the enum backend's scope, if any. Such specs get a clear
+/// `compile_error!` rather than subtly wrong output; see the section comment above for the
+/// scope rationale.
 fn enum_unsupported(isa: &Isa) -> Option<&'static str> {
     if isa.length.is_some() {
         return Some("`length` (variable-window) specs");
+    }
+    if isa.instrs.iter().any(fetch_has_expr) {
+        return Some("expression-width `fetch` operands");
     }
     if isa.prefix.is_some() {
         return Some("`prefix` specs");
@@ -1972,16 +2435,7 @@ fn enum_unsupported(isa: &Isa) -> Option<&'static str> {
     if !isa.subdecoders.is_empty() {
         return Some("`subdecoder` specs");
     }
-    for inst in &isa.instrs {
-        if segs_have_cond(ctx_pick_arm(inst)) {
-            return Some("in-template display conditionals");
-        }
-    }
     None
-}
-
-fn segs_have_cond(segs: &[Seg]) -> bool {
-    segs.iter().any(|s| matches!(s, Seg::Cond { .. }))
 }
 
 /// The payload fields of one leaf, as `(binding ident, rust type)`, in-window fields first then
@@ -2044,6 +2498,7 @@ fn variant_ctor(isa: &Isa, inst: &Insn) -> String {
                 fields: &inst.fields,
                 window: isa.window_bits(),
                 base: "word",
+                vars: &[],
             };
             let body = emit_value(&c.expr, &scope);
             let cast = if c.ty.signed {
@@ -2179,7 +2634,7 @@ fn enum_decode(isa: &Isa, m: &Model) -> String {
     let mut s = String::new();
     s.push_str("/// Total decoded byte length per opcode id (window + fetched operands).\n");
     let _ = writeln!(s, "pub static OPCODE_LEN: [u8; OPCODE_COUNT] = [");
-    for op in &isa.tree.opcodes {
+    for op in isa.tree.opcodes.iter() {
         let len = if op.instr == usize::MAX {
             wb
         } else {
@@ -2274,6 +2729,8 @@ fn enum_queries(isa: &Isa, m: &Model) -> String {
 fn enum_render(isa: &Isa) -> String {
     let wb = (isa.window_bits() as usize).div_ceil(8);
     let m = Model::new(isa);
+    let handle = isa.handle_ty();
+    let read0 = window_read(isa);
 
     let mut s = String::new();
     s.push_str("\n#[cfg(feature = \"disasm\")]\nimpl Instruction {\n");
@@ -2283,10 +2740,28 @@ fn enum_render(isa: &Isa) -> String {
 
     for &idx in &isa.instr_order() {
         let inst = &isa.instrs[idx];
-        let total = wb + fetched_bytes(inst);
+        // Expression-width fetches are rejected by enum_unsupported, so this total is static.
+        let total = format!("{}", wb + fetched_bytes(inst));
+        let segs = inst.ctx_pick_arm();
+
+        // Display conditions resolve names straight to runtime expressions: bound operand
+        // locals first, then host mode reads, then the raw window word (re-read through `ctx`
+        // at `pc`; the variant does not retain it).
+        let mut raw: BTreeMap<String, String> = BTreeMap::new();
+        for name in op_types(inst).keys() {
+            raw.insert(name.clone(), format!("*{}", ident(name)));
+        }
+        for md in &isa.modes {
+            raw.entry(md.name.clone())
+                .or_insert_with(|| format!("ctx.mode({:?})", md.name));
+        }
+        raw.insert("word".to_string(), "__w".to_string());
 
         let mut body = String::new();
-        enum_render_segs(ctx_pick_arm(inst), inst, total, &mut body);
+        if segs_cond_use_word(segs) {
+            let _ = writeln!(body, "                let __w = ({read0}) as {handle};");
+        }
+        enum_render_segs(segs, inst, &total, &raw, &mut body);
 
         let _ = writeln!(s, "            {} => {{", leaf_pattern(inst, &m));
         s.push_str(&body);
@@ -2298,10 +2773,41 @@ fn enum_render(isa: &Isa) -> String {
     s
 }
 
+/// Does any in-template condition in `segs` (recursively) read the raw `word`?
+fn segs_cond_use_word(segs: &[Seg]) -> bool {
+    segs.iter().any(|seg| match seg {
+        Seg::Cond { cond, then, els } => {
+            cond_uses_word(cond) || segs_cond_use_word(then) || segs_cond_use_word(els)
+        }
+        _ => false,
+    })
+}
+
+/// Does a display condition read the raw `word`? A hit only makes the renderer bind the `__w`
+/// local; a `word` buried in an `Assemble`/`Call` (which `emit_cond` lowers to a constant)
+/// merely leaves that binding unused.
+fn cond_uses_word(e: &Expr) -> bool {
+    let mut found = false;
+    e.walk(&mut |x| {
+        if let Expr::Name(n) = x {
+            if n.text == "word" {
+                found = true;
+            }
+        }
+    });
+    found
+}
+
 /// Emit the statements that render one display arm into `r`, reading each operand from its bound
 /// local (`*ident`). Reuses the same value formatters as the newtype contextual disassembler so the
-/// text matches the oracle exactly.
-fn enum_render_segs(segs: &[Seg], inst: &Insn, total: usize, s: &mut String) {
+/// text matches the oracle exactly. `raw` carries the name-to-expression map for conditions.
+fn enum_render_segs(
+    segs: &[Seg],
+    inst: &Insn,
+    total: &str,
+    raw: &BTreeMap<String, String>,
+    s: &mut String,
+) {
     let acc = op_types(inst);
     for seg in segs {
         match seg {
@@ -2317,9 +2823,20 @@ fn enum_render_segs(segs: &[Seg], inst: &Insn, total: usize, s: &mut String) {
                     let _ = writeln!(s, "                __r.push_str(\"{{{name}}}\");");
                 }
             },
-            // In-template conditionals and subdecoder outputs are rejected up front by
-            // `enum_unsupported`.
-            Seg::Cond { .. } | Seg::SubField { .. } => {}
+            Seg::Cond { cond, then, els } => {
+                let _ = writeln!(
+                    s,
+                    "                if ({}) != 0 {{",
+                    emit_cond(cond, "self", &BTreeMap::new(), raw)
+                );
+                enum_render_segs(then, inst, total, raw, s);
+                s.push_str("                } else {\n");
+                enum_render_segs(els, inst, total, raw, s);
+                s.push_str("                }\n");
+            }
+            // Subdecoder specs are rejected up front by `enum_unsupported`, so a `{field.output}`
+            // segment can never reach the enum renderer.
+            Seg::SubField { .. } => {}
         }
     }
 }
@@ -2332,7 +2849,9 @@ fn emit_decoder_enum(isa: &Isa) -> String {
     if let Some(reason) = enum_unsupported(isa) {
         let _ = writeln!(
             s,
-            "compile_error!(\"chipi: enum dispatch does not yet support {reason}\");"
+            "compile_error!(\"chipi: the enum backend is the eager fixed-width decoder for simple \
+             ISAs and does not support {reason}; use the default newtype backend \
+             (`style = newtype`) for this spec\");"
         );
         return s;
     }
@@ -2340,6 +2859,7 @@ fn emit_decoder_enum(isa: &Isa) -> String {
     let m = Model::new(isa);
     s.push_str(&preamble(&m));
     s.push_str(&opcode_consts(isa));
+    s.push_str(&axis_consts_enum(isa));
     s.push_str(&classify(isa, &m));
     s.push_str(&user_fns(isa));
     s.push_str(&enum_types(isa, &m));

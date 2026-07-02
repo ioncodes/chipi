@@ -1,0 +1,4096 @@
+0 0xf767814f psq_stu|psq_stu f27, 0x14f(r7), 1, 0
+0 0x84ba6d32 lwzu|lwzu r5, 0x6d32(r26)
+0 0x2e728119 Invalid|(invalid)
+0 0x7f2099b4 Invalid|(invalid)
+0 0x6226d1f3 ori|ori r6, r17, 0xd1f3
+0 0xd0d0f606 stfs|stfs f6, -0x9fa(r16)
+0 0x4fadba5d Invalid|(invalid)
+0 0x3c8666a8 addis|addis r4, r6, 0x66a8
+0 0xe7bce4d7 psq_lu|psq_lu f29, 0x4d7(r28), 1, 6
+0 0x6e45641a xoris|xoris r5, r18, 0x641a
+0 0xc164ffe1 lfs|lfs f11, -0x1f(r4)
+0 0xcb0e1adc lfd|lfd f24, 0x1adc(r14)
+0 0x9a415dfb stb|stb r18, 0x5dfb(r1)
+0 0xb99b8b6e lmw|lmw r12, -0x7492(r27)
+0 0x90f095a5 stw|stw r7, -0x6a5b(r16)
+0 0xe0f7aa50 psq_l|psq_l f7, -0x5b0(r23), 1, 2
+0 0x40fe215f bcx|bne+la cr7, 0x215c
+0 0x16ec8002 Invalid|(invalid)
+0 0x6ba4ffa9 xori|xori r4, r29, 0xffa9
+0 0xb79a4904 sthu|sthu r28, 0x4904(r26)
+0 0x77135303 andis_dot|andis. r19, r24, 0x5303
+0 0xb0ba95d6 sth|sth r5, -0x6a2a(r26)
+0 0x561701ed rlwinmx|rlwinm. r23, r16, 0, 7, 22
+0 0xfe586af8 fmsubx|fmsub f18, f24, f11, f13
+0 0x6c5b56e7 xoris|xoris r27, r2, 0x56e7
+0 0x7c0560ea Invalid|(invalid)
+0 0x4f9fa071 Invalid|(invalid)
+0 0x14d3c42c Invalid|(invalid)
+0 0xec8ed10b Invalid|(invalid)
+0 0x559db53e rlwinmx|extrwi r29, r12, 12, 10
+0 0x26201f35 Invalid|(invalid)
+0 0x806148a0 lwz|lwz r3, 0x48a0(r1)
+0 0x90a8a56f stw|stw r5, -0x5a91(r8)
+0 0x4cb9a6d2 Invalid|(invalid)
+0 0xfe060239 fmsubx|fmsub. f16, f6, f8, f0
+0 0xd0bd2c54 stfs|stfs f5, 0x2c54(r29)
+0 0x3e89f813 addis|subis r20, r9, 0x7ed
+0 0x6ec889a6 xoris|xoris r8, r22, 0x89a6
+0 0x528f0d7d rlwimix|insrwi. r15, r20, 10, 21
+0 0x67fee348 oris|oris r30, r31, 0xe348
+0 0x5ade2cf7 Invalid|(invalid)
+0 0xa886f1ba lha|lha r4, -0xe46(r6)
+0 0x724d4501 andi_dot|andi. r13, r18, 0x4501
+0 0xd9cd217c stfd|stfd f14, 0x217c(r13)
+0 0x513ee81b rlwimix|rlwimi. r30, r9, 29, 0, 13
+0 0x9052b30e stw|stw r2, -0x4cf2(r18)
+0 0xbbeaecc5 lmw|lmw r31, -0x133b(r10)
+0 0xd5d1daf0 stfsu|stfsu f14, -0x2510(r17)
+0 0x56980d7f rlwinmx|rlwinm. r24, r20, 1, 21, 31
+0 0x2dbee1a2 cmpi|cmpi 3, 1, r30, -0x1e5e
+0 0x1f2e88c9 mulli|mulli r25, r14, -0x7737
+0 0xd16e43a4 stfs|stfs f11, 0x43a4(r14)
+0 0x89cbc123 lbz|lbz r14, -0x3edd(r11)
+0 0x1267d176 Invalid|(invalid)
+0 0xa63edd0d lhzu|lhzu r17, -0x22f3(r30)
+0 0xe4aecf98 psq_lu|psq_lu f5, -0x68(r14), 1, 4
+0 0xd6966707 stfsu|stfsu f20, 0x6707(r22)
+0 0x5807168a Invalid|(invalid)
+0 0xb26ed91 Invalid|(invalid)
+0 0x8e7f32cc lbzu|lbzu r19, 0x32cc(r31)
+0 0x3eb2a32b addis|subis r21, r18, 0x5cd5
+0 0x57c784de rlwinmx|clrlslwi r7, r30, 35, 16
+0 0x9d99fe55 stbu|stbu r12, -0x1ab(r25)
+0 0x541e6140 rlwinmx|rlwinm r30, r0, 12, 5, 0
+0 0x6d3d598f xoris|xoris r29, r9, 0x598f
+0 0x2ed93072 Invalid|(invalid)
+0 0xfcf79359 Invalid|(invalid)
+0 0x6fd28ef4 xoris|xoris r18, r30, 0x8ef4
+0 0xb859ae33 lmw|lmw r2, -0x51cd(r25)
+0 0x64456d46 oris|oris r5, r2, 0x6d46
+0 0x6a8f709d xori|xori r15, r20, 0x709d
+0 0x2dd2fe8 Invalid|(invalid)
+0 0xf5150517 psq_stu|psq_stu f8, 0x517(r21), 0, 0
+0 0x4402cf5a Invalid|(invalid)
+0 0xb8259a21 lmw|lmw r1, -0x65df(r5)
+0 0x7eaef81c Invalid|(invalid)
+0 0xc18b023b lfs|lfs f12, 0x23b(r11)
+0 0xc3492aae lfs|lfs f26, 0x2aae(r9)
+0 0x16b653e5 Invalid|(invalid)
+0 0x395bdb90 addi|subi r10, r27, 0x2470
+0 0x2949899f Invalid|(invalid)
+0 0x2259342 Invalid|(invalid)
+0 0x497a21e9 bx|bl 0x17a21e8
+0 0x614f0e44 ori|ori r15, r10, 0xe44
+0 0xc7f4bf43 lfsu|lfsu f31, -0x40bd(r20)
+0 0xbe4e5d16 stmw|stmw r18, 0x5d16(r14)
+0 0x129c82d Invalid|(invalid)
+0 0xc43f0438 lfsu|lfsu f1, 0x438(r31)
+0 0xce2b0727 lfdu|lfdu f17, 0x727(r11)
+0 0x4b371c2a bx|ba -0xc8e3d8
+0 0x63824ab1 ori|ori r2, r28, 0x4ab1
+0 0x1d61716c mulli|mulli r11, r1, 0x716c
+0 0x8ca9054b lbzu|lbzu r5, 0x54b(r9)
+0 0xe364a47e psq_l|psq_l f27, 0x47e(r4), 1, 2
+0 0x308ed75 Invalid|(invalid)
+0 0xdedf49e0 stfdu|stfdu f22, 0x49e0(r31)
+0 0x69ad9daf xori|xori r13, r13, 0x9daf
+0 0x67010a12 oris|oris r1, r24, 0xa12
+0 0xcb0f3479 lfd|lfd f24, 0x3479(r15)
+0 0xaa88c194 lha|lha r20, -0x3e6c(r8)
+0 0x649df453 oris|oris r29, r4, 0xf453
+0 0xdbafa0e6 stfd|stfd f29, -0x5f1a(r15)
+0 0xa3f6e3bd lhz|lhz r31, -0x1c43(r22)
+0 0xedc94c88 Invalid|(invalid)
+0 0x8be96d37 lbz|lbz r31, 0x6d37(r9)
+0 0x41a0fcfa bcx|blt+a -0x308
+0 0xd3b5ff41 stfs|stfs f29, -0xbf(r21)
+0 0x54db9ebc rlwinmx|rlwinm r27, r6, 19, 26, 30
+0 0x92dac5b Invalid|(invalid)
+0 0x91e6f24e stw|stw r15, -0xdb2(r6)
+0 0x5e9acb05 rlwnmx|rlwnm. r26, r20, r25, 12, 2
+0 0x93dac30 Invalid|(invalid)
+0 0xa79a95bf lhzu|lhzu r28, -0x6a41(r26)
+0 0xfa0894e2 Invalid|(invalid)
+0 0xec4fcb09 Invalid|(invalid)
+0 0xef64a8e4 Invalid|(invalid)
+0 0xf8964d63 Invalid|(invalid)
+0 0xa8d638b6 lha|lha r6, 0x38b6(r22)
+0 0xf51fc34d psq_stu|psq_stu f8, 0x34d(r31), 1, 4
+0 0x57b108d8 rlwinmx|rlwinm r17, r29, 1, 3, 12
+0 0x7aa13747 Invalid|(invalid)
+0 0xc07d71ca lfs|lfs f3, 0x71ca(r29)
+0 0x3b79b7d1 addi|subi r27, r25, 0x482f
+0 0xd6a2800c stfsu|stfsu f21, -0x7ff4(r2)
+0 0x6679f76b oris|oris r25, r19, 0xf76b
+0 0x41dd141e bcx|bgta cr7, 0x141c
+0 0xd5b4ec95 stfsu|stfsu f13, -0x136b(r20)
+0 0x384c0280 addi|addi r2, r12, 0x280
+0 0x68171cf Invalid|(invalid)
+0 0x51933b2 Invalid|(invalid)
+0 0x4c14e599 Invalid|(invalid)
+0 0xc307c434 lfs|lfs f24, -0x3bcc(r7)
+0 0xbc5eca73 stmw|stmw r2, -0x358d(r30)
+0 0x136f2486 Invalid|(invalid)
+0 0x8f0d66dd lbzu|lbzu r24, 0x66dd(r13)
+0 0x3d6b3928 addis|addis r11, r11, 0x3928
+0 0x18e36557 Invalid|(invalid)
+0 0xf6497a9a psq_stu|psq_stu f18, -0x566(r9), 0, 7
+0 0xc9c67461 lfd|lfd f14, 0x7461(r6)
+0 0x6b7b155c xori|xori r27, r27, 0x155c
+0 0xaa2ee67b lha|lha r17, -0x1985(r14)
+0 0xcf9409ee lfdu|lfdu f28, 0x9ee(r20)
+0 0x54e05225 rlwinmx|rlwinm. r0, r7, 10, 8, 18
+0 0xf71f4cd0 psq_stu|psq_stu f24, -0x330(r31), 0, 4
+0 0x641331df oris|oris r19, r0, 0x31df
+0 0x4f4fe682 Invalid|(invalid)
+0 0x4d778429 Invalid|(invalid)
+0 0xf7d71384 psq_stu|psq_stu f30, 0x384(r23), 0, 1
+0 0xc6b86b83 lfsu|lfsu f21, 0x6b83(r24)
+0 0xda676456 stfd|stfd f19, 0x6456(r7)
+0 0x9468ce6d stwu|stwu r3, -0x3193(r8)
+0 0x8dacdd78 lbzu|lbzu r13, -0x2288(r12)
+0 0x2780f767 Invalid|(invalid)
+0 0x76c2176a andis_dot|andis. r2, r22, 0x176a
+0 0x39d534f1 addi|addi r14, r21, 0x34f1
+0 0x436a5eac bcx|bc 27, 10, 0x5eac
+0 0xc02d798b lfs|lfs f1, 0x798b(r13)
+0 0x5098d3be rlwimix|rlwimi r24, r4, 26, 14, 31
+0 0x98e5fbb5 stb|stb r7, -0x44b(r5)
+0 0x2c0c8b20 cmpi|cmpwi r12, -0x74e0
+0 0x6840d5ef xori|xori r0, r2, 0xd5ef
+0 0xed09ad52 Invalid|(invalid)
+0 0xa7d0a6b9 lhzu|lhzu r30, -0x5947(r16)
+0 0xef7796d4 Invalid|(invalid)
+0 0x1ca43093 mulli|mulli r5, r4, 0x3093
+0 0x5debf826 rlwnmx|rlwnm r11, r15, r31, 0, 19
+0 0x401af9fd bcx|bcl 0, 26, -0x604
+0 0x3a6af5c8 addi|subi r19, r10, 0xa38
+0 0xb98aed77 lmw|lmw r12, -0x1289(r10)
+0 0xae4483a Invalid|(invalid)
+0 0x631ef981 ori|ori r30, r24, 0xf981
+0 0x45b55bfc Invalid|(invalid)
+0 0x8a96b09b lbz|lbz r20, -0x4f65(r22)
+0 0xe3b8718e psq_l|psq_l f29, 0x18e(r24), 0, 7
+0 0xbecee945 stmw|stmw r22, -0x16bb(r14)
+0 0x68a8bd70 xori|xori r8, r5, 0xbd70
+0 0x953b5dff stwu|stwu r9, 0x5dff(r27)
+0 0xfe38822 twi|twi 31, r3, -0x77de
+0 0xf6b94d49 psq_stu|psq_stu f21, -0x2b7(r25), 0, 4
+0 0xeace4e24 Invalid|(invalid)
+0 0xc16319a3 lfs|lfs f11, 0x19a3(r3)
+0 0x6f69dff6 xoris|xoris r9, r27, 0xdff6
+0 0x754ce98d andis_dot|andis. r12, r10, 0xe98d
+0 0x88da8218 lbz|lbz r6, -0x7de8(r26)
+0 0x44524787 Invalid|(invalid)
+0 0x80ed0d0a lwz|lwz r7, 0xd0a(r13)
+0 0xc95cc211 lfd|lfd f10, -0x3def(r28)
+0 0x60e10d4c ori|ori r1, r7, 0xd4c
+0 0xf1cb8bab psq_st|psq_st f14, -0x455(r11), 1, 0
+0 0x80ffe35e lwz|lwz r7, -0x1ca2(r31)
+0 0xd3e41ad5 stfs|stfs f31, 0x1ad5(r4)
+0 0x39c8e3c0 addi|subi r14, r8, 0x1c40
+0 0x5773ca0f rlwinmx|rlwinm. r19, r27, 25, 8, 7
+0 0xd6ba76f2 stfsu|stfsu f21, 0x76f2(r26)
+0 0x4a0a77d9 bx|bl -0x1f58828
+0 0x5a003974 Invalid|(invalid)
+0 0xc67626b3 lfsu|lfsu f19, 0x26b3(r22)
+0 0x218e1bc6 subfic|subfic r12, r14, 0x1bc6
+0 0x4f679d1d Invalid|(invalid)
+0 0x61708268 ori|ori r16, r11, 0x8268
+0 0xaf680597 lhau|lhau r27, 0x597(r8)
+0 0x7c5965da Invalid|(invalid)
+0 0x2c878ea1 cmpi|cmpwi cr1, r7, -0x715f
+0 0xdab2729c stfd|stfd f21, 0x729c(r18)
+0 0xf46d0abb psq_stu|psq_stu f3, -0x545(r13), 0, 0
+0 0xc9bc292e lfd|lfd f13, 0x292e(r28)
+0 0x65ae9065 oris|oris r14, r13, 0x9065
+0 0x7781fe10 andis_dot|andis. r1, r28, 0xfe10
+0 0x159b1a1f Invalid|(invalid)
+0 0x1dab79c2 mulli|mulli r13, r11, 0x79c2
+0 0xb5dd2669 sthu|sthu r14, 0x2669(r29)
+0 0x2c7258c4 Invalid|(invalid)
+0 0x5b9e57c3 Invalid|(invalid)
+0 0x9845ab96 stb|stb r2, -0x546a(r5)
+0 0xb21414ad sth|sth r16, 0x14ad(r20)
+0 0x9fe1f6b8 stbu|stbu r31, -0x948(r1)
+0 0x649d27a7 oris|oris r29, r4, 0x27a7
+0 0x45e652aa Invalid|(invalid)
+0 0x18d85f31 Invalid|(invalid)
+0 0xa02e8bec lhz|lhz r1, -0x7414(r14)
+0 0xb75c2dcb sthu|sthu r26, 0x2dcb(r28)
+0 0xd87a42fe stfd|stfd f3, 0x42fe(r26)
+0 0x11f749f5 Invalid|(invalid)
+0 0x95290c60 stwu|stwu r9, 0xc60(r9)
+0 0x40a24e2f bcx|bne+la 0x4e2c
+0 0x4e139092 Invalid|(invalid)
+0 0xe28a58f9 psq_l|psq_l f20, -0x707(r10), 0, 5
+0 0x20c9ac14 subfic|subfic r6, r9, -0x53ec
+0 0xdedcacd3 stfdu|stfdu f22, -0x532d(r28)
+0 0xd8bd8f66 stfd|stfd f5, -0x709a(r29)
+0 0xd93b503d stfd|stfd f9, 0x503d(r27)
+0 0x6323df08 ori|ori r3, r25, 0xdf08
+0 0x6002adb7 ori|ori r2, r0, 0xadb7
+0 0x9b90d37a stb|stb r28, -0x2c86(r16)
+0 0x76c833c1 andis_dot|andis. r8, r22, 0x33c1
+0 0x959a593c stwu|stwu r12, 0x593c(r26)
+0 0x95b9f4db stwu|stwu r13, -0xb25(r25)
+0 0x110730ce psq_stux|psq_stux f8, r7, r6, 0, 1
+0 0x16c74785 Invalid|(invalid)
+0 0xf1530eb0 psq_st|psq_st f10, -0x150(r19), 0, 0
+0 0x63ba663f ori|ori r26, r29, 0x663f
+0 0x2e8fbb62 cmpi|cmpwi cr5, r15, -0x449e
+0 0x9cab0f89 stbu|stbu r5, 0xf89(r11)
+0 0x14eb3364 Invalid|(invalid)
+0 0xec7225e3 Invalid|(invalid)
+0 0x9962c736 stb|stb r11, -0x38ca(r2)
+0 0xe9064fcd Invalid|(invalid)
+0 0x5d6b3b58 rlwnmx|rlwnm r11, r11, r7, 13, 12
+0 0x3fe997c7 addis|subis r31, r9, 0x6839
+0 0x8095e84a lwz|lwz r4, -0x17b6(r21)
+0 0x1b100c51 Invalid|(invalid)
+0 0xe67ada8c psq_lu|psq_lu f19, -0x574(r26), 1, 5
+0 0x30e75feb addic|addic r7, r7, 0x5feb
+0 0xf06ff29e psq_st|psq_st f3, 0x29e(r15), 1, 7
+0 0xe2678915 psq_l|psq_l f19, -0x6eb(r7), 1, 0
+0 0x25d50500 Invalid|(invalid)
+0 0x3454624f addic_dot|addic. r2, r20, 0x624f
+0 0xb2fcfa32 sth|sth r23, -0x5ce(r28)
+0 0x65184a19 oris|oris r24, r8, 0x4a19
+0 0x55fbeeb4 rlwinmx|rlwinm r27, r15, 29, 26, 26
+0 0x6edfc2f3 xoris|xoris r31, r22, 0xc2f3
+0 0x11e25306 Invalid|(invalid)
+0 0x7dde135d Invalid|(invalid)
+0 0x242d0ba8 Invalid|(invalid)
+0 0x54e2e5d7 rlwinmx|rlwinm. r2, r7, 28, 23, 11
+0 0xd72911a twi|twi 11, r18, -0x6ee6
+0 0x56a8e8e1 rlwinmx|rlwinm. r8, r21, 29, 3, 16
+0 0x55950fdc rlwinmx|rlwinm r21, r12, 1, 31, 14
+0 0x80856efb lwz|lwz r4, 0x6efb(r5)
+0 0xdd01886e stfdu|stfdu f8, -0x7792(r1)
+0 0xa3610ea5 lhz|lhz r27, 0xea5(r1)
+0 0x57c3ef50 rlwinmx|rlwinm r3, r30, 29, 29, 8
+0 0xa221425f lhz|lhz r17, 0x425f(r1)
+0 0xcc784d02 lfdu|lfdu f3, 0x4d02(r24)
+0 0xeb08a9 Invalid|(invalid)
+0 0xf060de04 psq_st|psq_st f3, -0x1fc(r0), 1, 5
+0 0xaee68403 lhau|lhau r23, -0x7bfd(r6)
+0 0xcb2932d6 lfd|lfd f25, 0x32d6(r9)
+0 0x3c6b9aed addis|subis r3, r11, 0x6513
+0 0x801e4ff8 lwz|lwz r0, 0x4ff8(r30)
+0 0xb1bf97e7 sth|sth r13, -0x6819(r31)
+0 0x3fe3cdea addis|subis r31, r3, 0x3216
+0 0x86cbc971 lwzu|lwzu r22, -0x368f(r11)
+0 0x8cedf92c lbzu|lbzu r7, -0x6d4(r13)
+0 0xe275220b psq_l|psq_l f19, 0x20b(r21), 0, 2
+0 0xf648f23e psq_stu|psq_stu f18, 0x23e(r8), 1, 7
+0 0xd87cd835 stfd|stfd f3, -0x27cb(r28)
+0 0x8774cda0 lwzu|lwzu r27, -0x3260(r20)
+0 0xe712066f psq_lu|psq_lu f24, 0x66f(r18), 0, 0
+0 0x395eb3d2 addi|subi r10, r30, 0x4c2e
+0 0x97c4b39 Invalid|(invalid)
+0 0xffbf0154 Invalid|(invalid)
+0 0x63876913 ori|ori r7, r28, 0x6913
+0 0x6f6466a6 xoris|xoris r4, r27, 0x66a6
+0 0x6197e67d ori|ori r23, r12, 0xe67d
+0 0xbd340848 stmw|stmw r9, 0x848(r20)
+0 0x3b90adf7 addi|subi r28, r16, 0x5209
+0 0xcae69eba lfd|lfd f23, -0x6146(r6)
+0 0xa4f1ae01 lhzu|lhzu r7, -0x51ff(r17)
+0 0x6dca967c xoris|xoris r10, r14, 0x967c
+0 0x2ad7791b Invalid|(invalid)
+0 0xe513300e psq_lu|psq_lu f8, 0xe(r19), 0, 3
+0 0xe0c3e5c5 psq_l|psq_l f6, 0x5c5(r3), 1, 6
+0 0xe07c9ff0 psq_l|psq_l f3, -0x10(r28), 1, 1
+0 0x9757ae7f stwu|stwu r26, -0x5181(r23)
+0 0x554d2ea2 rlwinmx|rlwinm r13, r10, 5, 26, 17
+0 0x7c6511c9 Invalid|(invalid)
+0 0xfefb58a4 Invalid|(invalid)
+0 0xc2037223 lfs|lfs f16, 0x7223(r3)
+0 0x9a00ee76 stb|stb r16, -0x118a(r0)
+0 0x528bf60d rlwimix|rlwimi. r11, r20, 30, 24, 6
+0 0xfaa33498 Invalid|(invalid)
+0 0xb9a72807 lmw|lmw r13, 0x2807(r7)
+0 0xe6b8038a psq_lu|psq_lu f21, 0x38a(r24), 0, 0
+0 0xd6d39691 stfsu|stfsu f22, -0x696f(r19)
+0 0x60afe7cc ori|ori r15, r5, 0xe7cc
+0 0xb40d742b sthu|sthu r0, 0x742b(r13)
+0 0xab6d41de lha|lha r27, 0x41de(r13)
+0 0x8b7f3755 lbz|lbz r27, 0x3755(r31)
+0 0x9b06640 Invalid|(invalid)
+0 0xb1633a8f sth|sth r11, 0x3a8f(r3)
+0 0xe920bd72 Invalid|(invalid)
+0 0x4b7e5c59 bx|bl -0x81a3a8
+0 0x183ae3f4 Invalid|(invalid)
+0 0x8ddb9f33 lbzu|lbzu r14, -0x60cd(r27)
+0 0xa7abca46 lhzu|lhzu r29, -0x35ba(r11)
+0 0x2cb0c99d cmpi|cmpi 1, 1, r16, -0x3663
+0 0x7ae0d4e8 Invalid|(invalid)
+0 0xe5940617 psq_lu|psq_lu f12, 0x617(r20), 0, 0
+0 0x20d4fc5a subfic|subfic r6, r20, -0x3a6
+0 0xfe6a8321 Invalid|(invalid)
+0 0xa562ed1c lhzu|lhzu r11, -0x12e4(r2)
+0 0x6eb8133b xoris|xoris r24, r21, 0x133b
+0 0x74a427ae andis_dot|andis. r4, r5, 0x27ae
+0 0xa837cce5 lha|lha r1, -0x331b(r23)
+0 0x75252090 andis_dot|andis. r5, r9, 0x2090
+0 0xade5aa9f lhau|lhau r15, -0x5561(r5)
+0 0xfaf66042 Invalid|(invalid)
+0 0xece12ae9 Invalid|(invalid)
+0 0x74e2a344 andis_dot|andis. r2, r7, 0xa344
+0 0x28d0f043 Invalid|(invalid)
+0 0x8651fa16 lwzu|lwzu r18, -0x5ea(r17)
+0 0x55af612d rlwinmx|rlwinm. r15, r13, 12, 4, 22
+0 0xf3a1e938 psq_st|psq_st f29, -0x6c8(r1), 1, 6
+0 0x7b284827 Invalid|(invalid)
+0 0x2bfa892a Invalid|(invalid)
+0 0x49ef73b1 bx|bl 0x1ef73b0
+0 0xa2e8a66c lhz|lhz r23, -0x5994(r8)
+0 0xf1b8564b psq_st|psq_st f13, 0x64b(r24), 0, 5
+0 0x6544e17e oris|oris r4, r10, 0xe17e
+0 0x96b6a675 stwu|stwu r21, -0x598b(r22)
+0 0xb02fcee0 sth|sth r1, -0x3120(r15)
+0 0x8fcffeaf lbzu|lbzu r30, -0x151(r15)
+0 0x9e2b1712 stbu|stbu r17, 0x1712(r11)
+0 0xeae67d79 Invalid|(invalid)
+0 0x8d979694 lbzu|lbzu r12, -0x696c(r23)
+0 0xa2e46553 lhz|lhz r23, 0x6553(r4)
+0 0x85207de6 lwzu|lwzu r9, 0x7de6(r0)
+0 0xb70bcbd Invalid|(invalid)
+0 0xdddb7188 stfdu|stfdu f14, 0x7188(r27)
+0 0x4874ee37 bx|bla 0x74ee34
+0 0xb025a9fa sth|sth r1, -0x5606(r5)
+0 0xc3db6841 lfs|lfs f30, 0x6841(r27)
+0 0x378613bc addic_dot|addic. r28, r6, 0x13bc
+0 0x8a2f3d5b lbz|lbz r17, 0x3d5b(r15)
+0 0x6b1c6f4e xori|xori r28, r24, 0x6f4e
+0 0xd704c405 stfsu|stfsu f24, -0x3bfb(r4)
+0 0xb3657130 sth|sth r27, 0x7130(r5)
+0 0xf45336bf psq_stu|psq_stu f2, 0x6bf(r19), 0, 3
+0 0xc35be1e2 lfs|lfs f26, -0x1e1e(r27)
+0 0x74275409 andis_dot|andis. r7, r1, 0x5409
+0 0x7a3ebde4 Invalid|(invalid)
+0 0xca56fe63 lfd|lfd f18, -0x19d(r22)
+0 0x248455b6 Invalid|(invalid)
+0 0xf41ddc4d psq_stu|psq_stu f0, -0x3b3(r29), 1, 5
+0 0xc5c26dd8 lfsu|lfsu f14, 0x6dd8(r2)
+0 0x3dcaf847 addis|subis r14, r10, 0x7b9
+0 0x1a935eca Invalid|(invalid)
+0 0xe2e760d1 psq_l|psq_l f23, 0xd1(r7), 0, 6
+0 0x8c0350c Invalid|(invalid)
+0 0x4b7dc86b bx|bla -0x823798
+0 0xd37d11e twi|twi 9, r23, -0x2ee2
+0 0x996b2595 stb|stb r11, 0x2595(r11)
+0 0x329b0780 addic|addic r20, r27, 0x780
+0 0x22e052cf subfic|subfic r23, r0, 0x52cf
+0 0x865c0b2 Invalid|(invalid)
+0 0xeb7cae99 Invalid|(invalid)
+0 0x41fd1934 bcx|bgt+ cr7, 0x1934
+0 0x3ba9bb73 addi|subi r29, r9, 0x448d
+0 0xe62a8186 psq_lu|psq_lu f17, 0x186(r10), 1, 0
+0 0xae1fbfdd lhau|lhau r16, -0x4023(r31)
+0 0x9acbde28 stb|stb r22, -0x21d8(r11)
+0 0x7dbb6657 Invalid|(invalid)
+0 0x6dc0a79a xoris|xoris r0, r14, 0xa79a
+0 0x1a0c5d61 Invalid|(invalid)
+0 0xd35c0a5c stfs|stfs f26, 0xa5c(r28)
+0 0x1f44f77b mulli|mulli r26, r4, -0x885
+0 0x3be406ee addi|addi r31, r4, 0x6ee
+0 0x4e72cb25 Invalid|(invalid)
+0 0xece591d0 Invalid|(invalid)
+0 0x1d2852df mulli|mulli r9, r8, 0x52df
+0 0x8865b382 lbz|lbz r3, -0x4c7e(r5)
+0 0x77ff8d29 andis_dot|andis. r31, r31, 0x8d29
+0 0x2b37a884 cmpli|cmpli 6, 1, r23, 0xa884
+0 0x719d9c83 andi_dot|andi. r29, r12, 0x9c83
+0 0x1d000156 mulli|mulli r8, r0, 0x156
+0 0x601f676d ori|ori r31, r0, 0x676d
+0 0xffacc278 fmsubx|fmsub f29, f12, f9, f24
+0 0x6d173867 xoris|xoris r23, r8, 0x3867
+0 0x116a846a Invalid|(invalid)
+0 0x68835df1 xori|xori r3, r4, 0x5df1
+0 0xbb5e93ac lmw|lmw r26, -0x6c54(r30)
+0 0xd565ca8b stfsu|stfsu f11, -0x3575(r5)
+0 0x20ae10be subfic|subfic r5, r14, 0x10be
+0 0x36e4b4b5 addic_dot|subic. r23, r4, 0x4b4b
+0 0xfc9a1020 Invalid|(invalid)
+0 0xaf1c36ef lhau|lhau r24, 0x36ef(r28)
+0 0xabb8ba52 lha|lha r29, -0x45ae(r24)
+0 0x9508efb9 stwu|stwu r8, -0x1047(r8)
+0 0xb936bd4 Invalid|(invalid)
+0 0xd533a193 stfsu|stfsu f9, -0x5e6d(r19)
+0 0xbd31d526 stmw|stmw r9, -0x2ada(r17)
+0 0x4905d2fd bx|bl 0x105d2fc
+0 0x9a5a1ac8 stb|stb r18, 0x1ac8(r26)
+0 0xc2ef6e77 lfs|lfs f23, 0x6e77(r15)
+0 0xa28df53a lhz|lhz r20, -0xac6(r13)
+0 0xe9c56281 Invalid|(invalid)
+0 0x9c0cd0fc stbu|stbu r0, -0x2f04(r12)
+0 0x3401419b addic_dot|addic. r0, r1, 0x419b
+0 0xee62ee8e Invalid|(invalid)
+0 0xf3c9e245 psq_st|psq_st f30, 0x245(r9), 1, 6
+0 0x274d8270 Invalid|(invalid)
+0 0x7eecfeff Invalid|(invalid)
+0 0xf7fbd522 psq_stu|psq_stu f31, 0x522(r27), 1, 5
+0 0xa231d649 lhz|lhz r17, -0x29b7(r17)
+0 0x97f56324 stwu|stwu r31, 0x6324(r21)
+0 0xcdaccaa3 lfdu|lfdu f13, -0x355d(r12)
+0 0x2c2cfcf6 cmpi|cmpi 0, 1, r12, -0x30a
+0 0x4ffc028d Invalid|(invalid)
+0 0x6408e718 oris|oris r8, r0, 0xe718
+0 0x98950887 stb|stb r4, 0x887(r21)
+0 0xc367fa0a lfs|lfs f27, -0x5f6(r7)
+0 0x658b6b11 oris|oris r11, r12, 0x6b11
+0 0x57ebc24c rlwinmx|rlwinm r11, r31, 24, 9, 6
+0 0x7785cab Invalid|(invalid)
+0 0xb10fa05e sth|sth r8, -0x5fa2(r15)
+0 0x166b53d5 Invalid|(invalid)
+0 0x2dd4e8c0 Invalid|(invalid)
+0 0x1d0bab0f mulli|mulli r8, r11, -0x54f1
+0 0xe00c03f2 psq_l|psq_l f0, 0x3f2(r12), 0, 0
+0 0x735340d9 andi_dot|andi. r19, r26, 0x40d9
+0 0xb4828e74 sthu|sthu r4, -0x718c(r2)
+0 0xd08a17b3 stfs|stfs f4, 0x17b3(r10)
+0 0x109e78c6 Invalid|(invalid)
+0 0x946af61d stwu|stwu r3, -0x9e3(r10)
+0 0xf92e2768 Invalid|(invalid)
+0 0x79990697 Invalid|(invalid)
+0 0xeb7592da Invalid|(invalid)
+0 0xdfce77a1 stfdu|stfdu f30, 0x77a1(r14)
+0 0x28c0679c Invalid|(invalid)
+0 0x326c1bbb addic|addic r19, r12, 0x1bbb
+0 0x1e01262e mulli|mulli r16, r1, 0x262e
+0 0xb0520965 sth|sth r2, 0x965(r18)
+0 0x1c454310 mulli|mulli r2, r5, 0x4310
+0 0x14293b1f Invalid|(invalid)
+0 0x940646c2 stwu|stwu r0, 0x46c2(r6)
+0 0xe0862f69 psq_l|psq_l f4, -0x97(r6), 0, 2
+0 0xc49fedc4 lfsu|lfsu f4, -0x123c(r31)
+0 0x718c88c3 andi_dot|andi. r12, r12, 0x88c3
+0 0x22734896 subfic|subfic r19, r19, 0x4896
+0 0xfdfbadad Invalid|(invalid)
+0 0xe97edbb8 Invalid|(invalid)
+0 0x73cc68a7 andi_dot|andi. r12, r30, 0x68a7
+0 0x3773bfaa addic_dot|subic. r27, r19, 0x4056
+0 0x28c78831 Invalid|(invalid)
+0 0xef8fc0ec Invalid|(invalid)
+0 0xbdbd7ecb stmw|stmw r13, 0x7ecb(r29)
+0 0x63c47ffe ori|ori r4, r30, 0x7ffe
+0 0xe34702f5 psq_l|psq_l f26, 0x2f5(r7), 0, 0
+0 0x99f39160 stb|stb r15, -0x6ea0(r19)
+0 0xf936af2f Invalid|(invalid)
+0 0xd1479d92 stfs|stfs f10, -0x626e(r7)
+0 0x5623a1f9 rlwinmx|rlwinm. r3, r17, 20, 7, 28
+0 0xfaf28114 Invalid|(invalid)
+0 0x72b51dd3 andi_dot|andi. r21, r21, 0x1dd3
+0 0xfad86c66 Invalid|(invalid)
+0 0xcc97293d lfdu|lfdu f4, 0x293d(r23)
+0 0x7f00408 Invalid|(invalid)
+0 0x27402eb7 Invalid|(invalid)
+0 0x395f807a addi|subi r10, r31, 0x7f86
+0 0x6cef9cc1 xoris|xoris r15, r7, 0x9cc1
+0 0x849ece3c lwzu|lwzu r4, -0x31c4(r30)
+0 0xe88d85db Invalid|(invalid)
+0 0xfa26adce Invalid|(invalid)
+0 0x71534085 andi_dot|andi. r19, r10, 0x4085
+0 0x3974d3b0 addi|subi r11, r20, 0x2c50
+0 0x7b65073f Invalid|(invalid)
+0 0xb26d0862 sth|sth r19, 0x862(r13)
+0 0x64c49889 oris|oris r4, r6, 0x9889
+0 0xa95f4864 lha|lha r10, 0x4864(r31)
+0 0xd444d6e3 stfsu|stfsu f2, -0x291d(r4)
+0 0xe43ae436 psq_lu|psq_lu f1, 0x436(r26), 1, 6
+0 0x286668cd Invalid|(invalid)
+0 0xbab6a058 lmw|lmw r21, -0x5fa8(r22)
+0 0xd64558c7 stfsu|stfsu f18, 0x58c7(r5)
+0 0xc875d54a lfd|lfd f3, -0x2ab6(r21)
+0 0xc4ffb551 lfsu|lfsu f7, -0x4aaf(r31)
+0 0x7728f8c Invalid|(invalid)
+0 0x383d30eb addi|addi r1, r29, 0x30eb
+0 0x7234af9e andi_dot|andi. r20, r17, 0xaf9e
+0 0x4cbfc215 Invalid|(invalid)
+0 0xc89e0a00 lfd|lfd f4, 0xa00(r30)
+0 0x7425434f andis_dot|andis. r5, r1, 0x434f
+0 0x7f538732 Invalid|(invalid)
+0 0x51421319 rlwimix|rlwimi. r2, r10, 2, 12, 12
+0 0x910b43b4 stw|stw r8, 0x43b4(r11)
+0 0xe4bcb3f3 psq_lu|psq_lu f5, 0x3f3(r28), 1, 3
+0 0xaa47b006 lha|lha r18, -0x4ffa(r7)
+0 0xb1d26c5d sth|sth r14, 0x6c5d(r18)
+0 0x4b47b0a8 bx|b -0xb84f58
+0 0x756ce6d7 andis_dot|andis. r12, r11, 0xe6d7
+0 0xd133be1a stfs|stfs f9, -0x41e6(r19)
+0 0xc5f0d1e1 lfsu|lfsu f15, -0x2e1f(r16)
+0 0x2ed004dc Invalid|(invalid)
+0 0x886d7ffb lbz|lbz r3, 0x7ffb(r13)
+0 0x463b856e Invalid|(invalid)
+0 0x281587a5 cmpli|cmplwi r21, 0x87a5
+0 0xa0843450 lhz|lhz r4, 0x3450(r4)
+0 0xf728635f psq_stu|psq_stu f25, 0x35f(r8), 0, 6
+0 0x7d181a02 Invalid|(invalid)
+0 0xa4b511a9 lhzu|lhzu r5, 0x11a9(r21)
+0 0x325b7304 addic|addic r18, r27, 0x7304
+0 0x50ddb503 rlwimix|rlwimi. r29, r6, 22, 20, 1
+0 0x69ebcfd6 xori|xori r11, r15, 0xcfd6
+0 0x118433ed Invalid|(invalid)
+0 0x365834f8 addic_dot|addic. r18, r24, 0x34f8
+0 0xbb87d8e7 lmw|lmw r28, -0x2719(r7)
+0 0x25563aea Invalid|(invalid)
+0 0x10fbf271 Invalid|(invalid)
+0 0x98bc2e2c stb|stb r5, 0x2e2c(r28)
+0 0x1aff730b Invalid|(invalid)
+0 0xa9c82f3e lha|lha r14, 0x2f3e(r8)
+0 0x61d9135 Invalid|(invalid)
+0 0xf57c52a0 psq_stu|psq_stu f11, 0x2a0(r28), 0, 5
+0 0x625f676f ori|ori r31, r18, 0x676f
+0 0xbe17c0d2 stmw|stmw r16, -0x3f2e(r23)
+0 0xbc769439 stmw|stmw r3, -0x6bc7(r22)
+0 0x1cf4d654 mulli|mulli r7, r20, -0x29ac
+0 0x33a8da13 addic|subic r29, r8, 0x25ed
+0 0x615443a6 ori|ori r20, r10, 0x43a6
+0 0x8864bf7d lbz|lbz r3, -0x4083(r4)
+0 0x7bdd2d48 Invalid|(invalid)
+0 0x31a72ef7 addic|addic r13, r7, 0x2ef7
+0 0x4bda4bba bx|ba -0x25b448
+0 0xe39a1701 psq_l|psq_l f28, 0x701(r26), 0, 1
+0 0x1a7c0b7c Invalid|(invalid)
+0 0xa8140a1b lha|lha r0, 0xa1b(r20)
+0 0x59a7ad0e Invalid|(invalid)
+0 0xc9e0dec5 lfd|lfd f15, -0x213b(r0)
+0 0x271b64f0 Invalid|(invalid)
+0 0x6dfb4f7f xoris|xoris r27, r15, 0x4f7f
+0 0xf1ef7ba2 psq_st|psq_st f15, -0x45e(r15), 0, 7
+0 0x5a1f9ac9 Invalid|(invalid)
+0 0x3fbc6da4 addis|addis r29, r28, 0x6da4
+0 0x265f2323 Invalid|(invalid)
+0 0xbfee0b76 stmw|stmw r31, 0xb76(r14)
+0 0x7f9d0f0d Invalid|(invalid)
+0 0xef0b9998 Invalid|(invalid)
+0 0x431be907 bcx|bcla 24, 27, -0x16fc
+0 0x50fcf08a rlwimix|inslwi r28, r7, 4, 2
+0 0xa7843f91 lhzu|lhzu r28, 0x3f91(r4)
+0 0x10949ccc psq_lux|psq_lux f4, r20, r19, 1, 1
+0 0x6e0c452b xoris|xoris r12, r16, 0x452b
+0 0x6be6fede xori|xori r6, r31, 0xfede
+0 0xc6a87055 lfsu|lfsu f21, 0x7055(r8)
+0 0x10366b40 Invalid|(invalid)
+0 0x3c6d1b8f addis|addis r3, r13, 0x1b8f
+0 0x357c4a72 addic_dot|addic. r11, r28, 0x4a72
+0 0x33892559 addic|addic r28, r9, 0x2559
+0 0x38d738f4 addi|addi r6, r23, 0x38f4
+0 0x50819033 rlwimix|rlwimi. r1, r4, 18, 0, 25
+0 0x76662746 andis_dot|andis. r6, r19, 0x2746
+0 0x1896229d Invalid|(invalid)
+0 0x865879e8 lwzu|lwzu r18, 0x79e8(r24)
+0 0x4d770717 Invalid|(invalid)
+0 0x963b295a stwu|stwu r17, 0x295a(r27)
+0 0x82b36c21 lwz|lwz r21, 0x6c21(r19)
+0 0xaecae21c lhau|lhau r22, -0x1de4(r10)
+0 0x4189243b bcx|bgtla cr2, 0x2438
+0 0x1fd324ae mulli|mulli r30, r19, 0x24ae
+0 0x4ffd45e5 Invalid|(invalid)
+0 0x56e26590 rlwinmx|rlwinm r2, r23, 12, 22, 8
+0 0x6a65cb9f xori|xori r5, r19, 0xcb9f
+0 0xe2db2d42 psq_l|psq_l f22, -0x2be(r27), 0, 2
+0 0x82cc33e9 lwz|lwz r22, 0x33e9(r12)
+0 0xa5aa3844 lhzu|lhzu r13, 0x3844(r10)
+0 0x77d12143 andis_dot|andis. r17, r30, 0x2143
+0 0x6a99716 Invalid|(invalid)
+0 0xbcf8fa2d stmw|stmw r7, -0x5d3(r24)
+0 0xab78ce38 lha|lha r27, -0x31c8(r24)
+0 0xb0898927 sth|sth r4, -0x76d9(r9)
+0 0xa251f62a lhz|lhz r18, -0x9d6(r17)
+0 0xe7609cb1 psq_lu|psq_lu f27, -0x34f(r0), 1, 1
+0 0x5023db6c rlwimix|rlwimi r3, r1, 27, 13, 22
+0 0x9d6ba74b stbu|stbu r11, -0x58b5(r11)
+0 0xadf91e7e lhau|lhau r15, 0x1e7e(r25)
+0 0x49a85f75 bx|bl 0x1a85f74
+0 0xbc7453e0 stmw|stmw r3, 0x53e0(r20)
+0 0x1ed65faf mulli|mulli r22, r22, 0x5faf
+0 0x61692412 ori|ori r9, r11, 0x2412
+0 0x9641c679 stwu|stwu r18, -0x3987(r1)
+0 0x72da6b94 andi_dot|andi. r26, r22, 0x6b94
+0 0x104ed653 Invalid|(invalid)
+0 0x53e55ae6 rlwimix|rlwimi r5, r31, 11, 11, 19
+0 0xaeae95bd lhau|lhau r21, -0x6a43(r14)
+0 0x8b619688 lbz|lbz r27, -0x6978(r1)
+0 0xde646f37 stfdu|stfdu f19, 0x6f37(r4)
+0 0xf13e56fa psq_st|psq_st f9, 0x6fa(r30), 0, 5
+0 0x2404d141 Invalid|(invalid)
+0 0xc6e488bc lfsu|lfsu f23, -0x7744(r4)
+0 0xb2d4ce5b sth|sth r22, -0x31a5(r20)
+0 0x1825ec4e Invalid|(invalid)
+0 0xb7b2bd05 sthu|sthu r29, -0x42fb(r18)
+0 0x6d813630 xoris|xoris r1, r12, 0x3630
+0 0x1aefd7bf Invalid|(invalid)
+0 0xf5c32ee2 psq_stu|psq_stu f14, -0x11e(r3), 0, 2
+0 0x6082dd09 ori|ori r2, r4, 0xdd09
+0 0x2c4cd2e4 Invalid|(invalid)
+0 0x4c3baf63 Invalid|(invalid)
+0 0x728672b6 andi_dot|andi. r6, r20, 0x72b6
+0 0x97dff54d stwu|stwu r30, -0xab3(r31)
+0 0x6647d2d8 oris|oris r7, r18, 0xd2d8
+0 0x6b58b947 xori|xori r24, r26, 0xb947
+0 0xc43d4bca lfsu|lfsu f1, 0x4bca(r29)
+0 0xf35909d1 psq_st|psq_st f26, -0x62f(r25), 0, 0
+0 0xac91ea0c lhau|lhau r4, -0x15f4(r17)
+0 0x7925996b Invalid|(invalid)
+0 0xf9668e1e Invalid|(invalid)
+0 0x4e655e95 Invalid|(invalid)
+0 0x51de0c80 rlwimix|rlwimi r30, r14, 1, 18, 0
+0 0xca2333cf lfd|lfd f17, 0x33cf(r3)
+0 0x91c64db2 stw|stw r14, 0x4db2(r6)
+0 0x8687799 Invalid|(invalid)
+0 0x4d266e34 Invalid|(invalid)
+0 0x2c18ac73 cmpi|cmpwi r24, -0x538d
+0 0x7839de86 Invalid|(invalid)
+0 0x1af618dd Invalid|(invalid)
+0 0xdfa08328 stfdu|stfdu f29, -0x7cd8(r0)
+0 0x1df76757 mulli|mulli r15, r23, 0x6757
+0 0xf1cbd49a psq_st|psq_st f14, 0x49a(r11), 1, 5
+0 0xc564661 twi|twi 2, r22, 0x4661
+0 0xb1f0ff5c sth|sth r15, -0xa4(r16)
+0 0xbdff087b stmw|stmw r15, 0x87b(r31)
+0 0x560803ee rlwinmx|rlwinm r8, r16, 0, 15, 23
+0 0x2494425 Invalid|(invalid)
+0 0x5c9fd6d0 rlwnmx|rlwnm r31, r4, r26, 27, 8
+0 0x522173df rlwimix|rlwimi. r1, r17, 14, 15, 15
+0 0xa48f8082 lhzu|lhzu r4, -0x7f7e(r15)
+0 0x790b9629 Invalid|(invalid)
+0 0x8fcc3d84 lbzu|lbzu r30, 0x3d84(r12)
+0 0x8ea6cd83 lbzu|lbzu r21, -0x327d(r6)
+0 0x4bec9e56 bx|ba -0x1361ac
+0 0x629a006d ori|ori r26, r20, 0x6d
+0 0x4e20a778 Invalid|(invalid)
+0 0xff117967 Invalid|(invalid)
+0 0xb5a6f16a sthu|sthu r13, -0xe96(r6)
+0 0xb23586f1 sth|sth r17, -0x790f(r21)
+0 0xef06c8ac Invalid|(invalid)
+0 0x35421b8b addic_dot|addic. r10, r2, 0x1b8b
+0 0x6b974dbe xori|xori r23, r28, 0x4dbe
+0 0x98276db5 stb|stb r1, 0x6db5(r7)
+0 0xdc1b9520 stfdu|stfdu f0, -0x6ae0(r27)
+0 0xa2db97ef lhz|lhz r22, -0x6811(r27)
+0 0xea7bc752 Invalid|(invalid)
+0 0xf1c538b9 psq_st|psq_st f14, -0x747(r5), 0, 3
+0 0x3de340d4 addis|addis r15, r3, 0x40d4
+0 0x40e71293 bcx|bns+la cr1, 0x1290
+0 0x75cbb226 andis_dot|andis. r11, r14, 0xb226
+0 0xb1b4abfd sth|sth r13, -0x5403(r20)
+0 0xbbd3fc8 Invalid|(invalid)
+0 0x69b7ef77 xori|xori r23, r13, 0xef77
+0 0x80cba23a lwz|lwz r6, -0x5dc6(r11)
+0 0x446fcb81 Invalid|(invalid)
+0 0x331845fc addic|addic r24, r24, 0x45fc
+0 0x890fd29b lbz|lbz r8, -0x2d65(r15)
+0 0x80e16b8e lwz|lwz r7, 0x6b8e(r1)
+0 0x3508db45 addic_dot|subic. r8, r8, 0x24bb
+0 0xc9e64770 lfd|lfd f15, 0x4770(r6)
+0 0x86829fff lwzu|lwzu r20, -0x6001(r2)
+0 0x3d282222 addis|addis r9, r8, 0x2222
+0 0x962e5f49 stwu|stwu r17, 0x5f49(r14)
+0 0x80507824 lwz|lwz r2, 0x7824(r16)
+0 0xe1a7ba3 twi|twi 16, r26, 0x7ba3
+0 0xef4419f6 Invalid|(invalid)
+0 0xf36f1b8d psq_st|psq_st f27, -0x473(r15), 0, 1
+0 0xc5ab4c18 lfsu|lfsu f13, 0x4c18(r11)
+0 0x1b3bc987 Invalid|(invalid)
+0 0xc976e70a lfd|lfd f11, -0x18f6(r22)
+0 0xcebe1411 lfdu|lfdu f21, 0x1411(r30)
+0 0x54aa774c rlwinmx|rlwinm r10, r5, 14, 29, 6
+0 0x69c92dab xori|xori r9, r14, 0x2dab
+0 0xb5f35d5e sthu|sthu r15, 0x5d5e(r19)
+0 0xee368cd5 Invalid|(invalid)
+0 0x1ad4edc0 Invalid|(invalid)
+0 0xb1878c0f sth|sth r12, -0x73f1(r7)
+0 0x637190f2 ori|ori r17, r27, 0x90f2
+0 0xfe2009d9 Invalid|(invalid)
+0 0xaf38e374 lhau|lhau r25, -0x1c8c(r24)
+0 0xcfc208b3 lfdu|lfdu f30, 0x8b3(r2)
+0 0xf302d5c6 psq_st|psq_st f24, 0x5c6(r2), 1, 5
+0 0x4b324f1d bx|bl -0xcdb0e4
+0 0xcc5fcc68 lfdu|lfdu f2, -0x3398(r31)
+0 0x432e0797 bcx|bcla 25, 14, 0x794
+0 0xdb25bfda stfd|stfd f25, -0x4026(r5)
+0 0x991960a1 stb|stb r8, 0x60a1(r25)
+0 0x81825c9c lwz|lwz r12, 0x5c9c(r2)
+0 0x9e0f2cbb stbu|stbu r16, 0x2cbb(r15)
+0 0xd41a232e stfsu|stfsu f0, 0x232e(r26)
+0 0x59398265 Invalid|(invalid)
+0 0xefc8810 twi|twi 23, r28, -0x77f0
+0 0xd29b5c1f stfs|stfs f20, 0x5c1f(r27)
+0 0xe17513c2 psq_l|psq_l f11, 0x3c2(r21), 0, 1
+0 0xc5b33869 lfsu|lfsu f13, 0x3869(r19)
+0 0xa20182c4 lhz|lhz r16, -0x7d3c(r1)
+0 0x7d9eb9c3 Invalid|(invalid)
+0 0xccf4e596 lfdu|lfdu f7, -0x1a6a(r20)
+0 0xa4a746ad lhzu|lhzu r5, 0x46ad(r7)
+0 0x638fc0b8 ori|ori r15, r28, 0xc0b8
+0 0x935fa9a7 stw|stw r26, -0x5659(r31)
+0 0xa6952caa lhzu|lhzu r20, 0x2caa(r21)
+0 0xb7bab131 sthu|sthu r29, -0x4ecf(r26)
+0 0x8ea4f5ec lbzu|lbzu r21, -0xa14(r4)
+0 0x12c2cfcb Invalid|(invalid)
+0 0x1de2bcfe mulli|mulli r15, r2, -0x4302
+0 0x1bdabbf5 Invalid|(invalid)
+0 0x81b21660 lwz|lwz r13, 0x1660(r18)
+0 0xa2af102f lhz|lhz r21, 0x102f(r15)
+0 0xc88faa92 lfd|lfd f4, -0x556e(r15)
+0 0x1d40eaf9 mulli|mulli r10, r0, -0x1507
+0 0xff4f5614 Invalid|(invalid)
+0 0x3db18ed3 addis|subis r13, r17, 0x712d
+0 0xaa474966 lha|lha r18, 0x4966(r7)
+0 0x43b7023d bcx|bcl 29, 23, 0x23c
+0 0x12302908 Invalid|(invalid)
+0 0x4fe1afb7 Invalid|(invalid)
+0 0x91c22d7a stw|stw r14, 0x2d7a(r2)
+0 0x9b1b05c1 stb|stb r24, 0x5c1(r27)
+0 0x4857433c bx|b 0x57433c
+0 0xeb0516db Invalid|(invalid)
+0 0x1f1a2ace mulli|mulli r24, r26, 0x2ace
+0 0x7c233985 Invalid|(invalid)
+0 0x398a98b0 addi|subi r12, r10, 0x6750
+0 0xf4f3a83f psq_stu|psq_stu f7, -0x7c1(r19), 1, 2
+0 0x875e5562 lwzu|lwzu r26, 0x5562(r30)
+0 0x59622189 Invalid|(invalid)
+0 0x8d075d64 lbzu|lbzu r8, 0x5d64(r7)
+0 0x743b87e3 andis_dot|andis. r27, r1, 0x87e3
+0 0x69670136 xori|xori r7, r11, 0x136
+0 0x548a81cd rlwinmx|rlwinm. r10, r4, 16, 7, 6
+0 0xf2760558 psq_st|psq_st f19, 0x558(r22), 0, 0
+0 0x5f0519c7 rlwnmx|rlwnm. r5, r24, r3, 7, 3
+0 0x47e9c24a Invalid|(invalid)
+0 0x9ff35e51 stbu|stbu r31, 0x5e51(r19)
+0 0xc21e448c lfs|lfs f16, 0x448c(r30)
+0 0x903701eb stw|stw r1, 0x1eb(r23)
+0 0x7ccd6c9e Invalid|(invalid)
+0 0xf05bfb15 psq_st|psq_st f2, -0x4eb(r27), 1, 7
+0 0x385b0f00 addi|addi r2, r27, 0xf00
+0 0xc6da244f lfsu|lfsu f22, 0x244f(r26)
+0 0xb9be1432 lmw|lmw r13, 0x1432(r30)
+0 0x82efdc19 lwz|lwz r23, -0x23e7(r15)
+0 0x804e98b4 lwz|lwz r2, -0x674c(r14)
+0 0xd3bda4f3 stfs|stfs f29, -0x5b0d(r29)
+0 0x6a010d06 xori|xori r1, r16, 0xd06
+0 0x7b8ac55d Invalid|(invalid)
+0 0x1d655a8 Invalid|(invalid)
+0 0x595ae7d7 Invalid|(invalid)
+0 0x8988eb1a lbz|lbz r12, -0x14e6(r8)
+0 0x9f3cbae1 stbu|stbu r25, -0x451f(r28)
+0 0xa6bef9dc lhzu|lhzu r21, -0x624(r30)
+0 0xc1f990fb lfs|lfs f15, -0x6f05(r25)
+0 0xc549826e lfsu|lfsu f10, -0x7d92(r9)
+0 0xaf0e00a5 lhau|lhau r24, 0xa5(r14)
+0 0xb387950 Invalid|(invalid)
+0 0x5013845f rlwimix|rlwimi. r19, r0, 16, 17, 15
+0 0xf8cbe702 Invalid|(invalid)
+0 0xe7031aa9 psq_lu|psq_lu f24, -0x557(r3), 0, 1
+0 0xcd8a0804 lfdu|lfdu f12, 0x804(r10)
+0 0x6cf8e603 xoris|xoris r24, r7, 0xe603
+0 0x5d026cd6 rlwnmx|rlwnm r2, r8, r13, 19, 11
+0 0x6560cced oris|oris r0, r11, 0xcced
+0 0x710619f8 andi_dot|andi. r6, r8, 0x19f8
+0 0x99b419e7 stb|stb r13, 0x19e7(r20)
+0 0xfc5ca7ea Invalid|(invalid)
+0 0x7e301b71 Invalid|(invalid)
+0 0x883e632c lbz|lbz r1, 0x632c(r30)
+0 0xa62dc40b lhzu|lhzu r17, -0x3bf5(r13)
+0 0x401b6c3e bcx|bca 0, 27, 0x6c3c
+0 0x3f024a35 addis|addis r24, r2, 0x4a35
+0 0x1a77d7a0 Invalid|(invalid)
+0 0x1290c86f ps_sel|ps_sel. f20, f16, f1, f25
+0 0xaae4cdd2 lha|lha r23, -0x322e(r4)
+0 0xa6f4dd39 lhzu|lhzu r23, -0x22c7(r20)
+0 0x785eab54 Invalid|(invalid)
+0 0xbeee4b13 stmw|stmw r23, 0x4b13(r14)
+0 0x149820a6 Invalid|(invalid)
+0 0x56f5987d rlwinmx|rlwinm. r21, r23, 19, 1, 30
+0 0xf3fa5248 psq_st|psq_st f31, 0x248(r26), 0, 5
+0 0x4d21aff7 Invalid|(invalid)
+0 0xfb61f8ba Invalid|(invalid)
+0 0xbe468001 stmw|stmw r18, -0x7fff(r6)
+0 0x2fe1807c Invalid|(invalid)
+0 0xd8f49b1b stfd|stfd f7, -0x64e5(r20)
+0 0xbe102a0e stmw|stmw r16, 0x2a0e(r16)
+0 0x741d7c5 Invalid|(invalid)
+0 0xf9ae29f0 Invalid|(invalid)
+0 0xea82f07f Invalid|(invalid)
+0 0xd3a5c8a2 stfs|stfs f29, -0x375e(r5)
+0 0x485e23c9 bx|bl 0x5e23c8
+0 0xe3b182a4 psq_l|psq_l f29, 0x2a4(r17), 1, 0
+0 0xc6ded423 lfsu|lfsu f22, -0x2bdd(r30)
+0 0x542f2876 rlwinmx|rlwinm r15, r1, 5, 1, 27
+0 0xbd72280d stmw|stmw r11, 0x280d(r18)
+0 0x11e7fe98 Invalid|(invalid)
+0 0x82f4aa07 lwz|lwz r23, -0x55f9(r20)
+0 0x66d5dd8a oris|oris r21, r22, 0xdd8a
+0 0xd38e891 twi|twi 9, r24, -0x176f
+0 0xee2d51cc Invalid|(invalid)
+0 0x7caf162b Invalid|(invalid)
+0 0x6934bbde xori|xori r20, r9, 0xbbde
+0 0xdf15a955 stfdu|stfdu f24, -0x56ab(r21)
+0 0xb7b07040 sthu|sthu r29, 0x7040(r16)
+0 0x1e5afc8f mulli|mulli r18, r26, -0x371
+0 0xe3ebd772 psq_l|psq_l f31, 0x772(r11), 1, 5
+0 0x4517ee59 Invalid|(invalid)
+0 0x21a78df4 subfic|subfic r13, r7, -0x720c
+0 0x104b8133 Invalid|(invalid)
+0 0xa0748446 lhz|lhz r3, -0x7bba(r20)
+0 0xbe3f7b9d stmw|stmw r17, 0x7b9d(r31)
+0 0x75441ee8 andis_dot|andis. r4, r10, 0x1ee8
+0 0x3cbe0817 addis|addis r5, r30, 0x817
+0 0x7435565a andis_dot|andis. r21, r1, 0x565a
+0 0xd5005521 stfsu|stfsu f8, 0x5521(r0)
+0 0xeae6d71c Invalid|(invalid)
+0 0x49fe353b bx|bla 0x1fe3538
+0 0x94d621ae stwu|stwu r6, 0x21ae(r22)
+0 0x9e06bee5 stbu|stbu r16, -0x411b(r6)
+0 0x2e93aa90 cmpi|cmpwi cr5, r19, -0x5570
+0 0x6ec9ec9f xoris|xoris r9, r22, 0xec9f
+0 0x89d3fa42 lbz|lbz r14, -0x5be(r19)
+0 0x9b3b3ce9 stb|stb r25, 0x3ce9(r27)
+0 0x43a5cd44 bcx|bc 29, 5, -0x32bc
+0 0xc4f55243 lfsu|lfsu f7, 0x5243(r21)
+0 0xf553416 twi|twi 26, r21, 0x3416
+0 0xc706932d lfsu|lfsu f24, -0x6cd3(r6)
+0 0x3bc3b338 addi|subi r30, r3, 0x4cc8
+0 0x7e4eca27 Invalid|(invalid)
+0 0x7e3d632a Invalid|(invalid)
+0 0xcbd5c5b1 lfd|lfd f30, -0x3a4f(r21)
+0 0x7513106c andis_dot|andis. r19, r8, 0x106c
+0 0x9fc2f84b stbu|stbu r30, -0x7b5(r2)
+0 0x8d815b7e lbzu|lbzu r12, 0x5b7e(r1)
+0 0xabde1875 lha|lha r30, 0x1875(r30)
+0 0x53acd8e0 rlwimix|rlwimi r12, r29, 27, 3, 16
+0 0x26c0c0af Invalid|(invalid)
+0 0x80bb3112 lwz|lwz r5, 0x3112(r27)
+0 0x5d210f79 rlwnmx|rlwnm. r1, r9, r1, 29, 28
+0 0xaa514094 lha|lha r18, 0x4094(r17)
+0 0xbcdd4753 stmw|stmw r6, 0x4753(r29)
+0 0x17fe37e6 Invalid|(invalid)
+0 0x1db06ebd mulli|mulli r13, r16, 0x6ebd
+0 0x465bbb88 Invalid|(invalid)
+0 0x5db7f037 rlwnmx|rlwnm. r23, r13, r30, 0, 27
+0 0xd4eb03fa stfsu|stfsu f7, 0x3fa(r11)
+0 0x84323a41 lwzu|lwzu r1, 0x3a41(r18)
+0 0x52f6fdbc rlwimix|rlwimi r22, r23, 31, 22, 30
+0 0x931e5f5b stw|stw r24, 0x5f5b(r30)
+0 0x6903694e xori|xori r3, r8, 0x694e
+0 0x90a4b605 stw|stw r5, -0x49fb(r4)
+0 0x8790fb30 lwzu|lwzu r28, -0x4d0(r16)
+0 0x2b7078bf Invalid|(invalid)
+0 0x613e7be2 ori|ori r30, r9, 0x7be2
+0 0x41626609 bcx|bcl 11, 2, 0x6608
+0 0x558ee7e4 rlwinmx|rlwinm r14, r12, 28, 31, 18
+0 0x8e446063 lbzu|lbzu r18, 0x6063(r4)
+0 0x62dc8fb6 ori|ori r28, r22, 0x8fb6
+0 0x70660e4d andi_dot|andi. r6, r3, 0xe4d
+0 0x894137d8 lbz|lbz r10, 0x37d8(r1)
+0 0x134a7a47 Invalid|(invalid)
+0 0x8d7b38ca lbzu|lbzu r11, 0x38ca(r27)
+0 0xfcceb2d1 Invalid|(invalid)
+0 0x12179f0c psq_lx|psq_lx f16, r23, r19, 1, 6
+0 0xff716a6b Invalid|(invalid)
+0 0xd6694b1e stfsu|stfsu f19, 0x4b1e(r9)
+0 0x84a39795 lwzu|lwzu r5, -0x686b(r3)
+0 0xe6151180 psq_lu|psq_lu f16, 0x180(r21), 0, 1
+0 0xc4a14cf twi|twi 2, r10, 0x14cf
+0 0x713adab2 andi_dot|andi. r26, r9, 0xdab2
+0 0x32d84099 addic|addic r22, r24, 0x4099
+0 0x3483c334 addic_dot|subic. r4, r3, 0x3ccc
+0 0x9dab9d73 stbu|stbu r13, -0x628d(r11)
+0 0x999d3b86 stb|stb r12, 0x3b86(r29)
+0 0x659071dd oris|oris r16, r12, 0x71dd
+0 0x5be92828 Invalid|(invalid)
+0 0x9976857 Invalid|(invalid)
+0 0x526b019a rlwimix|rlwimi r11, r19, 0, 6, 13
+0 0x30a42f61 addic|addic r5, r4, 0x2f61
+0 0x5739f45c rlwinmx|rlwinm r25, r25, 30, 17, 14
+0 0x965d197b stwu|stwu r18, 0x197b(r29)
+0 0xee0000ee Invalid|(invalid)
+0 0x63bd25 Invalid|(invalid)
+0 0x964e1bd0 stwu|stwu r18, 0x1bd0(r14)
+0 0x12fe94df ps_madds1|ps_madds1. f23, f30, f19, f18
+0 0x73cd4d82 andi_dot|andi. r13, r30, 0x4d82
+0 0xe09b9f29 psq_l|psq_l f4, -0xd7(r27), 1, 1
+0 0x7594d284 andis_dot|andis. r20, r12, 0xd284
+0 0x2dd3fe83 Invalid|(invalid)
+0 0x372d3b56 addic_dot|addic. r25, r13, 0x3b56
+0 0x2bd8996d Invalid|(invalid)
+0 0xc9088c78 lfd|lfd f8, -0x7388(r8)
+0 0xed6fba67 Invalid|(invalid)
+0 0x33775e6a addic|addic r27, r23, 0x5e6a
+0 0xa6ebaff1 lhzu|lhzu r23, -0x500f(r11)
+0 0x2e62fdac Invalid|(invalid)
+0 0xefc26c8b Invalid|(invalid)
+0 0x1548abe Invalid|(invalid)
+0 0x4cae26b5 Invalid|(invalid)
+0 0x1a911a20 Invalid|(invalid)
+0 0x537ef8ef rlwimix|rlwimi. r30, r27, 31, 3, 23
+0 0x7952d452 Invalid|(invalid)
+0 0x4e0581b9 Invalid|(invalid)
+0 0xd66715d4 stfsu|stfsu f19, 0x15d4(r7)
+0 0x6fbe8393 xoris|xoris r30, r29, 0x8393
+0 0x57b98f26 rlwinmx|rlwinm r25, r29, 17, 28, 19
+0 0xa2784fd Invalid|(invalid)
+0 0xde9464c8 stfdu|stfdu f20, 0x64c8(r20)
+0 0xbde47077 stmw|stmw r15, 0x7077(r4)
+0 0x759d4f3a andis_dot|andis. r29, r12, 0x4f3a
+0 0x31e3481 Invalid|(invalid)
+0 0x5ad7bafc Invalid|(invalid)
+0 0x99c2639b stb|stb r14, 0x639b(r2)
+0 0x6b33e88e xori|xori r19, r25, 0xe88e
+0 0x128bd445 Invalid|(invalid)
+0 0xa0730c70 lhz|lhz r3, 0xc70(r19)
+0 0xbbfc40ff lmw|lmw r31, 0x40ff(r28)
+0 0xaf686f22 lhau|lhau r27, 0x6f22(r8)
+0 0x62aee849 ori|ori r14, r21, 0xe849
+0 0xf3df8d24 psq_st|psq_st f30, -0x2dc(r31), 1, 0
+0 0x92ac2ca3 stw|stw r21, 0x2ca3(r12)
+0 0x88af36f6 lbz|lbz r5, 0x36f6(r15)
+0 0xefa6348d Invalid|(invalid)
+0 0xfdc1b118 Invalid|(invalid)
+0 0xdc468a87 stfdu|stfdu f2, -0x7579(r6)
+0 0x6319d40a ori|ori r25, r24, 0xd40a
+0 0x94f4bd11 stwu|stwu r7, -0x42ef(r20)
+0 0xa71d2c4c lhzu|lhzu r24, 0x2c4c(r29)
+0 0x28bdfeab cmpli|cmpli 1, 1, r29, 0xfeab
+0 0x5fab1a5e rlwnmx|rlwnm r11, r29, r3, 9, 15
+0 0xeb45c5d5 Invalid|(invalid)
+0 0x50c8f2c0 rlwimix|rlwimi r8, r6, 30, 11, 0
+0 0x24e76d0f Invalid|(invalid)
+0 0x30eb1df2 addic|addic r7, r11, 0x1df2
+0 0x7a70d2d9 Invalid|(invalid)
+0 0x9a233874 stb|stb r17, 0x3874(r3)
+0 0xd41df9b3 stfsu|stfsu f0, -0x64d(r29)
+0 0x98bb32c6 stb|stb r5, 0x32c6(r27)
+0 0x3bda81d Invalid|(invalid)
+0 0x2b057168 cmpli|cmplwi cr6, r5, 0x7168
+0 0x1c270897 mulli|mulli r1, r7, 0x897
+0 0x1b69ecda Invalid|(invalid)
+0 0xe86849a1 Invalid|(invalid)
+0 0x34f8519c addic_dot|addic. r7, r24, 0x519c
+0 0x47563dbb Invalid|(invalid)
+0 0xbc07202e stmw|stmw r0, 0x202e(r7)
+0 0xf064fb65 psq_st|psq_st f3, -0x49b(r4), 1, 7
+0 0x9fa7cd10 stbu|stbu r29, -0x32f0(r7)
+0 0x60f17d1f ori|ori r17, r7, 0x7d1f
+0 0xd5f7e0c2 stfsu|stfsu f15, -0x1f3e(r23)
+0 0xf5644169 psq_stu|psq_stu f11, 0x169(r4), 0, 4
+0 0x149717c4 Invalid|(invalid)
+0 0x8fd4eac3 lbzu|lbzu r30, -0x153d(r20)
+0 0x67ca8296 oris|oris r10, r30, 0x8296
+0 0x3616dfad addic_dot|subic. r16, r22, 0x2053
+0 0x5e14a5b8 rlwnmx|rlwnm r20, r16, r20, 22, 28
+0 0xd356eaa7 stfs|stfs f26, -0x1559(r22)
+0 0x634a99aa ori|ori r10, r26, 0x99aa
+0 0x55b1da31 rlwinmx|rlwinm. r17, r13, 27, 8, 24
+0 0xcd6e2aec lfdu|lfdu f11, 0x2aec(r14)
+0 0xc66c20cb lfsu|lfsu f19, 0x20cb(r12)
+0 0xd6d4f9fe stfsu|stfsu f22, -0x602(r20)
+0 0x4bb274f5 bx|bl -0x4d8b0c
+0 0x9c649b60 stbu|stbu r3, -0x64a0(r4)
+0 0x4d0b712f Invalid|(invalid)
+0 0x3ebb792 Invalid|(invalid)
+0 0xc7e233f9 lfsu|lfsu f31, 0x33f9(r2)
+0 0x7de02b14 Invalid|(invalid)
+0 0x4fd1ffd3 Invalid|(invalid)
+0 0xb70a2666 sthu|sthu r24, 0x2666(r10)
+0 0xce9adb3d lfdu|lfdu f20, -0x24c3(r26)
+0 0xd1e44e08 stfs|stfs f15, 0x4e08(r4)
+0 0xe9e730b7 Invalid|(invalid)
+0 0x74b8da7a andis_dot|andis. r24, r5, 0xda7a
+0 0x914a6ec1 stw|stw r10, 0x6ec1(r10)
+0 0x30c3b83c addic|subic r6, r3, 0x47c4
+0 0xad20a7db lhau|lhau r9, -0x5825(r0)
+0 0x4fe1a7ce Invalid|(invalid)
+0 0xc7373285 lfsu|lfsu f25, 0x3285(r23)
+0 0x41945db0 bcx|blt cr5, 0x5db0
+0 0xe066493f psq_l|psq_l f3, -0x6c1(r6), 0, 4
+0 0x7d63a262 Invalid|(invalid)
+0 0xa83aa89 Invalid|(invalid)
+0 0xfe37264 twi|twi 31, r3, 0x7264
+0 0xdc5638e3 stfdu|stfdu f2, 0x38e3(r22)
+0 0xf8e71e36 Invalid|(invalid)
+0 0xfd729acd Invalid|(invalid)
+0 0x54a96a58 rlwinmx|rlwinm r9, r5, 13, 9, 12
+0 0xea28dac7 Invalid|(invalid)
+0 0xcef1af4a lfdu|lfdu f23, -0x50b6(r17)
+0 0x3beb0751 addi|addi r31, r11, 0x751
+0 0x667df98c oris|oris r29, r19, 0xf98c
+0 0x48d4d2eb bx|bla 0xd4d2e8
+0 0xe03a299e psq_l|psq_l f1, -0x662(r26), 0, 2
+0 0x5d3c3415 rlwnmx|rlwnm. r28, r9, r6, 16, 10
+0 0xc50c1400 lfsu|lfsu f8, 0x1400(r12)
+0 0x3c73054f addis|addis r3, r19, 0x54f
+0 0x323ca132 addic|subic r17, r28, 0x5ece
+0 0x8a21a519 lbz|lbz r17, -0x5ae7(r1)
+0 0x73c5edb4 andi_dot|andi. r5, r30, 0xedb4
+0 0x4be295f3 bx|bla -0x1d6a10
+0 0x210e6a06 subfic|subfic r8, r14, 0x6a06
+0 0x6b071e5d xori|xori r7, r24, 0x1e5d
+0 0x97d8faa8 stwu|stwu r30, -0x558(r24)
+0 0x10ace8d7 ps_sum1|ps_sum1. f5, f12, f3, f29
+0 0x672181a Invalid|(invalid)
+0 0x728ca3e1 andi_dot|andi. r12, r20, 0xa3e1
+0 0xd61eedc twi|twi 11, r1, -0x1124
+0 0x3d29a1fb addis|subis r9, r9, 0x5e05
+0 0x2a2b7f6e cmpli|cmpli 4, 1, r11, 0x7f6e
+0 0xc84a79a5 lfd|lfd f2, 0x79a5(r10)
+0 0xe7e0be50 psq_lu|psq_lu f31, -0x1b0(r0), 1, 3
+0 0xbce2a55f stmw|stmw r7, -0x5aa1(r2)
+0 0xf93b402 twi|twi 28, r19, -0x4bfe
+0 0x57d523a9 rlwinmx|rlwinm. r21, r30, 4, 14, 20
+0 0x11ec9d04 Invalid|(invalid)
+0 0x13381703 Invalid|(invalid)
+0 0x746d09d6 andis_dot|andis. r13, r3, 0x9d6
+0 0xc80165ed lfd|lfd f0, 0x65ed(r1)
+0 0x8027fef8 lwz|lwz r1, -0x108(r7)
+0 0x5c445ae7 rlwnmx|rlwnm. r4, r2, r11, 11, 19
+0 0x94f714ea stwu|stwu r7, 0x14ea(r23)
+0 0x5e684471 rlwnmx|rlwnm. r8, r19, r8, 17, 24
+0 0xab74982c lha|lha r27, -0x67d4(r20)
+0 0x9400150b stwu|stwu r0, 0x150b(r0)
+0 0x8942a93e lbz|lbz r10, -0x56c2(r2)
+0 0x132b0335 Invalid|(invalid)
+0 0x46675ca0 Invalid|(invalid)
+0 0x7a6296f Invalid|(invalid)
+0 0xcfc5dad2 lfdu|lfdu f30, -0x252e(r5)
+0 0x58f72639 Invalid|(invalid)
+0 0x61fc8054 ori|ori r28, r15, 0x8054
+0 0x1557bc13 Invalid|(invalid)
+0 0x592ffda6 Invalid|(invalid)
+0 0x5d4a717d rlwnmx|rlwnm. r10, r10, r14, 5, 30
+0 0x758b7748 andis_dot|andis. r11, r12, 0x7748
+0 0x9e0030f7 stbu|stbu r16, 0x30f7(r0)
+0 0xa97da5ba lha|lha r11, -0x5a46(r29)
+0 0xc4f6e901 lfsu|lfsu f7, -0x16ff(r22)
+0 0xfdfaf57c fnmsubx|fnmsub f15, f26, f21, f30
+0 0xcd792c1b lfdu|lfdu f11, 0x2c1b(r25)
+0 0xe24ca70e psq_l|psq_l f18, 0x70e(r12), 1, 2
+0 0x28e6d0c5 Invalid|(invalid)
+0 0xa834eef0 lha|lha r1, -0x1110(r20)
+0 0x1cee917f mulli|mulli r7, r14, -0x6e81
+0 0xca7015a2 lfd|lfd f19, 0x15a2(r16)
+0 0xd720acc9 stfsu|stfsu f25, -0x5337(r0)
+0 0x3ada97a4 addi|subi r22, r26, 0x685c
+0 0xb3828523 sth|sth r28, -0x7add(r2)
+0 0x26c44576 Invalid|(invalid)
+0 0x9c0b410d stbu|stbu r0, 0x410d(r11)
+0 0xb3386398 sth|sth r25, 0x6398(r24)
+0 0x89316b07 lbz|lbz r9, 0x6b07(r17)
+0 0xf842ca8a Invalid|(invalid)
+0 0x97f19191 stwu|stwu r31, -0x6e6f(r17)
+0 0x497a06cc bx|b 0x17a06cc
+0 0xeff5e72b Invalid|(invalid)
+0 0x735678de andi_dot|andi. r22, r26, 0x78de
+0 0x64c6e255 oris|oris r6, r6, 0xe255
+0 0x501e7540 rlwimix|rlwimi r30, r0, 14, 21, 0
+0 0x672cdd8f oris|oris r12, r25, 0xdd8f
+0 0xc46f6472 lfsu|lfsu f3, 0x6472(r15)
+0 0x102ab759 Invalid|(invalid)
+0 0x22abe2f4 subfic|subfic r21, r11, -0x1d0c
+0 0xdd397233 stfdu|stfdu f9, 0x7233(r25)
+0 0xf5d6e146 psq_stu|psq_stu f14, 0x146(r22), 1, 6
+0 0xadacd49d lhau|lhau r13, -0x2b63(r12)
+0 0x97a3c3e8 stwu|stwu r29, -0x3c18(r3)
+0 0xc3690917 lfs|lfs f27, 0x917(r9)
+0 0x8ac3835a lbz|lbz r22, -0x7ca6(r3)
+0 0x85513e21 lwzu|lwzu r10, 0x3e21(r17)
+0 0xa9b6cc1c lha|lha r13, -0x33e4(r22)
+0 0x9817463b stb|stb r0, 0x463b(r23)
+0 0xa3ad1eae lhz|lhz r29, 0x1eae(r13)
+0 0x225437e5 subfic|subfic r18, r20, 0x37e5
+0 0x4c38ef90 Invalid|(invalid)
+0 0xcb120d9f lfd|lfd f24, 0xd9f(r18)
+0 0xbfe0c742 stmw|stmw r31, -0x38be(r0)
+0 0xc62e45e9 lfsu|lfsu f17, 0x45e9(r14)
+0 0x9ed56244 stbu|stbu r22, 0x6244(r21)
+0 0x203d8343 subfic|subfic r1, r29, -0x7cbd
+0 0x7054d116 andi_dot|andi. r20, r2, 0xd116
+0 0x3d82c2d Invalid|(invalid)
+0 0xf4829838 psq_stu|psq_stu f4, -0x7c8(r2), 1, 1
+0 0xf4780b27 psq_stu|psq_stu f3, -0x4d9(r24), 0, 0
+0 0x8fbcd02a lbzu|lbzu r29, -0x2fd6(r28)
+0 0x874eeeb1 lwzu|lwzu r26, -0x114f(r14)
+0 0x61b6456c ori|ori r22, r13, 0x456c
+0 0x8be494b Invalid|(invalid)
+0 0xd3dd987e stfs|stfs f30, -0x6782(r29)
+0 0x4d57d175 Invalid|(invalid)
+0 0xc5d95de0 lfsu|lfsu f14, 0x5de0(r25)
+0 0xb78f21af sthu|sthu r28, 0x21af(r15)
+0 0xcc213e12 lfdu|lfdu f1, 0x3e12(r1)
+0 0xcf845879 lfdu|lfdu f28, 0x5879(r4)
+0 0x83fc1594 lwz|lwz r31, 0x1594(r28)
+0 0xb88fb853 lmw|lmw r4, -0x47ad(r15)
+0 0xa16b14e6 lhz|lhz r11, 0x14e6(r11)
+0 0xe87647bd Invalid|(invalid)
+0 0x5ec9e088 rlwnmx|rlwnm r9, r22, r28, 2, 4
+0 0xd66f7137 stfsu|stfsu f19, 0x7137(r15)
+0 0x2b2bb0fa cmpli|cmpli 6, 1, r11, 0xb0fa
+0 0x7463a341 andis_dot|andis. r3, r3, 0xa341
+0 0x2bbd72bc cmpli|cmpli 7, 1, r29, 0x72bc
+0 0x3b0bf05b addi|subi r24, r11, 0xfa5
+0 0x2db4e64e cmpi|cmpi 3, 1, r20, -0x19b2
+0 0xf1daaf05 psq_st|psq_st f14, -0xfb(r26), 1, 2
+0 0x5194c030 rlwimix|rlwimi r20, r12, 24, 0, 24
+0 0x35d519bf addic_dot|addic. r14, r21, 0x19bf
+0 0xd5cdc8e2 stfsu|stfsu f14, -0x371e(r13)
+0 0xa6c5ef09 lhzu|lhzu r22, -0x10f7(r5)
+0 0x4604fce4 Invalid|(invalid)
+0 0xa0711163 lhz|lhz r3, 0x1163(r17)
+0 0xc586acb6 lfsu|lfsu f12, -0x534a(r6)
+0 0xdb0274d twi|twi 13, r16, 0x274d
+0 0x7eae9cd8 Invalid|(invalid)
+0 0x45a03b47 Invalid|(invalid)
+0 0x464d25ca Invalid|(invalid)
+0 0x8f485bd1 lbzu|lbzu r26, 0x5bd1(r8)
+0 0x8951540c lbz|lbz r10, 0x540c(r17)
+0 0xee613b6b Invalid|(invalid)
+0 0x7440081e andis_dot|andis. r0, r2, 0x81e
+0 0xcc25d095 lfdu|lfdu f1, -0x2f6b(r5)
+0 0x3f401680 addis|lis r26, 0x1680
+0 0xf954f5cf Invalid|(invalid)
+0 0x76c367b2 andis_dot|andis. r3, r22, 0x67b2
+0 0xfacc0999 Invalid|(invalid)
+0 0x48151834 bx|b 0x151834
+0 0xa0628e73 lhz|lhz r3, -0x718d(r2)
+0 0x1a549886 Invalid|(invalid)
+0 0x1deecadd mulli|mulli r15, r14, -0x3523
+0 0x5fa5cd28 rlwnmx|rlwnm r5, r29, r25, 20, 20
+0 0x509b6957 rlwimix|rlwimi. r27, r4, 13, 5, 11
+0 0x5f9e2e9a rlwnmx|rlwnm r30, r28, r5, 26, 13
+0 0x16f61861 Invalid|(invalid)
+0 0x1336e95c ps_madds0|ps_madds0 f25, f22, f5, f29
+0 0xb85f2a7b lmw|lmw r2, 0x2a7b(r31)
+0 0xd3cbfdee stfs|stfs f30, -0x212(r11)
+0 0xd8c23625 stfd|stfd f6, 0x3625(r2)
+0 0xe9f060d0 Invalid|(invalid)
+0 0x6fbfb5df xoris|xoris r31, r29, 0xb5df
+0 0xc61f1a82 lfsu|lfsu f16, 0x1a82(r31)
+0 0x3eafa829 addis|subis r21, r15, 0x57d7
+0 0x2c916784 cmpi|cmpwi cr1, r17, 0x6784
+0 0x5f252f83 rlwnmx|rlwnm. r5, r25, r5, 30, 1
+0 0xaec1d856 lhau|lhau r22, -0x27aa(r1)
+0 0x4bdb326d bx|bl -0x24cd94
+0 0xc0647178 lfs|lfs f3, 0x7178(r4)
+0 0x4831fb67 bx|bla 0x31fb64
+0 0x5adbcb6a Invalid|(invalid)
+0 0xd6a5d8f1 stfsu|stfsu f21, -0x270f(r5)
+0 0xc97332ac lfd|lfd f11, 0x32ac(r19)
+0 0x14e6bd8b Invalid|(invalid)
+0 0xb1e5c7be sth|sth r15, -0x3842(r5)
+0 0xe478dfb5 psq_lu|psq_lu f3, -0x4b(r24), 1, 5
+0 0x7fa9f20 Invalid|(invalid)
+0 0xd10659ef stfs|stfs f8, 0x59ef(r6)
+0 0x283de152 cmpli|cmpli 0, 1, r29, 0xe152
+0 0x39c9cab9 addi|subi r14, r9, 0x3547
+0 0x251eead4 Invalid|(invalid)
+0 0x71b9f493 andi_dot|andi. r25, r13, 0xf493
+0 0x32fb6c26 addic|addic r23, r27, 0x6c26
+0 0xe25e5dfd psq_l|psq_l f18, -0x203(r30), 0, 5
+0 0x62df89c8 ori|ori r31, r22, 0x89c8
+0 0xcf74f177 lfdu|lfdu f27, -0xe89(r20)
+0 0x5102fc3a rlwimix|rlwimi r2, r8, 31, 16, 29
+0 0xb5d09d81 sthu|sthu r14, -0x627f(r16)
+0 0x634b2ffc ori|ori r11, r26, 0x2ffc
+0 0x7618f49b andis_dot|andis. r24, r16, 0xf49b
+0 0x7d5a658e Invalid|(invalid)
+0 0x1c52cd45 mulli|mulli r2, r18, -0x32bb
+0 0xfaf3d170 Invalid|(invalid)
+0 0x2f59e1ff Invalid|(invalid)
+0 0x1ebcbc22 mulli|mulli r21, r28, -0x43de
+0 0x97b37149 stwu|stwu r29, 0x7149(r19)
+0 0x42a2a224 bcx|bc 21, 2, -0x5ddc
+0 0x6b61dda3 xori|xori r1, r27, 0xdda3
+0 0xc86e53f6 lfd|lfd f3, 0x53f6(r14)
+0 0xd4a14d8d stfsu|stfsu f5, 0x4d8d(r1)
+0 0x5c4c1618 rlwnmx|rlwnm r12, r2, r2, 24, 12
+0 0xebb54b87 Invalid|(invalid)
+0 0x6050c10a ori|ori r16, r2, 0xc10a
+0 0x482f6611 bx|bl 0x2f6610
+0 0x9f43e14c stbu|stbu r26, -0x1eb4(r3)
+0 0x5456cfab rlwinmx|rlwinm. r22, r2, 25, 30, 21
+0 0x7e36d75e Invalid|(invalid)
+0 0x9d98fed5 stbu|stbu r12, -0x12b(r24)
+0 0x1fb0f7c0 mulli|mulli r29, r16, -0x840
+0 0x872b4e0f lwzu|lwzu r25, 0x4e0f(r11)
+0 0x1878aaf2 Invalid|(invalid)
+0 0x78459bd9 Invalid|(invalid)
+0 0xc5418d74 lfsu|lfsu f10, -0x728c(r1)
+0 0xed9deab3 Invalid|(invalid)
+0 0xd1c78fc6 stfs|stfs f14, -0x703a(r7)
+0 0x4e0d011d Invalid|(invalid)
+0 0x651f1668 oris|oris r31, r8, 0x1668
+0 0x14840997 Invalid|(invalid)
+0 0x7c4219da Invalid|(invalid)
+0 0x5dbb32a1 rlwnmx|rlwnm. r27, r13, r6, 10, 16
+0 0x9322469c stw|stw r25, 0x469c(r2)
+0 0x3e414ebb addis|addis r18, r1, 0x4ebb
+0 0xa5c81d2e lhzu|lhzu r14, 0x1d2e(r8)
+0 0x5d47465 Invalid|(invalid)
+0 0x1e471210 mulli|mulli r18, r7, 0x1210
+0 0xcf2b9e1f lfdu|lfdu f25, -0x61e1(r11)
+0 0x418eadc2 bcx|beqa cr3, -0x5240
+0 0xff994a69 Invalid|(invalid)
+0 0x6c60acc4 xoris|xoris r0, r3, 0xacc4
+0 0xb82f1bc3 lmw|lmw r1, 0x1bc3(r15)
+0 0xc2f41f96 lfs|lfs f23, 0x1f96(r20)
+0 0x424a78ad bcx|bdzl 0x78ac
+0 0x290d8ab8 cmpli|cmplwi cr2, r13, 0x8ab8
+0 0x43b22ba7 bcx|bcla 29, 18, 0x2ba4
+0 0x3d9406aa addis|addis r12, r20, 0x6aa
+0 0x92ad0331 stw|stw r21, 0x331(r13)
+0 0xfbeb5fec Invalid|(invalid)
+0 0xe8b971cb Invalid|(invalid)
+0 0x5e9b36fe rlwnmx|rlwnm r27, r20, r6, 27, 31
+0 0x2ce2df5 Invalid|(invalid)
+0 0x3a0b2060 addi|addi r16, r11, 0x2060
+0 0x84bd22f Invalid|(invalid)
+0 0x535bc492 rlwimix|rlwimi r27, r26, 24, 18, 9
+0 0xe6077cf9 psq_lu|psq_lu f16, -0x307(r7), 0, 7
+0 0xc6a50014 lfsu|lfsu f21, 0x14(r5)
+0 0xb91670d3 lmw|lmw r8, 0x70d3(r22)
+0 0xf1210366 psq_st|psq_st f9, 0x366(r1), 0, 0
+0 0xfd42b43d fnmsubx|fnmsub. f10, f2, f16, f22
+0 0x970c7308 stwu|stwu r24, 0x7308(r12)
+0 0x550b1b7 Invalid|(invalid)
+0 0xb243877a sth|sth r18, -0x7886(r3)
+0 0xdf7dd7c1 stfdu|stfdu f27, -0x283f(r29)
+0 0x8de42d3c lbzu|lbzu r15, 0x2d3c(r4)
+0 0x3ee038db addis|lis r23, 0x38db
+0 0x5c7d24ce rlwnmx|rlwnm r29, r3, r4, 19, 7
+0 0xe28f2b85 psq_l|psq_l f20, -0x47b(r15), 0, 2
+0 0xa19222b0 lhz|lhz r12, 0x22b0(r18)
+0 0x4dbcea3f Invalid|(invalid)
+0 0x647cef62 oris|oris r28, r3, 0xef62
+0 0x8293389 Invalid|(invalid)
+0 0x81f38764 lwz|lwz r15, -0x789c(r19)
+0 0x1c94e9e3 mulli|mulli r4, r20, -0x161d
+0 0x62bb3b36 ori|ori r27, r21, 0x3b36
+0 0xb31eb3cd sth|sth r24, -0x4c33(r30)
+0 0x3150cf58 addic|subic r10, r16, 0x30a8
+0 0x87b09bc7 lwzu|lwzu r29, -0x6439(r16)
+0 0x2d8d9c4a cmpi|cmpwi cr3, r13, -0x63b6
+0 0x28e6b051 Invalid|(invalid)
+0 0x4491ae8c Invalid|(invalid)
+0 0x7216a3eb andi_dot|andi. r22, r16, 0xa3eb
+0 0x6c7ae69e xoris|xoris r26, r3, 0xe69e
+0 0x23606d15 subfic|subfic r27, r0, 0x6d15
+0 0xbeb11900 stmw|stmw r21, 0x1900(r17)
+0 0xe4efe64f psq_lu|psq_lu f7, 0x64f(r15), 1, 6
+0 0xb8cf2e32 lmw|lmw r6, 0x2e32(r15)
+0 0xf6d76e19 psq_stu|psq_stu f22, -0x1e7(r23), 0, 6
+0 0xbb7142b4 lmw|lmw r27, 0x42b4(r17)
+0 0x5d2b86f3 rlwnmx|rlwnm. r11, r9, r16, 27, 25
+0 0x9f6fc706 stbu|stbu r27, -0x38fa(r15)
+0 0x1047775d ps_madds0|ps_madds0. f2, f7, f29, f14
+0 0x5d4f9fa8 rlwnmx|rlwnm r15, r10, r19, 30, 20
+0 0xab62e9d7 lha|lha r27, -0x1629(r2)
+0 0x17ef451a Invalid|(invalid)
+0 0xcfe08ce1 lfdu|lfdu f31, -0x731f(r0)
+0 0xb2b8e3dc sth|sth r21, -0x1c24(r24)
+0 0x9fdb2fb Invalid|(invalid)
+0 0x44e17c6e Invalid|(invalid)
+0 0x3caf2a5 Invalid|(invalid)
+0 0x867d0350 lwzu|lwzu r19, 0x350(r29)
+0 0x4d95c65f Invalid|(invalid)
+0 0x916f8102 stw|stw r11, -0x7efe(r15)
+0 0x872b2ca9 lwzu|lwzu r25, 0x2ca9(r11)
+0 0x4f833204 Invalid|(invalid)
+0 0x539b4803 rlwimix|rlwimi. r27, r28, 9, 0, 1
+0 0x802ba6d6 lwz|lwz r1, -0x592a(r11)
+0 0xc965feed lfd|lfd f11, -0x113(r5)
+0 0xb3bde3f8 sth|sth r29, -0x1c08(r29)
+0 0x13389be7 Invalid|(invalid)
+0 0xbf2581ea stmw|stmw r25, -0x7e16(r5)
+0 0x41a46d71 bcx|blt+l cr1, 0x6d70
+0 0x525ecd2c rlwimix|rlwimi r30, r18, 25, 20, 22
+0 0xf476660b psq_stu|psq_stu f3, 0x60b(r22), 0, 6
+0 0x553de63e rlwinmx|extrwi r29, r9, 8, 20
+0 0x1297bc35 Invalid|(invalid)
+0 0xc94ae1a0 lfd|lfd f10, -0x1e60(r10)
+0 0x519f8a6f rlwimix|rlwimi. r31, r12, 17, 9, 23
+0 0xfcbae7d2 Invalid|(invalid)
+0 0x627d6f39 ori|ori r29, r19, 0x6f39
+0 0x29ce5554 Invalid|(invalid)
+0 0x46e52d13 Invalid|(invalid)
+0 0xff1bdaa6 Invalid|(invalid)
+0 0x2b634a7d Invalid|(invalid)
+0 0x50909c48 rlwimix|rlwimi r16, r4, 19, 17, 4
+0 0x3442b1f7 addic_dot|subic. r2, r2, 0x4e09
+0 0x262d52ba Invalid|(invalid)
+0 0x87ab5201 lwzu|lwzu r29, 0x5201(r11)
+0 0xd4c86a7c stfsu|stfsu f6, 0x6a7c(r8)
+0 0x95a1bd1b stwu|stwu r13, -0x42e5(r1)
+0 0x965d240e stwu|stwu r18, 0x240e(r29)
+0 0xbecfc9c5 stmw|stmw r22, -0x363b(r15)
+0 0x82afb3f0 lwz|lwz r21, -0x4c10(r15)
+0 0x153e327f Invalid|(invalid)
+0 0xa64e62a2 lhzu|lhzu r18, 0x62a2(r14)
+0 0x966735c9 stwu|stwu r19, 0x35c9(r7)
+0 0x9537aca4 stwu|stwu r9, -0x535c(r23)
+0 0xfc4a3623 Invalid|(invalid)
+0 0x7ad6276 Invalid|(invalid)
+0 0xab685a0d lha|lha r27, 0x5a0d(r8)
+0 0x22fcc898 subfic|subfic r23, r28, -0x3768
+0 0x65d22c07 oris|oris r18, r14, 0x2c07
+0 0xd543b78a stfsu|stfsu f10, -0x4876(r3)
+0 0xd7ae3a91 stfsu|stfsu f29, 0x3a91(r14)
+0 0x727abbcc andi_dot|andi. r26, r19, 0xbbcc
+0 0xd7e0b82b stfsu|stfsu f31, -0x47d5(r0)
+0 0x5a4c35de Invalid|(invalid)
+0 0xe7bc1b55 psq_lu|psq_lu f29, -0x4ab(r28), 0, 1
+0 0x29807a40 cmpli|cmplwi cr3, r0, 0x7a40
+0 0x26e2be8f Invalid|(invalid)
+0 0xa706f172 lhzu|lhzu r24, -0xe8e(r6)
+0 0x24c18059 Invalid|(invalid)
+0 0x8be437f4 lbz|lbz r31, 0x37f4(r4)
+0 0xc74b6333 lfsu|lfsu f26, 0x6333(r11)
+0 0x468d3e46 Invalid|(invalid)
+0 0x76de2d9d andis_dot|andis. r30, r22, 0x2d9d
+0 0x3d7768e8 addis|addis r11, r23, 0x68e8
+0 0xf1780a17 psq_st|psq_st f11, -0x5e9(r24), 0, 0
+0 0xa9e5b05a lha|lha r15, -0x4fa6(r5)
+0 0x23a62721 subfic|subfic r29, r6, 0x2721
+0 0x3b3ac11c addi|subi r25, r26, 0x3ee4
+0 0x3bd4573b addi|addi r30, r20, 0x573b
+0 0x1c581bae mulli|mulli r2, r24, 0x1bae
+0 0x6ce5b0e5 xoris|xoris r5, r7, 0xb0e5
+0 0xffd23490 Invalid|(invalid)
+0 0x8f3e2e9f lbzu|lbzu r25, 0x2e9f(r30)
+0 0x55019442 rlwinmx|rlwinm r1, r8, 18, 17, 1
+0 0x93a54ee9 stw|stw r29, 0x4ee9(r5)
+0 0x738f744 Invalid|(invalid)
+0 0x99a9b443 stb|stb r13, -0x4bbd(r9)
+0 0xf9a86e16 Invalid|(invalid)
+0 0x36dc52d Invalid|(invalid)
+0 0x25b57d38 Invalid|(invalid)
+0 0x23054c27 subfic|subfic r24, r5, 0x4c27
+0 0xa6d03d2a lhzu|lhzu r22, 0x3d2a(r16)
+0 0xa9cc17b1 lha|lha r14, 0x17b1(r12)
+0 0x660d7a6c oris|oris r13, r16, 0x7a6c
+0 0xe85d9a4b Invalid|(invalid)
+0 0x510dd57e rlwimix|rlwimi r13, r8, 26, 21, 31
+0 0xbe158a75 stmw|stmw r16, -0x758b(r21)
+0 0x62f9e2e0 ori|ori r25, r23, 0xe2e0
+0 0xe14182af psq_l|psq_l f10, 0x2af(r1), 1, 0
+0 0x139b4b12 Invalid|(invalid)
+0 0x7d6ba179 Invalid|(invalid)
+0 0x4fdaea94 Invalid|(invalid)
+0 0x13662953 Invalid|(invalid)
+0 0xc02bf1e6 lfs|lfs f1, -0xe1a(r11)
+0 0x9f0020bd stbu|stbu r24, 0x20bd(r0)
+0 0x24ac0588 Invalid|(invalid)
+0 0x588af237 Invalid|(invalid)
+0 0xc4005dfa lfsu|lfsu f0, 0x5dfa(r0)
+0 0x84990c41 lwzu|lwzu r4, 0xc41(r25)
+0 0xa137e7bc lhz|lhz r9, -0x1844(r23)
+0 0xba9d815b lmw|lmw r20, -0x7ea5(r29)
+0 0x363a634e addic_dot|addic. r17, r26, 0x634e
+0 0x6b54a805 xori|xori r20, r26, 0xa805
+0 0x1b8c8530 Invalid|(invalid)
+0 0x4a1dbabf bx|bla -0x1e24544
+0 0x237115e2 subfic|subfic r27, r17, 0x15e2
+0 0x20ad7809 subfic|subfic r5, r13, 0x7809
+0 0x4daf11e4 Invalid|(invalid)
+0 0x92c1c263 stw|stw r22, -0x3d9d(r1)
+0 0x6a84c9b6 xori|xori r4, r20, 0xc9b6
+0 0xffbe404d Invalid|(invalid)
+0 0x969001d8 stwu|stwu r20, 0x1d8(r16)
+0 0x1259fc47 Invalid|(invalid)
+0 0xbeb312ca stmw|stmw r21, 0x12ca(r19)
+0 0x3ac604d1 addi|addi r22, r6, 0x4d1
+0 0x623f090c ori|ori r31, r17, 0x90c
+0 0x55f50c6b rlwinmx|rlwinm. r21, r15, 1, 17, 21
+0 0xa2eac51e lhz|lhz r23, -0x3ae2(r10)
+0 0xb4ec0995 sthu|sthu r7, 0x995(r12)
+0 0xad5f1b80 lhau|lhau r10, 0x1b80(r31)
+0 0xa143d6cf lhz|lhz r10, -0x2931(r3)
+0 0x725ff4b2 andi_dot|andi. r31, r18, 0xf4b2
+0 0xf043d299 psq_st|psq_st f2, 0x299(r3), 1, 5
+0 0xd7da6d34 stfsu|stfsu f30, 0x6d34(r26)
+0 0x443d7f73 Invalid|(invalid)
+0 0xca5ff586 lfd|lfd f18, -0xa7a(r31)
+0 0xd41123dd stfsu|stfsu f0, 0x23dd(r17)
+0 0x3ad67228 addi|addi r22, r22, 0x7228
+0 0x3036a57 Invalid|(invalid)
+0 0xe9655b9a Invalid|(invalid)
+0 0x4f4c0161 Invalid|(invalid)
+0 0x35e7de5c addic_dot|subic. r15, r7, 0x21a4
+0 0x34053b7b addic_dot|addic. r0, r5, 0x3b7b
+0 0xd76bfaee stfsu|stfsu f27, -0x512(r11)
+0 0x1b64af25 Invalid|(invalid)
+0 0xa786a5d0 lhzu|lhzu r28, -0x5a30(r6)
+0 0x7864d6df Invalid|(invalid)
+0 0x6b84e782 xori|xori r4, r28, 0xe782
+0 0x2347b129 subfic|subfic r26, r7, -0x4ed7
+0 0x4c1fc84 Invalid|(invalid)
+0 0x329a6083 addic|addic r20, r26, 0x6083
+0 0x82aa7556 lwz|lwz r21, 0x7556(r10)
+0 0x52a1cb6d rlwimix|rlwimi. r1, r21, 25, 13, 22
+0 0x84345678 lwzu|lwzu r1, 0x5678(r20)
+0 0x1f583c67 mulli|mulli r26, r24, 0x3c67
+0 0xfbd4386a Invalid|(invalid)
+0 0xd16401f1 stfs|stfs f11, 0x1f1(r4)
+0 0x103767ac Invalid|(invalid)
+0 0xb4af0e8b sthu|sthu r5, 0xe8b(r15)
+0 0x4d4b04be Invalid|(invalid)
+0 0xef8798b5 Invalid|(invalid)
+0 0xf4582420 psq_stu|psq_stu f2, 0x420(r24), 0, 2
+0 0x2b71baef Invalid|(invalid)
+0 0xc73cee52 lfsu|lfsu f25, -0x11ae(r28)
+0 0x451213b9 Invalid|(invalid)
+0 0x7a0abfd4 Invalid|(invalid)
+0 0x56d96593 rlwinmx|rlwinm. r25, r22, 12, 22, 9
+0 0xd7914926 stfsu|stfsu f28, 0x4926(r17)
+0 0xca5936fd lfd|lfd f18, 0x36fd(r25)
+0 0xe89eaec8 Invalid|(invalid)
+0 0xae697277 lhau|lhau r19, 0x7277(r9)
+0 0xe2fca93a psq_l|psq_l f23, -0x6c6(r28), 1, 2
+0 0xec870681 Invalid|(invalid)
+0 0x9c72a4fc stbu|stbu r3, -0x5b04(r18)
+0 0x2e13859b cmpi|cmpwi cr4, r19, -0x7a65
+0 0x8754e28e lwzu|lwzu r26, -0x1d72(r20)
+0 0xe25dc645 psq_l|psq_l f18, 0x645(r29), 1, 4
+0 0x29689670 Invalid|(invalid)
+0 0xf09b82ff psq_st|psq_st f4, 0x2ff(r27), 1, 0
+0 0x5b250922 Invalid|(invalid)
+0 0xc53bfa49 lfsu|lfsu f9, -0x5b7(r27)
+0 0xbc99b724 stmw|stmw r4, -0x48dc(r25)
+0 0xa83b8ea3 lha|lha r1, -0x715d(r27)
+0 0x7e8170f6 Invalid|(invalid)
+0 0x3260668d addic|addic r19, r0, 0x668d
+0 0x314a7b18 addic|addic r10, r10, 0x7b18
+0 0x59880c87 Invalid|(invalid)
+0 0x911bae0a stw|stw r8, -0x51f6(r27)
+0 0x786e0f11 Invalid|(invalid)
+0 0x8d1e964c lbzu|lbzu r8, -0x69b4(r30)
+0 0xfc93a0ab Invalid|(invalid)
+0 0xe196945e psq_l|psq_l f12, 0x45e(r22), 1, 1
+0 0x953037d5 stwu|stwu r9, 0x37d5(r16)
+0 0xd78cfcc0 stfsu|stfsu f28, -0x340(r12)
+0 0xe8532f0f Invalid|(invalid)
+0 0xea1a37f2 Invalid|(invalid)
+0 0x879e64d9 lwzu|lwzu r28, 0x64d9(r30)
+0 0x8093e274 lwz|lwz r4, -0x1d8c(r19)
+0 0x2c41dbb3 Invalid|(invalid)
+0 0x6e27ecc6 xoris|xoris r7, r17, 0xecc6
+0 0xba205a1d lmw|lmw r17, 0x5a1d(r0)
+0 0xcaacbb68 lfd|lfd f21, -0x4498(r12)
+0 0x3c450a97 addis|addis r2, r5, 0xa97
+0 0xcdae46da lfdu|lfdu f13, 0x46da(r14)
+0 0x89121ba1 lbz|lbz r8, 0x1ba1(r18)
+0 0xec003b9c Invalid|(invalid)
+0 0x92d05fbb stw|stw r22, 0x5fbb(r16)
+0 0x615d1a2e ori|ori r29, r10, 0x1a2e
+0 0x2987ed65 cmpli|cmplwi cr3, r7, 0xed65
+0 0xdada5710 stfd|stfd f22, 0x5710(r26)
+0 0x2d49bf1f Invalid|(invalid)
+0 0xf4397ac2 psq_stu|psq_stu f1, -0x53e(r25), 0, 7
+0 0x74525369 andis_dot|andis. r18, r2, 0x5369
+0 0xf95e41c4 Invalid|(invalid)
+0 0x6ad4cc3 Invalid|(invalid)
+0 0xae71bc96 lhau|lhau r19, -0x436a(r17)
+0 0x594211ad Invalid|(invalid)
+0 0x147a6fb8 Invalid|(invalid)
+0 0xf4716ca7 psq_stu|psq_stu f3, -0x359(r17), 0, 6
+0 0x57173aa Invalid|(invalid)
+0 0xfeac2c31 Invalid|(invalid)
+0 0x6a1c94ec xori|xori r28, r16, 0x94ec
+0 0x89aac2cb lbz|lbz r13, -0x3d35(r10)
+0 0x853573fe lwzu|lwzu r9, 0x73fe(r21)
+0 0xd12de6f5 stfs|stfs f9, -0x190b(r13)
+0 0xaaa5a560 lha|lha r21, -0x5aa0(r5)
+0 0xe470332f psq_lu|psq_lu f3, 0x32f(r16), 0, 3
+0 0x86dfd192 lwzu|lwzu r22, -0x2e6e(r31)
+0 0x7b0c5f9 Invalid|(invalid)
+0 0x299dd514 cmpli|cmplwi cr3, r29, 0xd514
+0 0x897ee1d3 lbz|lbz r11, -0x1e2d(r30)
+0 0x288be066 cmpli|cmplwi cr1, r11, 0xe066
+0 0x5fae8d3d rlwnmx|rlwnm. r14, r29, r17, 20, 30
+0 0xb1a89808 sth|sth r13, -0x67f8(r8)
+0 0xb21e32b7 sth|sth r16, 0x32b7(r30)
+0 0x1a62347a Invalid|(invalid)
+0 0x15b540c1 Invalid|(invalid)
+0 0xafb8a23c lhau|lhau r29, -0x5dc4(r24)
+0 0xb043c9db sth|sth r2, -0x3625(r3)
+0 0x14eca1ce Invalid|(invalid)
+0 0x5e2b2485 rlwnmx|rlwnm. r11, r17, r4, 18, 2
+0 0xa983e7b0 lha|lha r12, -0x1850(r3)
+0 0x4cf78b3f Invalid|(invalid)
+0 0xcaa3c62 twi|twi 5, r10, 0x3c62
+0 0xe252bc89 psq_l|psq_l f18, -0x377(r18), 1, 3
+0 0x33379c64 addic|subic r25, r23, 0x639c
+0 0x44f79ae3 Invalid|(invalid)
+0 0x76e35836 andis_dot|andis. r3, r23, 0x5836
+0 0x58ecccd Invalid|(invalid)
+0 0xd86c3458 stfd|stfd f3, 0x3458(r12)
+0 0x479c5cc7 Invalid|(invalid)
+0 0x33bd894a addic|subic r29, r29, 0x76b6
+0 0xf6e65951 psq_stu|psq_stu f23, -0x6af(r6), 0, 5
+0 0xac59638c lhau|lhau r2, 0x638c(r25)
+0 0x1bfc74eb Invalid|(invalid)
+0 0xf18fa39e psq_st|psq_st f12, 0x39e(r15), 1, 2
+0 0xd2c8a615 stfs|stfs f22, -0x59eb(r8)
+0 0x754a1e00 andis_dot|andis. r10, r10, 0x1e00
+0 0xd050c74f stfs|stfs f2, -0x38b1(r16)
+0 0x1d75bb32 mulli|mulli r11, r21, -0x44ce
+0 0x59113719 Invalid|(invalid)
+0 0xa75097b4 lhzu|lhzu r26, -0x684c(r16)
+0 0x179877f3 Invalid|(invalid)
+0 0xb5252406 sthu|sthu r9, 0x2406(r5)
+0 0xfb4bd05d Invalid|(invalid)
+0 0xa23a44a8 lhz|lhz r17, 0x44a8(r26)
+0 0x397cead7 addi|subi r11, r28, 0x1529
+0 0x8e00721a lbzu|lbzu r16, 0x721a(r0)
+0 0x473875e1 Invalid|(invalid)
+0 0xe6c3d8dc psq_lu|psq_lu f22, -0x724(r3), 1, 5
+0 0x3875c3fb addi|subi r3, r21, 0x3c05
+0 0xe56b796e psq_lu|psq_lu f11, -0x692(r11), 0, 7
+0 0xf18f6ba5 psq_st|psq_st f12, -0x45b(r15), 0, 6
+0 0x370d4850 addic_dot|addic. r24, r13, 0x4850
+0 0x122ce75f ps_madds1|ps_madds1. f17, f12, f29, f28
+0 0x4e5f4e02 Invalid|(invalid)
+0 0x50535a9 Invalid|(invalid)
+0 0xd64dc704 stfsu|stfsu f18, -0x38fc(r13)
+0 0x3e227903 addis|addis r17, r2, 0x7903
+0 0x503e43d6 rlwimix|rlwimi r30, r1, 8, 15, 11
+0 0xf98e97ed Invalid|(invalid)
+0 0x5bc7c8f8 Invalid|(invalid)
+0 0xce90dce7 lfdu|lfdu f20, -0x2319(r16)
+0 0x4ae7eeea bx|ba -0x1181118
+0 0xb7e49671 sthu|sthu r31, -0x698f(r4)
+0 0xccfd022c lfdu|lfdu f7, 0x22c(r29)
+0 0xd790b70b stfsu|stfsu f28, -0x48f5(r16)
+0 0x740d233e andis_dot|andis. r13, r0, 0x233e
+0 0xcd487535 lfdu|lfdu f10, 0x7535(r8)
+0 0xf32266a0 psq_st|psq_st f25, 0x6a0(r2), 0, 6
+0 0x7ceb6f Invalid|(invalid)
+0 0x1c3f4d2 Invalid|(invalid)
+0 0x5387b839 rlwimix|rlwimi. r7, r28, 23, 0, 28
+0 0x1fd42a54 mulli|mulli r30, r20, 0x2a54
+0 0x63969e13 ori|ori r22, r28, 0x9e13
+0 0xd65bb7a6 stfsu|stfsu f18, -0x485a(r27)
+0 0x5140237d rlwimix|rlwimi. r0, r10, 4, 13, 30
+0 0xd509c148 stfsu|stfsu f8, -0x3eb8(r9)
+0 0x1fe932f7 mulli|mulli r31, r9, 0x32f7
+0 0x4170ffba bcx|bca 11, 16, -0x48
+0 0x9663bb01 stwu|stwu r19, -0x44ff(r3)
+0 0x449df7c Invalid|(invalid)
+0 0x416e4e1b bcx|bcla 11, 14, 0x4e18
+0 0xaa41a10e lha|lha r18, -0x5ef2(r1)
+0 0x58fcc2c5 Invalid|(invalid)
+0 0xd91e78f0 stfd|stfd f8, 0x78f0(r30)
+0 0xe371d37f psq_l|psq_l f27, 0x37f(r17), 1, 5
+0 0x3740afa2 addic_dot|subic. r26, r0, 0x505e
+0 0x1631bec9 Invalid|(invalid)
+0 0x42c8c1a4 bcx|bc 22, 8, -0x3e5c
+0 0xb135e723 sth|sth r9, -0x18dd(r21)
+0 0xc6ea7f76 lfsu|lfsu f23, 0x7f76(r10)
+0 0x7b89730d Invalid|(invalid)
+0 0xb1352d98 sth|sth r9, 0x2d98(r21)
+0 0x28d6ed07 Invalid|(invalid)
+0 0xcdd8a48a lfdu|lfdu f14, -0x5b76(r24)
+0 0x5c6ee391 rlwnmx|rlwnm. r14, r3, r28, 14, 8
+0 0xb92f70cc lmw|lmw r9, 0x70cc(r15)
+0 0x446f892b Invalid|(invalid)
+0 0xee15f2de Invalid|(invalid)
+0 0xf7f55455 psq_stu|psq_stu f31, 0x455(r21), 0, 5
+0 0x93d67f40 stw|stw r30, 0x7f40(r22)
+0 0x6d7c9f8f xoris|xoris r28, r11, 0x9f8f
+0 0x5bb27e72 Invalid|(invalid)
+0 0x12dc4959 Invalid|(invalid)
+0 0xad508cf4 lhau|lhau r10, -0x730c(r16)
+0 0xde815433 stfdu|stfdu f20, 0x5433(r1)
+0 0x62979b46 ori|ori r23, r20, 0x9b46
+0 0xa9d3869d lha|lha r14, -0x7963(r19)
+0 0xb6bf0de8 sthu|sthu r21, 0xde8(r31)
+0 0xd6eb0b17 stfsu|stfsu f23, 0xb17(r11)
+0 0xa19bdd5a lhz|lhz r12, -0x22a6(r27)
+0 0x3fff1021 addis|addis r31, r31, 0x1021
+0 0xef72b61c Invalid|(invalid)
+0 0x4535683b Invalid|(invalid)
+0 0xced718ae lfdu|lfdu f22, 0x18ae(r23)
+0 0xdbb29e5 twi|twi 13, r27, 0x29e5
+0 0x995f7990 stb|stb r10, 0x7990(r31)
+0 0xcb4e4f9f lfd|lfd f26, 0x4f9f(r14)
+0 0x19366142 Invalid|(invalid)
+0 0x93a057e9 stw|stw r29, 0x57e9(r0)
+0 0xccd08c44 lfdu|lfdu f6, -0x73bc(r16)
+0 0x4139e543 bcx|bcla 9, 25, -0x1ac0
+0 0x7b500b16 Invalid|(invalid)
+0 0x55c75e2d rlwinmx|rlwinm. r7, r14, 11, 24, 22
+0 0x1f5c6238 mulli|mulli r26, r28, 0x6238
+0 0x19f68d27 Invalid|(invalid)
+0 0x9377aa2a stw|stw r27, -0x55d6(r23)
+0 0xc34d40b1 lfs|lfs f26, 0x40b1(r13)
+0 0xd218af6c stfs|stfs f16, -0x5094(r24)
+0 0x4ea0eb4b Invalid|(invalid)
+0 0xd512127e stfsu|stfsu f8, 0x127e(r18)
+0 0x8e174375 lbzu|lbzu r16, 0x4375(r23)
+0 0x7b0e67e0 Invalid|(invalid)
+0 0xb3d7e3af sth|sth r30, -0x1c51(r23)
+0 0x27295812 Invalid|(invalid)
+0 0xf6d6ea79 psq_stu|psq_stu f22, -0x587(r22), 1, 6
+0 0x5dedbf94 rlwnmx|rlwnm r13, r15, r23, 30, 10
+0 0xdd609a53 stfdu|stfdu f11, -0x65ad(r0)
+0 0x4440cee6 Invalid|(invalid)
+0 0xd14df9bd stfs|stfs f10, -0x643(r13)
+0 0xe8022a88 Invalid|(invalid)
+0 0xf40a7337 psq_stu|psq_stu f0, 0x337(r10), 0, 7
+0 0x6f690afa xoris|xoris r9, r27, 0xafa
+0 0x44d27541 Invalid|(invalid)
+0 0x3665cbc Invalid|(invalid)
+0 0x21d3125b subfic|subfic r14, r19, 0x125b
+0 0x5293e04e rlwimix|rlwimi r19, r20, 28, 1, 7
+0 0x8d12a105 lbzu|lbzu r8, -0x5efb(r18)
+0 0x35784a30 addic_dot|addic. r11, r24, 0x4a30
+0 0x784a5bbf Invalid|(invalid)
+0 0x1a2862e2 Invalid|(invalid)
+0 0x3f190109 addis|addis r24, r25, 0x109
+0 0xbc8d26e4 stmw|stmw r4, 0x26e4(r13)
+0 0x75367363 andis_dot|andis. r22, r9, 0x7363
+0 0x21d6e6b6 subfic|subfic r14, r22, -0x194a
+0 0xd690594d stfsu|stfsu f20, 0x594d(r16)
+0 0x20e566d8 subfic|subfic r7, r5, 0x66d8
+0 0x8977bd47 lbz|lbz r11, -0x42b9(r23)
+0 0xc6acffca lfsu|lfsu f21, -0x36(r12)
+0 0x8f47add1 lbzu|lbzu r26, -0x522f(r7)
+0 0xece0be0c Invalid|(invalid)
+0 0x462cdd6b Invalid|(invalid)
+0 0x3269821e addic|subic r19, r9, 0x7de2
+0 0xcef64295 lfdu|lfdu f23, 0x4295(r22)
+0 0x80722080 lwz|lwz r3, 0x2080(r18)
+0 0x1416b7cf Invalid|(invalid)
+0 0x341081b2 addic_dot|subic. r0, r16, 0x7e4e
+0 0xa33f9b99 lhz|lhz r25, -0x6467(r31)
+0 0x33d3c234 addic|subic r30, r19, 0x3dcc
+0 0x993c7073 stb|stb r9, 0x7073(r28)
+0 0x79bf5286 Invalid|(invalid)
+0 0x17f77cdd Invalid|(invalid)
+0 0x3d7b1728 addis|addis r11, r27, 0x1728
+0 0x30cf6b57 addic|addic r6, r15, 0x6b57
+0 0xbfc0889a stmw|stmw r30, -0x7766(r0)
+0 0x69a5ea61 xori|xori r5, r13, 0xea61
+0 0xf4cd35c twi|twi 26, r12, -0x2ca4
+0 0x194f4c7b Invalid|(invalid)
+0 0xc8dff7ee lfd|lfd f6, -0x812(r31)
+0 0x584b2825 Invalid|(invalid)
+0 0x1f10ead0 mulli|mulli r24, r16, -0x1530
+0 0x3cedf7df addis|subis r7, r13, 0x821
+0 0x33feb482 addic|subic r31, r30, 0x4b7e
+0 0x1e63ba29 mulli|mulli r19, r3, -0x45d7
+0 0x4e269184 Invalid|(invalid)
+0 0xb8339183 lmw|lmw r1, -0x6e7d(r19)
+0 0x82e71256 lwz|lwz r23, 0x1256(r7)
+0 0xd02c646d stfs|stfs f1, 0x646d(r12)
+0 0x64783b78 oris|oris r24, r3, 0x3b78
+0 0x82e27d67 lwz|lwz r23, 0x7d67(r2)
+0 0xe660a56a psq_lu|psq_lu f19, 0x56a(r0), 1, 2
+0 0x27262af1 Invalid|(invalid)
+0 0x52af9cac rlwimix|rlwimi r15, r21, 19, 18, 22
+0 0xdf1b5f8b stfdu|stfdu f24, 0x5f8b(r27)
+0 0xa38441be lhz|lhz r28, 0x41be(r4)
+0 0xfdda51b5 Invalid|(invalid)
+0 0x2fa9a920 cmpi|cmpi 7, 1, r9, -0x56e0
+0 0x72c11bef andi_dot|andi. r1, r22, 0x1bef
+0 0x264ffb52 Invalid|(invalid)
+0 0xffde5cb9 fmsubx|fmsub. f30, f30, f18, f11
+0 0x252a94d4 Invalid|(invalid)
+0 0x2f1cd693 cmpi|cmpwi cr6, r28, -0x296d
+0 0x157b2626 Invalid|(invalid)
+0 0x52180ffd rlwimix|rlwimi. r24, r16, 1, 31, 30
+0 0xbfd1d3c8 stmw|stmw r30, -0x2c38(r17)
+0 0x6ac1f377 xori|xori r1, r22, 0xf377
+0 0xfb8a563a Invalid|(invalid)
+0 0x37416f81 addic_dot|addic. r26, r1, 0x6f81
+0 0x564e19fc rlwinmx|rlwinm r14, r18, 3, 7, 30
+0 0xd1b2169b stfs|stfs f13, 0x169b(r18)
+0 0x59235f8e Invalid|(invalid)
+0 0xf4acbf45 psq_stu|psq_stu f5, -0xbb(r12), 1, 3
+0 0x7bd15b70 Invalid|(invalid)
+0 0xfc123ff twi|twi 30, r1, 0x23ff
+0 0x34a15622 addic_dot|addic. r5, r1, 0x5622
+0 0x7b488349 Invalid|(invalid)
+0 0xb1c4cc24 sth|sth r14, -0x33dc(r4)
+0 0x59393fa3 Invalid|(invalid)
+0 0x7ae88df6 Invalid|(invalid)
+0 0x98e37f8d stb|stb r7, 0x7f8d(r3)
+0 0xccbce018 lfdu|lfdu f5, -0x1fe8(r28)
+0 0x35becd87 addic_dot|subic. r13, r30, 0x3279
+0 0xc57a9b0a lfsu|lfsu f11, -0x64f6(r26)
+0 0xb5b0b811 sthu|sthu r13, -0x47ef(r16)
+0 0xc0ad4b4c lfs|lfs f5, 0x4b4c(r13)
+0 0x317471ab addic|addic r11, r20, 0x71ab
+0 0x59ca515e Invalid|(invalid)
+0 0x620b70d5 ori|ori r11, r16, 0x70d5
+0 0xc85d01c0 lfd|lfd f2, 0x1c0(r29)
+0 0x585f100f Invalid|(invalid)
+0 0x75cfc4f2 andis_dot|andis. r15, r14, 0xc4f2
+0 0x387b2dd9 addi|addi r3, r27, 0x2dd9
+0 0x1c1a3774 mulli|mulli r0, r26, 0x3774
+0 0xa009ccb3 lhz|lhz r0, -0x334d(r9)
+0 0x3ddc49c6 addis|addis r14, r28, 0x49c6
+0 0xd7f7b31d stfsu|stfsu f31, -0x4ce3(r23)
+0 0xabae6068 lha|lha r29, 0x6068(r14)
+0 0xa36a0b97 lhz|lhz r27, 0xb97(r10)
+0 0xdfae73da stfdu|stfdu f29, 0x73da(r14)
+0 0xfa6d04a1 Invalid|(invalid)
+0 0x8f92309c lbzu|lbzu r28, 0x309c(r18)
+0 0x550370bb rlwinmx|rlwinm. r3, r8, 14, 2, 29
+0 0xbec6172e stmw|stmw r22, 0x172e(r6)
+0 0xeb7f6665 Invalid|(invalid)
+0 0x25619c10 Invalid|(invalid)
+0 0x8b4be01f lbz|lbz r26, -0x1fe1(r11)
+0 0xbdf847c2 stmw|stmw r15, 0x47c2(r24)
+0 0xe38f5c69 psq_l|psq_l f28, -0x397(r15), 0, 5
+0 0xb8fd6c4 Invalid|(invalid)
+0 0x8b4f7dc3 lbz|lbz r26, 0x7dc3(r15)
+0 0xfa435996 Invalid|(invalid)
+0 0xafdaaad Invalid|(invalid)
+0 0x705b54b8 andi_dot|andi. r27, r2, 0x54b8
+0 0xf594ada7 psq_stu|psq_stu f12, -0x259(r20), 1, 2
+0 0x8ae2e0aa lbz|lbz r23, -0x1f56(r2)
+0 0x29af5531 cmpli|cmpli 3, 1, r15, 0x5531
+0 0x6801c9ec xori|xori r1, r0, 0xc9ec
+0 0xb94013cb lmw|lmw r10, 0x13cb(r0)
+0 0x1aa3b0fe Invalid|(invalid)
+0 0x46d19ff5 Invalid|(invalid)
+0 0x3e342a60 addis|addis r17, r20, 0x2a60
+0 0xf178942f psq_st|psq_st f11, 0x42f(r24), 1, 1
+0 0x6e77de92 xoris|xoris r23, r19, 0xde92
+0 0xbcde0ef9 stmw|stmw r6, 0xef9(r30)
+0 0xf6caaa14 psq_stu|psq_stu f22, -0x5ec(r10), 1, 2
+0 0xd10b52d3 stfs|stfs f8, 0x52d3(r11)
+0 0x2d4abd66 Invalid|(invalid)
+0 0x85de663d lwzu|lwzu r14, 0x663d(r30)
+0 0x71b8bd08 andi_dot|andi. r24, r13, 0xbd08
+0 0x4fb3b7 Invalid|(invalid)
+0 0x7d14e17a Invalid|(invalid)
+0 0xc3f0a9c1 lfs|lfs f31, -0x563f(r16)
+0 0xe641173c psq_lu|psq_lu f18, 0x73c(r1), 0, 1
+0 0x114b5adb Invalid|(invalid)
+0 0x49301ece bx|ba 0x1301ecc
+0 0xca0b1d85 lfd|lfd f16, 0x1d85(r11)
+0 0xa969acb0 lha|lha r11, -0x5350(r9)
+0 0xee162c3f fnmaddsx|fnmadds. f16, f22, f16, f5
+0 0x45eb8962 Invalid|(invalid)
+0 0x29004589 cmpli|cmplwi cr2, r0, 0x4589
+0 0x73afb164 andi_dot|andi. r15, r29, 0xb164
+0 0x657e4be3 oris|oris r30, r11, 0x4be3
+0 0x55f7536 Invalid|(invalid)
+0 0x84c2e5cd lwzu|lwzu r6, -0x1a33(r2)
+0 0x99fb9958 stb|stb r15, -0x66a8(r27)
+0 0x39ec1dc7 addi|addi r15, r12, 0x1dc7
+0 0xb181764a sth|sth r12, 0x764a(r1)
+0 0x35ea0251 addic_dot|addic. r15, r10, 0x251
+0 0xedd5188c Invalid|(invalid)
+0 0x568645eb rlwinmx|rlwinm. r6, r20, 8, 23, 21
+0 0x3f78609e addis|addis r27, r24, 0x609e
+0 0xfb74df15 Invalid|(invalid)
+0 0x38d72300 addi|addi r6, r23, 0x2300
+0 0xe95a84f twi|twi 20, r21, -0x57b1
+0 0x30304832 addic|addic r1, r16, 0x4832
+0 0x40cf0019 bcx|bnsl cr3, 0x18
+0 0x8763ecb4 lwzu|lwzu r27, -0x134c(r3)
+0 0x8b2968f3 lbz|lbz r25, 0x68f3(r9)
+0 0x322e8106 addic|subic r17, r14, 0x7efa
+0 0xbc14295d stmw|stmw r0, 0x295d(r20)
+0 0xb698e9a8 sthu|sthu r20, -0x1658(r24)
+0 0xcafaebd7 lfd|lfd f23, -0x1429(r26)
+0 0x38a59f1a addi|subi r5, r5, 0x60e6
+0 0x68945ee1 xori|xori r20, r4, 0x5ee1
+0 0xf982cddc Invalid|(invalid)
+0 0xd891d4fb stfd|stfd f4, -0x2b05(r17)
+0 0xdbc9766e stfd|stfd f30, 0x766e(r9)
+0 0x2197e4a5 subfic|subfic r12, r23, -0x1b5b
+0 0x49918d50 bx|b 0x1918d50
+0 0x1aa8085f Invalid|(invalid)
+0 0x16631b02 Invalid|(invalid)
+0 0x61633ea9 ori|ori r3, r11, 0x3ea9
+0 0xf64c5c04 psq_stu|psq_stu f18, -0x3fc(r12), 0, 5
+0 0xe2cdaa03 psq_l|psq_l f22, -0x5fd(r13), 1, 2
+0 0xb4a4e0d6 sthu|sthu r5, -0x1f2a(r4)
+0 0xe87b30ed Invalid|(invalid)
+0 0xc845adf8 lfd|lfd f2, -0x5208(r5)
+0 0x9e4d1de7 stbu|stbu r18, 0x1de7(r13)
+0 0x83e5bea Invalid|(invalid)
+0 0x5128bf71 rlwimix|rlwimi. r8, r9, 23, 29, 24
+0 0x6b4f372c xori|xori r15, r26, 0x372c
+0 0x4d4f080b Invalid|(invalid)
+0 0xb5b0603e sthu|sthu r13, 0x603e(r16)
+0 0xd33d2e35 stfs|stfs f25, 0x2e35(r29)
+0 0x13edeba0 Invalid|(invalid)
+0 0x243e4c6f Invalid|(invalid)
+0 0xaee101d2 lhau|lhau r23, 0x1d2(r1)
+0 0xbc160139 stmw|stmw r0, 0x139(r22)
+0 0x940dff54 stwu|stwu r0, -0xac(r13)
+0 0x7b6c0f13 Invalid|(invalid)
+0 0xaeef94a6 lhau|lhau r23, -0x6b5a(r15)
+0 0x5ee0fc7d rlwnmx|rlwnm. r0, r23, r31, 17, 30
+0 0x52f6e648 rlwimix|rlwimi r22, r23, 28, 25, 4
+0 0x70f3b3f7 andi_dot|andi. r19, r7, 0xb3f7
+0 0xcb48acba lfd|lfd f26, -0x5346(r8)
+0 0x81202401 lwz|lwz r9, 0x2401(r0)
+0 0xdc7f547c stfdu|stfdu f3, 0x547c(r31)
+0 0xe0dedf1b psq_l|psq_l f6, -0xe5(r30), 1, 5
+0 0xedfa1e0e Invalid|(invalid)
+0 0x876dbbc5 lwzu|lwzu r27, -0x443b(r13)
+0 0xfb813df0 Invalid|(invalid)
+0 0x9789747f stwu|stwu r28, 0x747f(r9)
+0 0x4d46fca2 Invalid|(invalid)
+0 0xe68047c9 psq_lu|psq_lu f20, 0x7c9(r0), 0, 4
+0 0x938dd6a4 stw|stw r28, -0x295c(r13)
+0 0xe2459823 psq_l|psq_l f18, -0x7dd(r5), 1, 1
+0 0x347b9c76 addic_dot|subic. r3, r27, 0x638a
+0 0x9c6e8c0d stbu|stbu r3, -0x73f3(r14)
+0 0xade19298 lhau|lhau r15, -0x6d68(r1)
+0 0xe23fae07 psq_l|psq_l f17, -0x1f9(r31), 1, 2
+0 0xb201918a sth|sth r16, -0x6e76(r1)
+0 0xb6338c91 sthu|sthu r17, -0x736f(r19)
+0 0x6d9825cc xoris|xoris r24, r12, 0x25cc
+0 0x45a25a2b Invalid|(invalid)
+0 0xfeb3afde Invalid|(invalid)
+0 0x25728d55 Invalid|(invalid)
+0 0xdf208440 stfdu|stfdu f25, -0x7bc0(r0)
+0 0x4afa808f bx|bla -0x1057f74
+0 0xb2720b72 sth|sth r19, 0xb72(r18)
+0 0x6a7b1259 xori|xori r27, r19, 0x1259
+0 0xd6f0e1f4 stfsu|stfsu f23, -0x1e0c(r16)
+0 0x32db4533 addic|addic r22, r27, 0x4533
+0 0x19f5f846 Invalid|(invalid)
+0 0xd68cdf9d stfsu|stfsu f20, -0x2063(r12)
+0 0x537ab2e8 rlwimix|rlwimi r26, r27, 22, 11, 20
+0 0x83c20c17 lwz|lwz r30, 0xc17(r2)
+0 0x41e60a5a bcx|beq+a cr1, 0xa58
+0 0x6a5bf921 xori|xori r27, r18, 0xf921
+0 0x165eab1c Invalid|(invalid)
+0 0xc43a793b lfsu|lfsu f1, 0x793b(r26)
+0 0x8b2a15ae lbz|lbz r25, 0x15ae(r10)
+0 0x94d4a2e5 stwu|stwu r6, -0x5d1b(r20)
+0 0x68e0be90 xori|xori r0, r7, 0xbe90
+0 0x8f42709f lbzu|lbzu r26, 0x709f(r2)
+0 0xdc7f2e42 stfdu|stfdu f3, 0x2e42(r31)
+0 0x561f60e9 rlwinmx|rlwinm. r31, r16, 12, 3, 20
+0 0x3f9c2144 addis|addis r28, r28, 0x2144
+0 0x26ee1643 Invalid|(invalid)
+0 0xc54ba816 lfsu|lfsu f10, -0x57ea(r11)
+0 0x8ae4f72d lbz|lbz r23, -0x8d3(r4)
+0 0x31774738 addic|addic r11, r23, 0x4738
+0 0xe94bce27 Invalid|(invalid)
+0 0x25b3172a Invalid|(invalid)
+0 0x63d269b1 ori|ori r18, r30, 0x69b1
+0 0xf5d7e46c psq_stu|psq_stu f14, 0x46c(r23), 1, 6
+0 0x4b883c4b bx|bla -0x77c3b8
+0 0x2fea4f7e Invalid|(invalid)
+0 0x4d5cfc75 Invalid|(invalid)
+0 0x5e16ece0 rlwnmx|rlwnm r22, r16, r29, 19, 16
+0 0x3f5244af addis|addis r26, r18, 0x44af
+0 0xd6cb6512 stfsu|stfsu f22, 0x6512(r11)
+0 0xcbc63379 lfd|lfd f30, 0x3379(r6)
+0 0xfe349494 Invalid|(invalid)
+0 0x267f0b53 Invalid|(invalid)
+0 0xfda9abe6 Invalid|(invalid)
+0 0xf5fd2bd twi|twi 26, r31, -0x2d43
+0 0xf8cc4f88 Invalid|(invalid)
+0 0xb8edf437 lmw|lmw r7, -0xbc9(r13)
+0 0xfd65b7fa fmaddx|fmadd f11, f5, f31, f22
+0 0x450fde41 Invalid|(invalid)
+0 0xa248d1bc lhz|lhz r18, -0x2e44(r8)
+0 0x80aca35b lwz|lwz r5, -0x5ca5(r12)
+0 0x52c15d4e rlwimix|rlwimi r1, r22, 11, 21, 7
+0 0xe7149a05 psq_lu|psq_lu f24, -0x5fb(r20), 1, 1
+0 0xef580f30 Invalid|(invalid)
+0 0xd05afcbf stfs|stfs f2, -0x341(r26)
+0 0x89f3afe2 lbz|lbz r15, -0x501e(r19)
+0 0x92088a09 stw|stw r16, -0x75f7(r8)
+0 0xe29f3be4 psq_l|psq_l f20, -0x41c(r31), 0, 3
+0 0x57cf2463 rlwinmx|rlwinm. r15, r30, 4, 17, 17
+0 0xbb7d03b6 lmw|lmw r27, 0x3b6(r29)
+0 0x2226724d subfic|subfic r17, r6, 0x724d
+0 0x6daecbd8 xoris|xoris r14, r13, 0xcbd8
+0 0xbaf97e47 lmw|lmw r23, 0x7e47(r25)
+0 0x2e3aecca cmpi|cmpi 4, 1, r26, -0x1336
+0 0x1ccd56d1 mulli|mulli r6, r13, 0x56d1
+0 0x7936730c Invalid|(invalid)
+0 0xcf08ae6b lfdu|lfdu f24, -0x5195(r8)
+0 0xf2bc3f1e psq_st|psq_st f21, -0xe2(r28), 0, 3
+0 0xaa447b95 lha|lha r18, 0x7b95(r4)
+0 0x8792580 Invalid|(invalid)
+0 0x61cd98cf ori|ori r13, r14, 0x98cf
+0 0x8bd50eb2 lbz|lbz r30, 0xeb2(r21)
+0 0xa3bf6499 lhz|lhz r29, 0x6499(r31)
+0 0xac011734 lhau|lhau r0, 0x1734(r1)
+0 0xaf5f6173 lhau|lhau r26, 0x6173(r31)
+0 0xf872af86 Invalid|(invalid)
+0 0x79a1d5dd Invalid|(invalid)
+0 0xb793bc28 sthu|sthu r28, -0x43d8(r19)
+0 0xe9ff6c57 Invalid|(invalid)
+0 0xb2afb59a sth|sth r21, -0x4a66(r15)
+0 0xf603d361 psq_stu|psq_stu f16, 0x361(r3), 1, 5
+0 0xef65c85c Invalid|(invalid)
+0 0x783d5d7b Invalid|(invalid)
+0 0x7827f4ee Invalid|(invalid)
+0 0x1f75a125 mulli|mulli r27, r21, -0x5edb
+0 0xa08f2fd0 lhz|lhz r4, 0x2fd0(r15)
+0 0xcd5b18df lfdu|lfdu f10, 0x18df(r27)
+0 0xef8c8182 Invalid|(invalid)
+0 0xc003c329 lfs|lfs f0, -0x3cd7(r3)
+0 0x58bf2684 Invalid|(invalid)
+0 0xfff0c283 Invalid|(invalid)
+0 0x7f77af56 Invalid|(invalid)
+0 0x547afd6d rlwinmx|rlwinm. r26, r3, 31, 21, 22
+0 0xb1302078 sth|sth r9, 0x2078(r16)
+0 0x82d0be67 lwz|lwz r22, -0x4199(r16)
+0 0xea81126a Invalid|(invalid)
+0 0x67ec53f1 oris|oris r12, r31, 0x53f1
+0 0xe0dbd1ac psq_l|psq_l f6, 0x1ac(r27), 1, 5
+0 0xa42bb08b lhzu|lhzu r1, -0x4f75(r11)
+0 0x84917ebe lwzu|lwzu r4, 0x7ebe(r17)
+0 0x9f710ab5 stbu|stbu r27, 0xab5(r17)
+0 0x9ef2e20 Invalid|(invalid)
+0 0xb6f47cef sthu|sthu r23, 0x7cef(r20)
+0 0x15770852 Invalid|(invalid)
+0 0xfa2ea5b9 Invalid|(invalid)
+0 0x767e69d4 andis_dot|andis. r30, r19, 0x69d4
+0 0xa844793 Invalid|(invalid)
+0 0xbcb90326 stmw|stmw r5, 0x326(r25)
+0 0x99ae8fd Invalid|(invalid)
+0 0x3878f8c8 addi|subi r3, r24, 0x738
+0 0x147e7477 Invalid|(invalid)
+0 0x6aac033a xori|xori r12, r21, 0x33a
+0 0x25ffd881 Invalid|(invalid)
+0 0xe0dd8efc psq_l|psq_l f6, -0x104(r29), 1, 0
+0 0x70f4a79b andi_dot|andi. r20, r7, 0xa79b
+0 0xc2c5dc8e lfs|lfs f22, -0x2372(r5)
+0 0xe33fb845 psq_l|psq_l f25, -0x7bb(r31), 1, 3
+0 0x422e2070 bcx|bdnz+ 0x2070
+0 0x9ccac4ff stbu|stbu r6, -0x3b01(r10)
+0 0x7b31a322 Invalid|(invalid)
+0 0x49d90c49 bx|bl 0x1d90c48
+0 0x7223e124 andi_dot|andi. r3, r17, 0xe124
+0 0x8e5af0a3 lbzu|lbzu r18, -0xf5d(r26)
+0 0x8da3aaf6 lbzu|lbzu r13, -0x550a(r3)
+0 0x982a988d stb|stb r1, -0x6773(r10)
+0 0x7ea34518 Invalid|(invalid)
+0 0x90598e87 stw|stw r2, -0x7179(r25)
+0 0xcd6d880a lfdu|lfdu f11, -0x77f6(r13)
+0 0x8ff76111 lbzu|lbzu r31, 0x6111(r23)
+0 0x89f0004c lbz|lbz r15, 0x4c(r16)
+0 0x2f942ab Invalid|(invalid)
+0 0xb6d20e5e sthu|sthu r22, 0xe5e(r18)
+0 0x942aa9d5 stwu|stwu r1, -0x562b(r10)
+0 0x422106c0 bcx|bdnz+ 0x6c0
+0 0xe74ef10f psq_lu|psq_lu f26, 0x10f(r14), 1, 7
+0 0x8b9951f2 lbz|lbz r28, 0x51f2(r25)
+0 0x1adbf6d9 Invalid|(invalid)
+0 0xe7d48c74 psq_lu|psq_lu f30, -0x38c(r20), 1, 0
+0 0x58f5bdb3 Invalid|(invalid)
+0 0x10e4a6c6 Invalid|(invalid)
+0 0x37930c1d addic_dot|addic. r28, r19, 0xc1d
+0 0x58240568 Invalid|(invalid)
+0 0x59f30c97 Invalid|(invalid)
+0 0x8242a0da lwz|lwz r18, -0x5f26(r2)
+0 0x41cbeda1 bcx|bsol cr2, -0x1260
+0 0xcdd8259c lfdu|lfdu f14, 0x259c(r24)
+0 0x94da81bb stwu|stwu r6, -0x7e45(r26)
+0 0x8e03142e lbzu|lbzu r16, 0x142e(r3)
+0 0xdbbadf65 stfd|stfd f29, -0x209b(r26)
+0 0x4ddce110 Invalid|(invalid)
+0 0xf932011f Invalid|(invalid)
+0 0x6ecb14c2 xoris|xoris r11, r22, 0x14c2
+0 0xdd506569 stfdu|stfdu f10, 0x6569(r16)
+0 0xf2f56bc4 psq_st|psq_st f23, -0x43c(r21), 0, 6
+0 0x5615aec3 rlwinmx|rlwinm. r21, r16, 21, 27, 1
+0 0x7668f696 andis_dot|andis. r8, r19, 0xf696
+0 0xe77d43ad psq_lu|psq_lu f27, 0x3ad(r29), 0, 4
+0 0x8cb039b8 lbzu|lbzu r5, 0x39b8(r16)
+0 0x571beea7 rlwinmx|rlwinm. r27, r24, 29, 26, 19
+0 0x9de84daa stbu|stbu r15, 0x4daa(r8)
+0 0xa3b67e31 lhz|lhz r29, 0x7e31(r22)
+0 0x459afeec Invalid|(invalid)
+0 0x877964cb lwzu|lwzu r27, 0x64cb(r25)
+0 0xeee5edfe fnmaddsx|fnmadds f23, f5, f23, f29
+0 0xf3b958f5 psq_st|psq_st f29, -0x70b(r25), 0, 5
+0 0x44b6af60 Invalid|(invalid)
+0 0x3f64f52f addis|subis r27, r4, 0xad1
+0 0xda23eb92 stfd|stfd f17, -0x146e(r3)
+0 0x958f57f9 stwu|stwu r12, 0x57f9(r15)
+0 0x7e2b7f14 Invalid|(invalid)
+0 0x9fbbc3d3 stbu|stbu r29, -0x3c2d(r27)
+0 0xcf5d9a66 lfdu|lfdu f26, -0x659a(r29)
+0 0xffd23f3d fnmsubx|fnmsub. f30, f18, f28, f7
+0 0x273ce208 Invalid|(invalid)
+0 0xffe534b7 Invalid|(invalid)
+0 0xaa5b8e7a lha|lha r18, -0x7186(r27)
+0 0x7a3012c1 Invalid|(invalid)
+0 0x817d8c3c lwz|lwz r11, -0x73c4(r29)
+0 0x71f6ebdb andi_dot|andi. r22, r15, 0xebdb
+0 0xc9479bce lfd|lfd f10, -0x6432(r7)
+0 0xb62f1685 sthu|sthu r17, 0x1685(r15)
+0 0xf14371b0 psq_st|psq_st f10, 0x1b0(r3), 0, 7
+0 0x4118cd3f bcx|bcla 8, 24, -0x32c4
+0 0xe040d662 psq_l|psq_l f2, 0x662(r0), 1, 5
+0 0x6c31ce89 xoris|xoris r17, r1, 0xce89
+0 0x935bc664 stw|stw r26, -0x399c(r27)
+0 0x8e28fce3 lbzu|lbzu r17, -0x31d(r8)
+0 0xde2f9236 stfdu|stfdu f17, -0x6dca(r15)
+0 0xc0bafecd lfs|lfs f5, -0x133(r26)
+0 0xc5fefe58 lfsu|lfsu f15, -0x1a8(r30)
+0 0x6e9fdec7 xoris|xoris r31, r20, 0xdec7
+0 0x76d9634a andis_dot|andis. r25, r22, 0x634a
+0 0x75f1ab51 andis_dot|andis. r17, r15, 0xab51
+0 0x5904cd8c Invalid|(invalid)
+0 0x31b416eb addic|addic r13, r20, 0x16eb
+0 0x26351d9e Invalid|(invalid)
+0 0x2d651815 Invalid|(invalid)
+0 0x59582800 Invalid|(invalid)
+0 0xafbe894f lhau|lhau r29, -0x76b1(r30)
+0 0xc0fed532 lfs|lfs f7, -0x2ace(r30)
+0 0x3e10c919 addis|subis r16, r16, 0x36e7
+0 0xabab41b4 lha|lha r29, 0x41b4(r11)
+0 0xc7de59f3 lfsu|lfsu f30, 0x59f3(r30)
+0 0xe68bde06 psq_lu|psq_lu f20, -0x1fa(r11), 1, 5
+0 0xe2a0825d psq_l|psq_l f21, 0x25d(r0), 1, 0
+0 0xea6b8ea8 Invalid|(invalid)
+0 0x6fdcecd7 xoris|xoris r28, r30, 0xecd7
+0 0xe7decc1a psq_lu|psq_lu f30, -0x3e6(r30), 1, 4
+0 0xc3f447e1 lfs|lfs f31, 0x47e1(r20)
+0 0x3af5c2dc addi|subi r23, r21, 0x3d24
+0 0xfa51e5fb Invalid|(invalid)
+0 0xf7fb736e psq_stu|psq_stu f31, 0x36e(r27), 0, 7
+0 0x23e45da5 subfic|subfic r31, r4, 0x5da5
+0 0xe09d250 twi|twi 16, r9, -0x2db0
+0 0x7707295f andis_dot|andis. r7, r24, 0x295f
+0 0xb97ae802 lmw|lmw r11, -0x17fe(r26)
+0 0x2c4547a9 Invalid|(invalid)
+0 0xff7ef104 Invalid|(invalid)
+0 0x519cdb03 rlwimix|rlwimi. r28, r12, 27, 12, 1
+0 0x7d5f7dd6 mullwx|mullwo r10, r31, r15
+0 0x262bc9ed Invalid|(invalid)
+0 0x493792f8 bx|b 0x13792f8
+0 0x926d5ee7 stw|stw r19, 0x5ee7(r13)
+0 0xc728c8ea lfsu|lfsu f25, -0x3716(r8)
+0 0x9d70e871 stbu|stbu r11, -0x178f(r16)
+0 0x7d556c2c lwbrx|lwbrx r10, r21, r13
+0 0x65b1590b oris|oris r17, r13, 0x590b
+0 0xea279d3e Invalid|(invalid)
+0 0xb475e735 sthu|sthu r3, -0x18cb(r21)
+0 0x7bad70a0 Invalid|(invalid)
+0 0xcce3ad6f lfdu|lfdu f7, -0x5291(r3)
+0 0xd4120ed2 stfsu|stfsu f0, 0xed2(r18)
+0 0x2c284a39 cmpi|cmpi 0, 1, r8, 0x4a39
+0 0xd67bd454 stfsu|stfsu f19, -0x2bac(r27)
+0 0x9e658013 stbu|stbu r19, -0x7fed(r5)
+0 0x58d771a6 Invalid|(invalid)
+0 0xe445d57d psq_lu|psq_lu f2, 0x57d(r5), 1, 5
+0 0x1a580b48 Invalid|(invalid)
+0 0x376234f7 addic_dot|addic. r27, r2, 0x34f7
+0 0x93b459ba stw|stw r29, 0x59ba(r20)
+0 0xd7e08d01 stfsu|stfsu f31, -0x72ff(r0)
+0 0xad68c97c lhau|lhau r11, -0x3684(r8)
+0 0x83f3701b lwz|lwz r31, 0x701b(r19)
+0 0x31869b0e addic|subic r12, r6, 0x64f2
+0 0xda22b4c5 stfd|stfd f17, -0x4b3b(r2)
+0 0x39d802f0 addi|addi r14, r24, 0x2f0
+0 0x4185157f bcx|bgtla cr1, 0x157c
+0 0xb86149a2 lmw|lmw r3, 0x49a2(r1)
+0 0x9752d0c9 stwu|stwu r26, -0x2f37(r18)
+0 0xd786eba4 stfsu|stfsu f28, -0x145c(r6)
+0 0x9f794923 stbu|stbu r27, 0x4923(r25)
+0 0x2060b976 subfic|subfic r3, r0, -0x468a
+0 0x9e17a50d stbu|stbu r16, -0x5af3(r23)
+0 0x6901f798 xori|xori r1, r8, 0xf798
+0 0xa20c6f07 lhz|lhz r16, 0x6f07(r12)
+0 0x51be7e8a rlwimix|rlwimi r30, r13, 15, 26, 5
+0 0x74fc3591 andis_dot|andis. r28, r7, 0x3591
+0 0xdfb4dacc stfdu|stfdu f29, -0x2534(r20)
+0 0xeb792b2b Invalid|(invalid)
+0 0x5c256cde rlwnmx|rlwnm r5, r1, r13, 19, 15
+0 0x33c655 Invalid|(invalid)
+0 0x5b5e8940 Invalid|(invalid)
+0 0xcf5c618f lfdu|lfdu f26, 0x618f(r28)
+0 0x7b459872 Invalid|(invalid)
+0 0xbb9ddb59 lmw|lmw r28, -0x24a7(r29)
+0 0x58c536f4 Invalid|(invalid)
+0 0xd4593633 stfsu|stfsu f2, 0x3633(r25)
+0 0x3ca85546 addis|addis r5, r8, 0x5546
+0 0x8d0a389d lbzu|lbzu r8, 0x389d(r10)
+0 0x63aa57e8 ori|ori r10, r29, 0x57e8
+0 0x7fd0d17 Invalid|(invalid)
+0 0x5ac4375a Invalid|(invalid)
+0 0x32bce221 addic|subic r21, r28, 0x1ddf
+0 0xfffea01c Invalid|(invalid)
+0 0xc8e38a3b lfd|lfd f7, -0x75c5(r3)
+0 0x215112ae subfic|subfic r10, r17, 0x12ae
+0 0x92321be5 stw|stw r17, 0x1be5(r18)
+0 0xbe560390 stmw|stmw r18, 0x390(r22)
+0 0xeb1a919f Invalid|(invalid)
+0 0x6edbfb42 xoris|xoris r27, r22, 0xfb42
+0 0x6b2269e9 xori|xori r2, r25, 0x69e9
+0 0xaf9bb644 lhau|lhau r28, -0x49bc(r27)
+0 0x5ac64743 Invalid|(invalid)
+0 0xa79b4516 lhzu|lhzu r28, 0x4516(r27)
+0 0x32c6902d addic|subic r22, r6, 0x6fd3
+0 0xac062c38 lhau|lhau r0, 0x2c38(r6)
+0 0xa1050f27 lhz|lhz r8, 0xf27(r5)
+0 0x2d82842a cmpi|cmpwi cr3, r2, -0x7bd6
+0 0x1b5b92b1 Invalid|(invalid)
+0 0x214b196c subfic|subfic r10, r11, 0x196c
+0 0xef138d4b Invalid|(invalid)
+0 0x31968c7e addic|subic r12, r22, 0x7382
+0 0x8be6b575 lbz|lbz r31, -0x4a8b(r6)
+0 0x5c1371e0 rlwnmx|rlwnm r19, r0, r14, 7, 16
+0 0x93b0a5af stw|stw r29, -0x5a51(r16)
+0 0xf2817212 psq_st|psq_st f20, 0x212(r1), 0, 7
+0 0x8c397c79 lbzu|lbzu r1, 0x7c79(r25)
+0 0x80af6994 lwz|lwz r5, 0x6994(r15)
+0 0xfec17c53 Invalid|(invalid)
+0 0xbc6688e6 stmw|stmw r3, -0x771a(r6)
+0 0xe935abbd Invalid|(invalid)
+0 0xa70a7488 lhzu|lhzu r24, 0x7488(r10)
+0 0xb7357537 sthu|sthu r25, 0x7537(r21)
+0 0x3df664fa addis|addis r15, r22, 0x64fa
+0 0x15514741 Invalid|(invalid)
+0 0xcddf46bc lfdu|lfdu f14, 0x46bc(r31)
+0 0xe72a345b psq_lu|psq_lu f25, 0x45b(r10), 0, 3
+0 0x6c2da4e Invalid|(invalid)
+0 0x95a9305 Invalid|(invalid)
+0 0x992bd430 stb|stb r9, -0x2bd0(r11)
+0 0x624f9dbf ori|ori r15, r18, 0x9dbf
+0 0x42d2fce2 bcx|bca 22, 18, -0x320
+0 0xa97c1309 lha|lha r11, 0x1309(r28)
+0 0xfe550e4 twi|twi 31, r5, 0x50e4
+0 0x4a8bd563 bx|bla -0x1742aa0
+0 0x77720b6 Invalid|(invalid)
+0 0x72808b4d andi_dot|andi. r0, r20, 0x8b4d
+0 0xccec30d8 lfdu|lfdu f7, 0x30d8(r12)
+0 0xb6df3f47 sthu|sthu r22, 0x3f47(r31)
+0 0xc55cd9ca lfsu|lfsu f10, -0x2636(r28)
+0 0x7356ffd1 andi_dot|andi. r22, r26, 0xffd1
+0 0x5740280c rlwinmx|extlwi r0, r26, 7, 5
+0 0x887f6b Invalid|(invalid)
+0 0xb3e2fc1e sth|sth r31, -0x3e2(r2)
+0 0xd6d6b495 stfsu|stfsu f22, -0x4b6b(r22)
+0 0x95742a80 stwu|stwu r11, 0x2a80(r20)
+0 0x9a6879cf stb|stb r19, 0x79cf(r8)
+0 0x49ad9bb2 bx|ba 0x1ad9bb0
+0 0x81c32d99 lwz|lwz r14, 0x2d99(r3)
+0 0x90626c34 stw|stw r3, 0x6c34(r2)
+0 0x96a65273 stwu|stwu r21, 0x5273(r6)
+0 0x167a0c86 Invalid|(invalid)
+0 0x89102edd lbz|lbz r8, 0x2edd(r16)
+0 0xf9206128 Invalid|(invalid)
+0 0x3e936d57 addis|addis r20, r19, 0x6d57
+0 0x9232e29a stw|stw r17, -0x1d66(r18)
+0 0x8465bc61 lwzu|lwzu r3, -0x439f(r5)
+0 0x2632bd5c Invalid|(invalid)
+0 0x60cf6e7b ori|ori r15, r6, 0x6e7b
+0 0xb543f1ee sthu|sthu r10, -0xe12(r3)
+0 0xe41a25 Invalid|(invalid)
+0 0x7c0174d0 Invalid|(invalid)
+0 0x39ac39df addi|addi r13, r12, 0x39df
+0 0x6e2e4e82 xoris|xoris r14, r17, 0x4e82
+0 0x9827cc29 stb|stb r1, -0x33d7(r7)
+0 0x748bbb84 andis_dot|andis. r11, r4, 0xbb84
+0 0x19d1f383 Invalid|(invalid)
+0 0x485c4c56 bx|ba 0x5c4c54
+0 0x6f8d966d xoris|xoris r13, r28, 0x966d
+0 0xba5c0578 lmw|lmw r18, 0x578(r28)
+0 0x2f22ff67 cmpi|cmpi 6, 1, r2, -0x99
+0 0xd8357f6a stfd|stfd f1, 0x7f6a(r21)
+0 0x23b67cf1 subfic|subfic r29, r22, 0x7cf1
+0 0xabc06ac Invalid|(invalid)
+0 0x13e0018b Invalid|(invalid)
+0 0xc072bbbe lfs|lfs f3, -0x4442(r18)
+0 0x644bc3b5 oris|oris r11, r2, 0xc3b5
+0 0xd328b320 stfs|stfs f25, -0x4ce0(r8)
+0 0x80bddef Invalid|(invalid)
+0 0x64b21552 oris|oris r18, r5, 0x1552
+0 0xc402eeb9 lfsu|lfsu f0, -0x1147(r2)
+0 0xbe063ed4 stmw|stmw r16, 0x3ed4(r6)
+0 0xf90fb893 Invalid|(invalid)
+0 0x9d4ae026 stbu|stbu r10, -0x1fda(r10)
+0 0x80e1c1fd lwz|lwz r7, -0x3e03(r1)
+0 0xa2941dc8 lhz|lhz r20, 0x1dc8(r20)
+0 0xbb9ef577 lmw|lmw r28, -0xa89(r30)
+0 0x61b03a Invalid|(invalid)
+0 0x48c24181 bx|bl 0xc24180
+0 0x8c2103fc lbzu|lbzu r1, 0x3fc(r1)
+0 0x1bdb389b Invalid|(invalid)
+0 0x943c598e stwu|stwu r1, 0x598e(r28)
+0 0x3e16b145 addis|subis r16, r22, 0x4ebb
+0 0xcc7ee570 lfdu|lfdu f3, -0x1a90(r30)
+0 0xa7b865ff lhzu|lhzu r29, 0x65ff(r24)
+0 0xfed5f022 Invalid|(invalid)
+0 0xc0ed9549 lfs|lfs f7, -0x6ab7(r13)
+0 0x4db6f624 Invalid|(invalid)
+0 0x57a0a1a3 rlwinmx|rlwinm. r0, r29, 20, 6, 17
+0 0x86b2c7f6 lwzu|lwzu r21, -0x380a(r18)
+0 0xc035b18d lfs|lfs f1, -0x4e73(r21)
+0 0x96fdaa18 stwu|stwu r23, -0x55e8(r29)
+0 0x79584f87 Invalid|(invalid)
+0 0x78f4750a Invalid|(invalid)
+0 0x97420a11 stwu|stwu r26, 0xa11(r2)
+0 0x38e6b54c addi|subi r7, r6, 0x4ab4
+0 0x812213ab lwz|lwz r9, 0x13ab(r2)
+0 0xc8adcb5e lfd|lfd f5, -0x34a2(r13)
+0 0xbb8de2d5 lmw|lmw r28, -0x1d2b(r13)
+0 0x94d90bc0 stwu|stwu r6, 0xbc0(r25)
+0 0xa522d20f lhzu|lhzu r9, -0x2df1(r2)
+0 0xfb76def2 Invalid|(invalid)
+0 0xbec0bfd9 stmw|stmw r22, -0x4027(r0)
+0 0x33c2e174 addic|subic r30, r2, 0x1e8c
+0 0x6705aeb3 oris|oris r5, r24, 0xaeb3
+0 0xb74103c6 sthu|sthu r26, 0x3c6(r1)
+0 0x68f2651d xori|xori r18, r7, 0x651d
+0 0x200daa68 subfic|subfic r0, r13, -0x5598
+0 0x6fe00d97 xoris|xoris r0, r31, 0xd97
+0 0x856acdda lwzu|lwzu r11, -0x3226(r10)
+0 0xef2ed6a1 Invalid|(invalid)
+0 0xf6d21a9c psq_stu|psq_stu f22, -0x564(r18), 0, 1
+0 0x625592bb ori|ori r21, r18, 0x92bb
+0 0x9f14112e stbu|stbu r24, 0x112e(r20)
+0 0x8a3a5865 lbz|lbz r17, 0x5865(r26)
+0 0xa44c2610 lhzu|lhzu r2, 0x2610(r12)
+0 0x86fc221f lwzu|lwzu r23, 0x221f(r28)
+0 0xd6b1e1c2 stfsu|stfsu f21, -0x1e3e(r17)
+0 0xf1956e69 psq_st|psq_st f12, -0x197(r21), 0, 6
+0 0xff8f00c4 Invalid|(invalid)
+0 0x76ffdfc3 andis_dot|andis. r31, r23, 0xdfc3
+0 0xf2e29396 psq_st|psq_st f23, 0x396(r2), 1, 1
+0 0x7ec0dcad Invalid|(invalid)
+0 0xb9791eb8 lmw|lmw r11, 0x1eb8(r25)
+0 0x29072fa7 cmpli|cmplwi cr2, r7, 0x2fa7
+0 0xe81baaa twi|twi 20, r1, -0x4556
+0 0xfcc1a731 Invalid|(invalid)
+0 0x52e833ec rlwimix|rlwimi r8, r23, 6, 15, 22
+0 0x456b5cb Invalid|(invalid)
+0 0xd1fc2afe stfs|stfs f15, 0x2afe(r28)
+0 0x67e511f5 oris|oris r5, r31, 0x11f5
+0 0xe2d3460 twi|twi 17, r13, 0x3460
+0 0xde35562f stfdu|stfdu f17, 0x562f(r21)
+0 0x99e3f892 stb|stb r15, -0x76e(r3)
+0 0x21c4a0f9 subfic|subfic r14, r4, -0x5f07
+0 0xfc05414 twi|twi 30, r0, 0x5414
+0 0x59034d3 Invalid|(invalid)
+0 0xdec47766 stfdu|stfdu f22, 0x7766(r4)
+0 0x5d8a183d rlwnmx|rlwnm. r10, r12, r3, 0, 30
+0 0x22350708 subfic|subfic r17, r21, 0x708
+0 0xc0deb5b7 lfs|lfs f6, -0x4a49(r30)
+0 0x72363b7a andi_dot|andi. r22, r17, 0x3b7a
+0 0xc8737bc1 lfd|lfd f3, 0x7bc1(r19)
+0 0xd16e013c stfs|stfs f11, 0x13c(r14)
+0 0xe2467cdb psq_l|psq_l f18, -0x325(r6), 0, 7
+0 0x653318ce oris|oris r19, r9, 0x18ce
+0 0xb2970f85 sth|sth r20, 0xf85(r23)
+0 0xd11136b0 stfs|stfs f8, 0x36b0(r17)
+0 0x55ff6e3f rlwinmx|extrwi. r31, r15, 8, 5
+0 0xabaa2362 lha|lha r29, 0x2362(r10)
+0 0x3be75789 addi|addi r31, r7, 0x5789
+0 0xe23bdb64 psq_l|psq_l f17, -0x49c(r27), 1, 5
+0 0xcef7ade3 lfdu|lfdu f23, -0x521d(r23)
+0 0xd153af36 stfs|stfs f10, -0x50ca(r19)
+0 0x497717cd bx|bl 0x17717cc
+0 0xac766358 lhau|lhau r3, 0x6358(r22)
+0 0xf5b79fc7 psq_stu|psq_stu f13, -0x39(r23), 1, 1
+0 0x53c5504a rlwimix|rlwimi r5, r30, 10, 1, 5
+0 0x46fd5451 Invalid|(invalid)
+0 0x3de8828c addis|subis r15, r8, 0x7d74
+0 0xbd85e7eb stmw|stmw r12, -0x1815(r5)
+0 0x75c5da9e andis_dot|andis. r5, r14, 0xda9e
+0 0xf8995115 Invalid|(invalid)
+0 0x26cd2d00 Invalid|(invalid)
+0 0xc3cb6a4f lfs|lfs f30, 0x6a4f(r11)
+0 0x9fe16232 stbu|stbu r31, 0x6232(r1)
+0 0xe0d69219 psq_l|psq_l f6, 0x219(r22), 1, 1
+0 0x642696b4 oris|oris r6, r1, 0x96b4
+0 0xddb74af3 stfdu|stfdu f13, 0x4af3(r23)
+0 0xa23d3b06 lhz|lhz r17, 0x3b06(r29)
+0 0xfef0db5d Invalid|(invalid)
+0 0x8db233a8 lbzu|lbzu r13, 0x33a8(r18)
+0 0x3822edd7 addi|subi r1, r2, 0x1229
+0 0x6babf91a xori|xori r11, r29, 0xf91a
+0 0xe95830e1 Invalid|(invalid)
+0 0xfb1cb7dc Invalid|(invalid)
+0 0xadb5f6fb lhau|lhau r13, -0x905(r21)
+0 0xa01706e Invalid|(invalid)
+0 0x8874d6a5 lbz|lbz r3, -0x295b(r20)
+0 0xd4761750 stfsu|stfsu f3, 0x1750(r22)
+0 0x374a4a5f addic_dot|addic. r26, r10, 0x4a5f
+0 0x7a6b502 Invalid|(invalid)
+0 0xf5ab50a9 psq_stu|psq_stu f13, 0xa9(r11), 0, 5
+0 0x41e58604 bcx|bgt+ cr1, -0x79fc
+0 0x9a900c03 stb|stb r20, 0xc03(r16)
+0 0x7a6e1ad6 Invalid|(invalid)
+0 0x42a062ed bcx|bcl 21, 0, 0x62ec
+0 0x2e9d77f8 cmpi|cmpwi cr5, r29, 0x77f8
+0 0xbaf19fe7 lmw|lmw r23, -0x6019(r17)
+0 0x57a735ea rlwinmx|rlwinm r7, r29, 6, 23, 21
+0 0x2cbd1171 cmpi|cmpi 1, 1, r29, 0x1171
+0 0x530fa12c rlwimix|rlwimi r15, r24, 20, 4, 22
+0 0x30b7aa0b addic|subic r5, r23, 0x55f5
+0 0xe172da3e psq_l|psq_l f11, -0x5c2(r18), 1, 5
+0 0xf2a035 Invalid|(invalid)
+0 0x7a60f5a0 Invalid|(invalid)
+0 0xa6d0e6f Invalid|(invalid)
+0 0x41571bd2 bcx|bca 10, 23, 0x1bd0
+0 0x33be9339 addic|subic r29, r30, 0x6cc7
+0 0x371da954 addic_dot|subic. r24, r29, 0x56ac
+0 0xdc82f113 stfdu|stfdu f4, -0xeed(r2)
+0 0xa4134ea6 lhzu|lhzu r0, 0x4ea6(r19)
+0 0x716eae7d andi_dot|andi. r14, r11, 0xae7d
+0 0x7b2d3048 Invalid|(invalid)
+0 0x8334b5f7 lwz|lwz r25, -0x4a09(r20)
+0 0x6ab406ba xori|xori r20, r21, 0x6ba
+0 0x2aa4f601 cmpli|cmpli 5, 1, r4, 0xf601
+0 0xc7063e7c lfsu|lfsu f24, 0x3e7c(r6)
+0 0x3aac011b addi|addi r21, r12, 0x11b
+0 0x44e7180e Invalid|(invalid)
+0 0xe11badc5 psq_l|psq_l f8, -0x23b(r27), 1, 2
+0 0xe422c7f0 psq_lu|psq_lu f1, 0x7f0(r2), 1, 4
+0 0xf164b67f psq_st|psq_st f11, 0x67f(r4), 1, 3
+0 0x488f96a2 bx|ba 0x8f96a0
+0 0xb8a959c9 lmw|lmw r5, 0x59c9(r9)
+0 0x5eb400a4 rlwnmx|rlwnm r20, r21, r0, 2, 18
+0 0xf8d0fa23 Invalid|(invalid)
+0 0x5a99d676 Invalid|(invalid)
+0 0x1084be0d Invalid|(invalid)
+0 0x32965c98 addic|addic r20, r22, 0x5c98
+0 0x783d3007 Invalid|(invalid)
+0 0x7d0f6b8a Invalid|(invalid)
+0 0x28c8de91 Invalid|(invalid)
+0 0x5f858fcc rlwnmx|rlwnm r5, r28, r17, 31, 6
+0 0x45f3fc2b Invalid|(invalid)
+0 0xd66b29de stfsu|stfsu f19, 0x29de(r11)
+0 0x1838ff55 Invalid|(invalid)
+0 0x58908e40 Invalid|(invalid)
+0 0xaa2428f Invalid|(invalid)
+0 0x862d2572 lwzu|lwzu r17, 0x2572(r13)
+0 0x9644a459 stwu|stwu r18, -0x5ba7(r4)
+0 0x82cd8bf4 lwz|lwz r22, -0x740c(r13)
+0 0xd2fb2733 stfs|stfs f23, 0x2733(r27)
+0 0x9aaeb246 stb|stb r21, -0x4dba(r14)
+0 0x5d4b919d rlwnmx|rlwnm. r11, r10, r18, 6, 14
+0 0x374dfce8 addic_dot|subic. r26, r13, 0x318
+0 0x739c0e17 andi_dot|andi. r28, r28, 0xe17
+0 0xbc36645a stmw|stmw r1, 0x645a(r22)
+0 0x2921cb21 cmpli|cmpli 2, 1, r1, 0xcb21
+0 0xfc52951c Invalid|(invalid)
+0 0x63309b3b ori|ori r16, r25, 0x9b3b
+0 0x614c0fae ori|ori r12, r10, 0xfae
+0 0x95d394e5 stwu|stwu r14, -0x6b1b(r19)
+0 0xe9bf4890 Invalid|(invalid)
+0 0xeed6b29f Invalid|(invalid)
+0 0xa04cc842 lhz|lhz r2, -0x37be(r12)
+0 0x62a972e9 ori|ori r9, r21, 0x72e9
+0 0x6ccf4b44 xoris|xoris r15, r6, 0x4b44
+0 0xecc27843 Invalid|(invalid)
+0 0xf23ee216 psq_st|psq_st f17, 0x216(r30), 1, 6
+0 0xdd6c292d stfdu|stfdu f11, 0x292d(r12)
+0 0xdf091138 stfdu|stfdu f24, 0x1138(r9)
+0 0x51225027 rlwimix|rlwimi. r2, r9, 10, 0, 19
+0 0x7ae5f12a Invalid|(invalid)
+0 0x79e8bbb1 Invalid|(invalid)
+0 0xa4724e6c lhzu|lhzu r3, 0x4e6c(r18)
+0 0x4942de4b bx|bla 0x142de48
+0 0xaa16c97e lha|lha r16, -0x3682(r22)
+0 0xd9b46e75 stfd|stfd f13, 0x6e75(r20)
+0 0xc503f6e0 lfsu|lfsu f8, -0x920(r3)
+0 0xc0f306af lfs|lfs f7, 0x6af(r19)
+0 0x4a4b7f12 bx|ba -0x1b480f0
+0 0xc830c579 lfd|lfd f1, -0x3a87(r16)
+0 0x355e3e94 addic_dot|addic. r10, r30, 0x3e94
+0 0x7627ed53 andis_dot|andis. r7, r17, 0xed53
+0 0x507765e6 rlwimix|rlwimi r23, r3, 12, 23, 19
+0 0xeecf84bd fnmsubsx|fnmsubs. f22, f15, f18, f16
+0 0x42bc9988 bcx|bc 21, 28, -0x6678
+0 0xfee0f637 Invalid|(invalid)
+0 0x11b11fa Invalid|(invalid)
+0 0x4596b041 Invalid|(invalid)
+0 0xd629bbbc stfsu|stfsu f17, -0x4444(r9)
+0 0x654bc55b oris|oris r11, r10, 0xc55b
+0 0x3e98574e addis|addis r20, r24, 0x574e
+0 0x83e48c05 lwz|lwz r31, -0x73fb(r4)
+0 0x82f39930 lwz|lwz r23, -0x66d0(r19)
+0 0x3e283ebf addis|addis r17, r8, 0x3ebf
+0 0x14c649e2 Invalid|(invalid)
+0 0x15739c09 Invalid|(invalid)
+0 0x945f65e4 stwu|stwu r2, 0x65e4(r31)
+0 0x5d6c8663 rlwnmx|rlwnm. r12, r11, r16, 25, 17
+0 0xd5c53db6 stfsu|stfsu f14, 0x3db6(r5)
+0 0x579ea44d rlwinmx|rlwinm. r30, r28, 20, 17, 6
+0 0x8e9d95d8 lbzu|lbzu r20, -0x6a28(r29)
+0 0x8d290047 lbzu|lbzu r9, 0x47(r9)
+0 0x5c12c6ca rlwnmx|rlwnm r18, r0, r24, 27, 5
+0 0x22e4a8d1 subfic|subfic r23, r4, -0x572f
+0 0xd6fddd0c stfsu|stfsu f23, -0x22f4(r29)
+0 0xeaac506b Invalid|(invalid)
+0 0x45ddb91e Invalid|(invalid)
+0 0xe4aced95 psq_lu|psq_lu f5, -0x26b(r12), 1, 6
+0 0x77632f80 andis_dot|andis. r3, r27, 0x2f80
+0 0xcde75acf lfdu|lfdu f15, 0x5acf(r7)
+0 0x3d9a28b2 addis|addis r12, r26, 0x28b2
+0 0xcd4af699 lfdu|lfdu f10, -0x967(r10)
+0 0x30f7c134 addic|subic r7, r23, 0x3ecc
+0 0x5f114373 rlwnmx|rlwnm. r17, r24, r8, 13, 25
+0 0xa3d56986 lhz|lhz r30, 0x6986(r21)
+0 0xd64287dd stfsu|stfsu f18, -0x7823(r2)
+0 0x52210628 rlwimix|rlwimi r1, r17, 0, 24, 20
+0 0x3e8b6e57 addis|addis r20, r11, 0x6e57
+0 0x2e4a0f9a Invalid|(invalid)
+0 0xa4cba561 lhzu|lhzu r6, -0x5a9f(r11)
+0 0x3b3b25c Invalid|(invalid)
+0 0xe3057f7b psq_l|psq_l f24, -0x85(r5), 0, 7
+0 0x5033eeee rlwimix|rlwimi r19, r1, 29, 27, 23
+0 0x8c969325 lbzu|lbzu r4, -0x6cdb(r22)
+0 0x167b9d0 Invalid|(invalid)
+0 0x91e15adf stw|stw r15, 0x5adf(r1)
+0 0x7fe41b82 Invalid|(invalid)
+0 0x36cfd529 addic_dot|subic. r22, r15, 0x2ad7
+0 0xf18c5084 psq_st|psq_st f12, 0x84(r12), 0, 5
+0 0x15d72483 Invalid|(invalid)
+0 0xad94e956 lhau|lhau r12, -0x16aa(r20)
+0 0xb1642f6d sth|sth r11, 0x2f6d(r4)
+0 0xcffbea78 lfdu|lfdu f31, -0x1588(r27)
+0 0x97d94067 stwu|stwu r30, 0x4067(r25)
+0 0x7f7dec6a Invalid|(invalid)
+0 0xea84a5f1 Invalid|(invalid)
+0 0x20503bac subfic|subfic r2, r16, 0x3bac
+0 0x3e38528b addis|addis r17, r24, 0x528b
+0 0x2727f8be Invalid|(invalid)
+0 0xdc6a7cb5 stfdu|stfdu f3, 0x7cb5(r10)
+0 0xdb563820 stfd|stfd f26, 0x3820(r22)
+0 0x76073eef andis_dot|andis. r7, r16, 0x3eef
+0 0xe4012252 psq_lu|psq_lu f0, 0x252(r1), 0, 2
+0 0xed5b37b9 fmsubsx|fmsubs. f10, f27, f30, f6
+0 0x4bc213d4 bx|b -0x3dec2c
+0 0xabf2993 Invalid|(invalid)
+0 0x8730bd26 lwzu|lwzu r25, -0x42da(r16)
+0 0x47ec9afd Invalid|(invalid)
+0 0x4e2342c8 Invalid|(invalid)
+0 0x70237677 andi_dot|andi. r3, r1, 0x7677
+0 0x8cab5d3a lbzu|lbzu r5, 0x5d3a(r11)
+0 0x2f88aa81 cmpi|cmpwi cr7, r8, -0x557f
+0 0xa81878fc lha|lha r0, 0x78fc(r24)
+0 0xe265c99b psq_l|psq_l f19, -0x665(r5), 1, 4
+0 0x9d86d68e stbu|stbu r12, -0x2972(r6)
+0 0x9531aa45 stwu|stwu r9, -0x55bb(r17)
+0 0x6ac3aa70 xori|xori r3, r22, 0xaa70
+0 0x408a06ff bcx|bnela cr2, 0x6fc
+0 0x8f8e3d22 lbzu|lbzu r28, 0x3d22(r14)
+0 0x70861e49 andi_dot|andi. r6, r4, 0x1e49
+0 0x947e0b24 stwu|stwu r3, 0xb24(r30)
+0 0xc50a52a3 lfsu|lfsu f8, 0x52a3(r10)
+0 0x3615e4f6 addic_dot|subic. r16, r21, 0x1b0a
+0 0xa104ca8d lhz|lhz r8, -0x3573(r4)
+0 0x65cc0f18 oris|oris r12, r14, 0xf18
+0 0xbb1087 Invalid|(invalid)
+0 0x980f620a stb|stb r0, 0x620a(r15)
+0 0x5b90b311 Invalid|(invalid)
+0 0x1d916a4c mulli|mulli r12, r17, 0x6a4c
+0 0xbbeee4ab lmw|lmw r31, -0x1b55(r14)
+0 0x5f5d885e rlwnmx|rlwnm r29, r26, r17, 1, 15
+0 0x68351bd5 xori|xori r21, r1, 0x1bd5
+0 0x108510c0 ps_cmpo1|ps_cmpo1 cr1, f5, f2
+0 0xa1dab30f lhz|lhz r14, -0x4cf1(r26)
+0 0x95686bf2 stwu|stwu r11, 0x6bf2(r8)
+0 0xb42988d9 sthu|sthu r1, -0x7727(r9)
+0 0x4fe53674 Invalid|(invalid)
+0 0xda399fb3 stfd|stfd f17, -0x604d(r25)
+0 0xf160c6 Invalid|(invalid)
+0 0xfc15be1d Invalid|(invalid)
+0 0x536b4f68 rlwimix|rlwimi r11, r27, 9, 29, 20
+0 0xf5310e97 psq_stu|psq_stu f9, -0x169(r17), 0, 0
+0 0xb926fada lmw|lmw r9, -0x526(r6)
+0 0x9295bfa1 stw|stw r20, -0x405f(r21)
+0 0x5a800f9c Invalid|(invalid)
+0 0xcd74a3bb lfdu|lfdu f11, -0x5c45(r20)
+0 0xc1f90e2e lfs|lfs f15, 0xe2e(r25)
+0 0x86fdd165 lwzu|lwzu r23, -0x2e9b(r29)
+0 0x78af6b10 Invalid|(invalid)
+0 0x44aa431f Invalid|(invalid)
+0 0xc5acaec2 lfsu|lfsu f13, -0x513e(r12)
+0 0xb05e7769 sth|sth r2, 0x7769(r30)
+0 0x815c95c4 lwz|lwz r10, -0x6a3c(r28)
+0 0xfe0e10c3 Invalid|(invalid)
+0 0x3fb03096 addis|addis r29, r16, 0x3096
+0 0x60c875ad ori|ori r8, r6, 0x75ad
+0 0x46b603b8 Invalid|(invalid)
+0 0x7b5670a7 Invalid|(invalid)
+0 0xacaf27aa lhau|lhau r5, 0x27aa(r15)
+0 0xc4d0d031 lfsu|lfsu f6, -0x2fcf(r16)
+0 0xdfe968ec stfdu|stfdu f31, 0x68ec(r9)
+0 0x3fd806cb addis|addis r30, r24, 0x6cb
+0 0x93e667fe stw|stw r31, 0x67fe(r6)
+0 0x3354caf5 addic|subic r26, r20, 0x350b
+0 0xea97b960 Invalid|(invalid)
+0 0xdde9b72f stfdu|stfdu f15, -0x48d1(r9)
+0 0x7db80592 Invalid|(invalid)
+0 0xf17de9f9 psq_st|psq_st f11, -0x607(r29), 1, 6
+0 0xfb892914 Invalid|(invalid)
+0 0x1288a5d3 Invalid|(invalid)
+0 0x2b7f5466 Invalid|(invalid)
+0 0x2f05f13d cmpi|cmpwi cr6, r5, -0xec3
+0 0xb2a12c08 sth|sth r21, 0x2c08(r1)
+0 0x533c36b7 rlwimix|inslwi. r28, r25, 2, 26
+0 0xa4a4e87a lhzu|lhzu r5, -0x1786(r4)
+0 0x3ebae4c1 addis|subis r21, r26, 0x1b3f
+0 0x2612763c Invalid|(invalid)
+0 0x723a0ddb andi_dot|andi. r26, r17, 0xddb
+0 0xecf295ce Invalid|(invalid)
+0 0x4f430885 Invalid|(invalid)
+0 0x98d2fbb0 stb|stb r6, -0x450(r18)
+0 0x3cca0f3f addis|addis r6, r10, 0xf3f
+0 0x78277062 Invalid|(invalid)
+0 0x2820e089 cmpli|cmpli 0, 1, r0, 0xe089
+0 0xb04ff064 sth|sth r2, -0xf9c(r15)
+0 0x37ea5ee3 addic_dot|addic. r31, r10, 0x5ee3
+0 0xaecbcc36 lhau|lhau r22, -0x33ca(r11)
+0 0xaef730cd lhau|lhau r23, 0x30cd(r23)
+0 0x9d61c858 stbu|stbu r11, -0x37a8(r1)
+0 0xdf3360c7 stfdu|stfdu f25, 0x60c7(r19)
+0 0x18453d4a Invalid|(invalid)
+0 0x390cfd51 addi|subi r8, r12, 0x2af
+0 0xec80378c Invalid|(invalid)
+0 0x9fbb8eb Invalid|(invalid)
+0 0xfe2a979e Invalid|(invalid)
+0 0xed118a15 Invalid|(invalid)
+0 0xf1363200 psq_st|psq_st f9, 0x200(r22), 0, 3
+0 0x5abc4b4f Invalid|(invalid)
+0 0x9cd7ef32 stbu|stbu r6, -0x10ce(r23)
+0 0xb9205b19 lmw|lmw r9, 0x5b19(r0)
+0 0xd5ebb4 Invalid|(invalid)
+0 0xdcb43bf3 stfdu|stfdu f5, 0x3bf3(r20)
+0 0x35429806 addic_dot|subic. r10, r2, 0x67fa
+0 0xa105345d lhz|lhz r8, 0x345d(r5)
+0 0xf06cd8a8 psq_st|psq_st f3, -0x758(r12), 1, 5
+0 0x33cceed7 addic|subic r30, r12, 0x1129
+0 0x940d261a stwu|stwu r0, 0x261a(r13)
+0 0x68c019e1 xori|xori r0, r6, 0x19e1
+0 0x89f7acdc lbz|lbz r15, -0x5324(r23)
+0 0x2be07fb Invalid|(invalid)
+0 0xe1db6d6e psq_l|psq_l f14, -0x292(r27), 0, 6
+0 0xdf494fa5 stfdu|stfdu f26, 0x4fa5(r9)
+0 0xecd65c50 Invalid|(invalid)
+0 0x6b716b5f xori|xori r17, r27, 0x6b5f
+0 0xd0e68202 stfs|stfs f7, -0x7dfe(r6)
+0 0x4d9559a9 Invalid|(invalid)
+0 0xd801b04 twi|twi 12, r0, 0x1b04
+0 0xcda73d03 lfdu|lfdu f13, 0x3d03(r7)
+0 0x7bd0b7d6 Invalid|(invalid)
+0 0xcdd8fbed lfdu|lfdu f14, -0x413(r24)
+0 0xc8775cf8 lfd|lfd f3, 0x5cf8(r23)
+0 0x27d9e0e7 Invalid|(invalid)
+0 0x89b9a2ea lbz|lbz r13, -0x5d16(r25)
+0 0x8f0d3a71 lbzu|lbzu r24, 0x3a71(r13)
+0 0x3c7dd62c addis|subis r3, r29, 0x29d4
+0 0xbe61fb0b stmw|stmw r19, -0x4f5(r1)
+0 0x6b92173e xori|xori r18, r28, 0x173e
+0 0x48b35935 bx|bl 0xb35934
+0 0x60087aa0 ori|ori r8, r0, 0x7aa0
+0 0xecda6f6f Invalid|(invalid)
+0 0xc6b028d2 lfsu|lfsu f21, 0x28d2(r16)
+0 0x62d8dc39 ori|ori r24, r22, 0xdc39
+0 0x5f37e54 Invalid|(invalid)
+0 0x45c46213 Invalid|(invalid)
+0 0x60a32ba6 ori|ori r3, r5, 0x2ba6
+0 0x965b877d stwu|stwu r18, -0x7883(r27)
+0 0xc5765548 lfsu|lfsu f11, 0x5548(r22)
+0 0x646b36f7 oris|oris r11, r3, 0x36f7
+0 0x2047b3ba subfic|subfic r2, r7, -0x4c46
+0 0x96d5f01 Invalid|(invalid)
+0 0x7957b37c Invalid|(invalid)
+0 0x1508921b Invalid|(invalid)
+0 0xf81b950e Invalid|(invalid)
+0 0x2c58a6c5 Invalid|(invalid)
+0 0x4a618cf0 bx|b -0x19e7310
+0 0xb728577f sthu|sthu r25, 0x577f(r8)
+0 0xcdd1e3a2 lfdu|lfdu f14, -0x1c5e(r17)
+0 0xda83e2c9 stfd|stfd f20, -0x1d37(r3)
+0 0x791515a4 Invalid|(invalid)
+0 0xfe4cab23 Invalid|(invalid)
+0 0xb326f376 sth|sth r25, -0xc8a(r6)
+0 0x83b5d70d lwz|lwz r29, -0x28f3(r21)
+0 0x5a9ec198 Invalid|(invalid)
+0 0x74d1f107 andis_dot|andis. r17, r6, 0xf107
+0 0x3f4588a Invalid|(invalid)
+0 0x61998791 ori|ori r25, r12, 0x8791
+0 0x3d0a44cc addis|addis r8, r10, 0x44cc
+0 0x6512cd2b oris|oris r18, r8, 0xcd2b
+0 0x3d84e6de addis|subis r12, r4, 0x1922
+0 0xfd823855 Invalid|(invalid)
+0 0x26b69340 Invalid|(invalid)
+0 0xccc238f twi|twi 6, r12, 0x238f
+0 0xa328b272 lhz|lhz r25, -0x4d8e(r8)
+0 0x8a6f6d59 lbz|lbz r19, 0x6d59(r15)
+0 0xa509e0f4 lhzu|lhzu r8, -0x1f0c(r9)
+0 0x3ec11833 addis|addis r22, r1, 0x1833
+0 0x4090f46 Invalid|(invalid)
+0 0xd750ea9d stfsu|stfsu f26, -0x1563(r16)
+0 0x1e65a1e8 mulli|mulli r19, r5, -0x5e18
+0 0xd69f0f17 stfsu|stfsu f20, 0xf17(r31)
+0 0x363c915a addic_dot|subic. r17, r28, 0x6ea6
+0 0xdd8ab421 stfdu|stfdu f12, -0x4bdf(r10)
+0 0x5b5a8a1c Invalid|(invalid)
+0 0xa321ac3b lhz|lhz r25, -0x53c5(r1)
+0 0x1b1b0cae Invalid|(invalid)
+0 0x2fb90de5 cmpi|cmpi 7, 1, r25, 0xde5
+0 0x3b1c8d90 addi|subi r24, r28, 0x7270
+0 0xaa76d39f lha|lha r19, -0x2c61(r22)
+0 0x40d19542 bcx|blea cr4, -0x6ac0
+0 0xccb47be9 lfdu|lfdu f5, 0x7be9(r20)
+0 0xc736e044 lfsu|lfsu f25, -0x1fbc(r22)
+0 0xece2a943 Invalid|(invalid)
+0 0x75367f16 andis_dot|andis. r22, r9, 0x7f16
+0 0x1ad5c22d Invalid|(invalid)
+0 0x1a7ff638 Invalid|(invalid)
+0 0x9a39127 Invalid|(invalid)
+0 0xdddd5e2a stfdu|stfdu f14, 0x5e2a(r29)
+0 0xf79e4b1 twi|twi 27, r25, -0x1b4f
+0 0xcf4d836c lfdu|lfdu f26, -0x7c94(r13)
+0 0x6a162f4b xori|xori r22, r16, 0x2f4b
+0 0x696b067e xori|xori r11, r11, 0x67e
+0 0xc6c62775 lfsu|lfsu f22, 0x2775(r6)
+0 0xe8e87be0 Invalid|(invalid)
+0 0xd71967af stfsu|stfsu f24, 0x67af(r25)
+0 0xae298c12 lhau|lhau r17, -0x73ee(r9)
+0 0xfac0e79 twi|twi 29, r12, 0xe79
+0 0x6c411394 xoris|xoris r1, r2, 0x1394
+0 0x9cb25e53 stbu|stbu r5, 0x5e53(r18)
+0 0x89dc42e6 lbz|lbz r14, 0x42e6(r28)
+0 0xb02d5dbd sth|sth r1, 0x5dbd(r13)
+0 0x1be2be88 Invalid|(invalid)
+0 0x9ff07737 stbu|stbu r31, 0x7737(r16)
+0 0x16d3befa Invalid|(invalid)
+0 0x65e01941 oris|oris r0, r15, 0x1941
+0 0xb2830bc Invalid|(invalid)
+0 0xb11565b Invalid|(invalid)
+0 0xca41d44e lfd|lfd f18, -0x2bb2(r1)
+0 0xe6b28505 psq_lu|psq_lu f21, 0x505(r18), 1, 0
+0 0xfcaf5e30 Invalid|(invalid)
+0 0x73e4dfbf andi_dot|andi. r4, r31, 0xdfbf
+0 0xcfcd96e2 lfdu|lfdu f30, -0x691e(r13)
+0 0x65ef2509 oris|oris r15, r15, 0x2509
+0 0xc00d7ae4 lfs|lfs f0, 0x7ae4(r13)
+0 0xa0713763 lhz|lhz r3, 0x3763(r17)
+0 0xf6675ab6 psq_stu|psq_stu f19, -0x54a(r7), 0, 5
+0 0x6180bd4d ori|ori r0, r12, 0xbd4d
+0 0x2c2fad8 Invalid|(invalid)
+0 0x4dd6c147 Invalid|(invalid)
+0 0xc25cb3ca lfs|lfs f18, -0x4c36(r28)
+0 0xbb7651d1 lmw|lmw r27, 0x51d1(r22)
+0 0x486f920c bx|b 0x6f920c
+0 0x9d74216b stbu|stbu r11, 0x216b(r20)
+0 0x78ac761e Invalid|(invalid)
+0 0x63c72695 ori|ori r7, r30, 0x2695
+0 0xfe463480 Invalid|(invalid)
+0 0xc4a3bcf twi|twi 2, r10, 0x3bcf
+0 0x379ab5b2 addic_dot|subic. r28, r26, 0x4a4e
+0 0x1656bf99 Invalid|(invalid)
+0 0xddc11634 stfdu|stfdu f14, 0x1634(r1)
+0 0x18a03473 Invalid|(invalid)
+0 0x7084c686 andi_dot|andi. r4, r4, 0xc686
+0 0xf138e0dd psq_st|psq_st f9, 0xdd(r24), 1, 6
+0 0x1295ab28 Invalid|(invalid)
+0 0xf9e76f57 Invalid|(invalid)
+0 0x56f53c9a rlwinmx|rlwinm r21, r23, 7, 18, 13
+0 0xe7358e61 psq_lu|psq_lu f25, -0x19f(r21), 1, 0
+0 0xd7e8a75c stfsu|stfsu f31, -0x58a4(r8)
+0 0xedf907b twi|twi 22, r31, -0x6f85
+0 0x18f7ebee Invalid|(invalid)
+0 0x528d0c25 rlwimix|rlwimi. r13, r20, 1, 16, 18
+0 0x80c1fed0 lwz|lwz r6, -0x130(r1)
+0 0xe5fa7bdf psq_lu|psq_lu f15, -0x421(r26), 0, 7
+0 0xf4ade882 psq_stu|psq_stu f5, -0x77e(r13), 1, 6
+0 0x2bfbde29 Invalid|(invalid)
+0 0x1fc0e584 mulli|mulli r30, r0, -0x1a7c
+0 0x4005583 Invalid|(invalid)
+0 0x7f218656 Invalid|(invalid)
+0 0xa9fec86d lha|lha r15, -0x3793(r30)
+0 0x420fcf78 bcx|bdnz -0x3088
+0 0xccf38167 lfdu|lfdu f7, -0x7e99(r19)
+0 0xb05a596a sth|sth r2, 0x596a(r26)
+0 0x4c56cef1 Invalid|(invalid)
+0 0x719870ac andi_dot|andi. r24, r12, 0x70ac
+0 0x3334a38b addic|subic r25, r20, 0x5c75
+0 0x88b135be lbz|lbz r5, 0x35be(r17)
+0 0x97cd35b5 stwu|stwu r30, 0x35b5(r13)
+0 0x7277bd20 andi_dot|andi. r23, r19, 0xbd20
+0 0x10e69fef ps_sel|ps_sel. f7, f6, f31, f19
+0 0x63642f52 ori|ori r4, r27, 0x2f52
+0 0x63780b9 Invalid|(invalid)
+0 0x6fb1e8d4 xoris|xoris r17, r29, 0xe8d4
+0 0x4f929a93 Invalid|(invalid)
+0 0x4a6a9a26 bx|ba -0x19565dc
+0 0xeebb73fd fnmsubsx|fnmsubs. f21, f27, f15, f14
+0 0x8b2667c8 lbz|lbz r25, 0x67c8(r6)
+0 0x420bf777 bcx|bdnzla -0x88c
+0 0xdf890a3a stfdu|stfdu f28, 0xa3a(r9)
+0 0x6a531381 xori|xori r19, r18, 0x1381
+0 0x84c3edfc lwzu|lwzu r6, -0x1204(r3)
+0 0xd4945a9b stfsu|stfsu f4, 0x5a9b(r20)
+0 0xaea5538e lhau|lhau r21, 0x538e(r5)
+0 0x7890a345 Invalid|(invalid)
+0 0x6cfc6f70 xoris|xoris r28, r7, 0x6f70
+0 0x773fa7ff andis_dot|andis. r31, r25, 0xa7ff
+0 0xfd5a8a22 Invalid|(invalid)
+0 0xe8a2a749 Invalid|(invalid)
+0 0x96792024 stwu|stwu r19, 0x2024(r25)
+0 0xe69803a3 psq_lu|psq_lu f20, 0x3a3(r24), 0, 0
+0 0x6bcd01f6 xori|xori r13, r30, 0x1f6
+0 0xca97e38d lfd|lfd f20, -0x1c73(r23)
+0 0x3b0e7418 addi|addi r24, r14, 0x7418
+0 0x3681d187 addic_dot|subic. r20, r1, 0x2e79
+0 0xfabe4f0a Invalid|(invalid)
+0 0x6ce35c11 xoris|xoris r3, r7, 0x5c11
+0 0x87f01f4c lwzu|lwzu r31, 0x1f4c(r16)
+0 0xc35fb5ab lfs|lfs f26, -0x4a55(r31)
+0 0x4ae1455e bx|ba -0x11ebaa4
+0 0x2a2054d5 cmpli|cmpli 4, 1, r0, 0x54d5
+0 0x52515c0 Invalid|(invalid)
+0 0xed76940f Invalid|(invalid)
+0 0x296df8f2 Invalid|(invalid)
+0 0x8b1651d9 lbz|lbz r24, 0x51d9(r22)
+0 0x8c3b8b74 lbzu|lbzu r1, -0x748c(r27)
+0 0xc29190b3 lfs|lfs f20, -0x6f4d(r17)
+0 0xbdf5bdc6 stmw|stmw r15, -0x423a(r21)
+0 0x80fd171d lwz|lwz r7, 0x171d(r29)
+0 0x423cf468 bcx|bdnz+ -0xb98
+0 0xf9e60f97 Invalid|(invalid)
+0 0xed7727da Invalid|(invalid)
+0 0xbc00a8a1 stmw|stmw r0, -0x575f(r0)
+0 0x48e2049c bx|b 0xe2049c
+0 0xe637b4bb psq_lu|psq_lu f17, 0x4bb(r23), 1, 3
+0 0xc6b20b2e lfsu|lfsu f21, 0xb2e(r18)
+0 0x62054a65 ori|ori r5, r16, 0x4a65
+0 0x1b06b010 Invalid|(invalid)
+0 0x423c641f bcx|bdnz+la 0x641c
+0 0xbbb7bc2 Invalid|(invalid)
+0 0xa9ab8069 lha|lha r13, -0x7f97(r11)
+0 0xc85e2ac4 lfd|lfd f2, 0x2ac4(r30)
+0 0xfb4041c3 Invalid|(invalid)
+0 0x2cd1cd96 Invalid|(invalid)
+0 0x1d940ead mulli|mulli r12, r20, 0xead
+0 0x8466e8b8 lwzu|lwzu r3, -0x1748(r6)
+0 0x5e09b1a7 rlwnmx|rlwnm. r9, r16, r22, 6, 19
+0 0x487094aa bx|ba 0x7094a8
+0 0x8be3f931 lbz|lbz r31, -0x6cf(r3)
+0 0x3c9e9dec addis|subis r4, r30, 0x6214
+0 0x49fd57cb bx|bla 0x1fd57c8
+0 0x4a4a4fe Invalid|(invalid)
+0 0xe60883f5 psq_lu|psq_lu f16, 0x3f5(r8), 1, 0
+0 0x29f63e60 Invalid|(invalid)
+0 0x4e82182f Invalid|(invalid)
+0 0x55a01292 rlwinmx|rlwinm r0, r13, 2, 10, 9
+0 0x94bb32f9 stwu|stwu r5, 0x32f9(r27)
+0 0x9185fe14 stw|stw r12, -0x1ec(r5)
+0 0xd6a516d3 stfsu|stfsu f21, 0x16d3(r5)
+0 0x858e3166 lwzu|lwzu r12, 0x3166(r14)
+0 0x445ca3d Invalid|(invalid)
+0 0x28815108 cmpli|cmplwi cr1, r1, 0x5108
+0 0xc6fdb7b7 lfsu|lfsu f23, -0x4849(r29)
+0 0x11a7957a ps_madd|ps_madd f13, f7, f21, f18
+0 0x6d064dc1 xoris|xoris r6, r8, 0x4dc1
+0 0xcf6aeb3c lfdu|lfdu f27, -0x14c4(r10)
+0 0x31d19edb addic|subic r14, r17, 0x6125
+0 0x308612ce addic|addic r4, r6, 0x12ce
+0 0x1c330185 mulli|mulli r1, r19, 0x185
+0 0x9888c0b0 stb|stb r4, -0x3f50(r8)
+0 0x578b03f Invalid|(invalid)
+0 0x15b8bd62 Invalid|(invalid)
+0 0xc0de6989 lfs|lfs f6, 0x6989(r30)
+0 0x4d980564 Invalid|(invalid)
+0 0xd9010fe3 stfd|stfd f8, 0xfe3(r1)
+0 0x4697e936 Invalid|(invalid)
+0 0x813b49cd lwz|lwz r9, 0x49cd(r27)
+0 0xe8c12d58 Invalid|(invalid)
+0 0x3b1321c7 addi|addi r24, r19, 0x21c7
+0 0x94592a4a stwu|stwu r2, 0x2a4a(r25)
+0 0xdc20a651 stfdu|stfdu f1, -0x59af(r0)
+0 0xb4cbec8c sthu|sthu r6, -0x1374(r11)
+0 0x271589eb Invalid|(invalid)
+0 0x8f63549e lbzu|lbzu r27, 0x549e(r3)
+0 0x9acdc315 stb|stb r22, -0x3ceb(r13)
+0 0x8933700 Invalid|(invalid)
+0 0x84912c4f lwzu|lwzu r4, 0x2c4f(r17)
+0 0x87e27c32 lwzu|lwzu r31, 0x7c32(r2)
+0 0x56ee2419 rlwinmx|rlwinm. r14, r23, 4, 16, 12
+0 0xd1b940b4 stfs|stfs f13, 0x40b4(r25)
+0 0xd4d52cf3 stfsu|stfsu f6, 0x2cf3(r21)
+0 0x6f9bf506 xoris|xoris r27, r28, 0xf506
+0 0x58dd8d5d Invalid|(invalid)
+0 0x629b7da8 ori|ori r27, r20, 0x7da8
+0 0x72daefd7 andi_dot|andi. r26, r22, 0xefd7
+0 0x3102531a addic|addic r8, r2, 0x531a
+0 0xd22c02e1 stfs|stfs f17, 0x2e1(r12)
+0 0x3786a1dc addic_dot|subic. r28, r6, 0x5e24
+0 0x96a18fb Invalid|(invalid)
+0 0x4f896a6e Invalid|(invalid)
+0 0xb861c8a5 lmw|lmw r3, -0x375b(r1)
+0 0xa72aa150 lhzu|lhzu r25, -0x5eb0(r10)
+0 0x237c8c5f subfic|subfic r27, r28, -0x73a1
+0 0xe53a4f02 psq_lu|psq_lu f9, -0xfe(r26), 0, 4
+0 0xc40362a9 lfsu|lfsu f0, 0x62a9(r3)
+0 0xb24eb004 sth|sth r18, -0x4ffc(r14)
+0 0xfae26e03 Invalid|(invalid)
+0 0x518754d6 rlwimix|rlwimi r7, r12, 10, 19, 11
+0 0x57d594ed rlwinmx|rlwinm. r21, r30, 18, 19, 22
+0 0x66c541f8 oris|oris r5, r22, 0x41f8
+0 0xe92621e7 Invalid|(invalid)
+0 0x2d600fea Invalid|(invalid)
+0 0x54616371 rlwinmx|rlwinm. r1, r3, 12, 13, 24
+0 0x89a00b2c lbz|lbz r13, 0xb2c(r0)
+0 0x1eb04c0b mulli|mulli r21, r16, 0x4c0b
+0 0x5885543e Invalid|(invalid)
+0 0x1bb81235 Invalid|(invalid)
+0 0x7ca3ffa0 Invalid|(invalid)
+0 0x842bd06f lwzu|lwzu r1, -0x2f91(r11)
+0 0x341d35d2 addic_dot|addic. r0, r29, 0x35d2
+0 0x49772539 bx|bl 0x1772538
+0 0x92fd5354 stw|stw r23, 0x5354(r29)
+0 0xea29d313 Invalid|(invalid)
+0 0x5e8708a6 rlwnmx|rlwnm r7, r20, r1, 2, 19
+0 0xe30c607d psq_l|psq_l f24, 0x7d(r12), 0, 6
+0 0x49337a48 bx|b 0x1337a48
+0 0xeb05b7f7 Invalid|(invalid)
+0 0x846f60ba lwzu|lwzu r3, 0x60ba(r15)
+0 0x439c801 Invalid|(invalid)
+0 0x145d287c Invalid|(invalid)
+0 0x2309231b subfic|subfic r24, r9, 0x231b
+0 0x1b24120e Invalid|(invalid)
+0 0x4bd99fc5 bx|bl -0x26603c
+0 0xbc9451f0 stmw|stmw r4, 0x51f0(r20)
+0 0xa2cff87f lhz|lhz r22, -0x781(r15)
+0 0x182830a2 Invalid|(invalid)
+0 0x8ce26bc9 lbzu|lbzu r7, 0x6bc9(r2)
+0 0x76aa2aa4 andis_dot|andis. r10, r21, 0x2aa4
+0 0xbfec5c23 stmw|stmw r31, 0x5c23(r12)
+0 0xfa081076 Invalid|(invalid)
+0 0x87aaf00d lwzu|lwzu r29, -0xff3(r10)
+0 0x311b2698 addic|addic r8, r27, 0x2698
+0 0xa7cab207 lhzu|lhzu r30, -0x4df9(r10)
+0 0xb66d458a sthu|sthu r19, 0x458a(r13)
+0 0xaf6e3091 lhau|lhau r27, 0x3091(r14)
+0 0xc842f9cc lfd|lfd f2, -0x634(r2)
+0 0x58d59e2b Invalid|(invalid)
+0 0x6172a3de ori|ori r18, r11, 0xa3de
+0 0x400f7155 bcx|bcl 0, 15, 0x7154
+0 0x15d09840 Invalid|(invalid)
+0 0xe5da048f psq_lu|psq_lu f14, 0x48f(r26), 0, 0
+0 0xa2383f72 lhz|lhz r17, 0x3f72(r24)
+0 0x281e3659 cmpli|cmplwi r30, 0x3659
+0 0xf7a35f4 twi|twi 27, r26, 0x35f4
+0 0x27ab0933 Invalid|(invalid)
+0 0x48b76c46 bx|ba 0xb76c44
+0 0x8b1a439d lbz|lbz r24, 0x439d(r26)
+0 0x68f146e8 xori|xori r17, r7, 0x46e8
+0 0x41061017 bcx|bcla 8, 6, 0x1014
+0 0x98d6be5a stb|stb r6, -0x41a6(r22)
+0 0xdff79d21 stfdu|stfdu f31, -0x62df(r23)
+0 0x6d167f1c xoris|xoris r22, r8, 0x7f1c
+0 0x98b6bd3b stb|stb r5, -0x42c5(r22)
+0 0x1ebe09ae mulli|mulli r21, r30, 0x9ae
+0 0xefe286e5 Invalid|(invalid)
+0 0x26dd290 Invalid|(invalid)
+0 0x2dfaf49f Invalid|(invalid)
+0 0x206a6242 subfic|subfic r3, r10, 0x6242
+0 0x394384e9 addi|subi r10, r3, 0x7b17
+0 0xed27544 twi|twi 22, r18, 0x7544
+0 0x6b26da43 xori|xori r6, r25, 0xda43
+0 0x821c16 Invalid|(invalid)
+0 0x7b035b2d Invalid|(invalid)
+0 0xae6adb38 lhau|lhau r19, -0x24c8(r10)
+0 0xda88d227 stfd|stfd f20, -0x2dd9(r8)
+0 0x2668cb2a Invalid|(invalid)
+0 0x6c0f0db1 xoris|xoris r15, r0, 0xdb1
+0 0xf1dcb86c psq_st|psq_st f14, -0x794(r28), 1, 3
+0 0x618d804b ori|ori r13, r12, 0x804b
+0 0x3f93437e addis|addis r28, r19, 0x437e
+0 0xe31be075 psq_l|psq_l f24, 0x75(r27), 1, 6
+0 0x17c100e0 Invalid|(invalid)
+0 0xe623c8af psq_lu|psq_lu f17, -0x751(r3), 1, 4
+0 0xee1b9912 Invalid|(invalid)
+0 0xf2ab5779 psq_st|psq_st f21, 0x779(r11), 0, 5
+0 0x7557e894 andis_dot|andis. r23, r10, 0xe894
+0 0x8260cf53 lwz|lwz r19, -0x30ad(r0)
+0 0x38951fe6 addi|addi r4, r21, 0x1fe6
+0 0xbd4f36bd stmw|stmw r10, 0x36bd(r15)
+0 0x827ce388 lwz|lwz r19, -0x1c78(r28)
+0 0xaa63f837 lha|lha r19, -0x7c9(r3)
+0 0x4f206bfa Invalid|(invalid)
+0 0x62d8241 Invalid|(invalid)
+0 0xbcdaa5bc stmw|stmw r6, -0x5a44(r26)
+0 0xe87ae75b Invalid|(invalid)
+0 0x79bf514e Invalid|(invalid)
+0 0xc1c47e05 lfs|lfs f14, 0x7e05(r4)
+0 0x565f2330 rlwinmx|rlwinm r31, r18, 4, 12, 24
+0 0x138580bf ps_nmadd|ps_nmadd. f28, f5, f2, f16
+0 0x43e8e3e2 bcx|bca 31, 8, -0x1c20
+0 0x2aeeae09 Invalid|(invalid)
+0 0xe2ef8fe4 psq_l|psq_l f23, -0x1c(r15), 1, 0
+0 0x2399e863 subfic|subfic r28, r25, -0x179d
+0 0x395d77b6 addi|addi r10, r29, 0x77b6
+0 0x2026d64d subfic|subfic r1, r6, -0x29b3
+0 0x795c5fd8 Invalid|(invalid)
+0 0x8e88247 Invalid|(invalid)
+0 0xc83aa0ca lfd|lfd f1, -0x5f36(r26)
+0 0xcd0bfad1 lfdu|lfdu f8, -0x52f(r11)
+0 0xfb95470c Invalid|(invalid)
+0 0x28dff26b Invalid|(invalid)
+0 0x1c4f331e mulli|mulli r2, r15, 0x331e
+0 0xe4255f95 psq_lu|psq_lu f1, -0x6b(r5), 0, 5
+0 0x7a1d3980 Invalid|(invalid)
+0 0x65911ccf oris|oris r17, r12, 0x1ccf
+0 0x7af42b2 Invalid|(invalid)
+0 0xece68899 Invalid|(invalid)
+0 0xe6be6b34 psq_lu|psq_lu f21, -0x4cc(r30), 0, 6
+0 0xd3532573 stfs|stfs f26, 0x2573(r19)
+0 0x4c882386 Invalid|(invalid)
+0 0x69f339dd xori|xori r19, r15, 0x39dd
+0 0x8a7e5028 lbz|lbz r19, 0x5028(r30)
+0 0x80a77057 lwz|lwz r5, 0x7057(r7)
+0 0xdc34699a stfdu|stfdu f1, 0x699a(r20)
+0 0xdba37761 stfd|stfd f29, 0x7761(r3)
+0 0xf2d19c5c psq_st|psq_st f22, -0x3a4(r17), 1, 1
+0 0xf45da17b psq_stu|psq_stu f2, 0x17b(r29), 1, 2
+0 0xdf8fe8ee stfdu|stfdu f28, -0x1712(r15)
+0 0xe2c78525 psq_l|psq_l f22, 0x525(r7), 1, 0
+0 0x4a1043d0 bx|b -0x1efbc30
+0 0x45f79cdf Invalid|(invalid)
+0 0x9c8bb582 stbu|stbu r4, -0x4a7e(r11)
+0 0x7abe729 Invalid|(invalid)
+0 0x4f297a84 Invalid|(invalid)
+0 0xf44d8683 psq_stu|psq_stu f2, 0x683(r13), 1, 0
+0 0x8d022356 lbzu|lbzu r8, 0x2356(r2)
+0 0xe95d616d Invalid|(invalid)
+0 0x6097b478 ori|ori r23, r4, 0xb478
+0 0xde71c267 stfdu|stfdu f19, -0x3d99(r17)
+0 0x3acac66a addi|subi r22, r10, 0x3996
+0 0xd92cf7f1 stfd|stfd f9, -0x80f(r12)
+0 0x4e94a5ac Invalid|(invalid)
+0 0x2d4f48b Invalid|(invalid)
+0 0xb50e72be sthu|sthu r8, 0x72be(r14)
+0 0x2673eeb5 Invalid|(invalid)
+0 0xe88d4220 Invalid|(invalid)
+0 0xe8aa00ef Invalid|(invalid)
+0 0xb2db3c52 sth|sth r22, 0x3c52(r27)
+0 0x9e97c9b9 stbu|stbu r20, -0x3647(r23)
+0 0x79d5bdd4 Invalid|(invalid)
+0 0xd78a0b93 stfsu|stfsu f28, 0xb93(r10)
+0 0xb6f87726 sthu|sthu r23, 0x7726(r24)
+0 0x54e4cfd Invalid|(invalid)
+0 0xa99d8cc8 lha|lha r12, -0x7338(r29)
+0 0x41587877 bcx|bcla 10, 24, 0x7874
+0 0xc8fab73a lfd|lfd f7, -0x48c6(r26)
+0 0x89217c81 lbz|lbz r9, 0x7c81(r1)
+0 0x722362fc andi_dot|andi. r3, r17, 0x62fc
+0 0x266eb9b Invalid|(invalid)
+0 0x9797d08e stwu|stwu r28, -0x2f72(r23)
+0 0x78339c45 Invalid|(invalid)
+0 0x23293470 subfic|subfic r25, r9, 0x3470
+0 0x5bd948ff Invalid|(invalid)
+0 0x183ad722 Invalid|(invalid)
+0 0xb9433049 lmw|lmw r10, 0x3049(r3)
+0 0xa3a83524 lhz|lhz r29, 0x3524(r8)
+0 0xcc49b4a3 lfdu|lfdu f2, -0x4b5d(r9)
+0 0xf7d81ef6 psq_stu|psq_stu f30, -0x10a(r24), 0, 1
+0 0xcceefc8d lfdu|lfdu f7, -0x373(r14)
+0 0x66c4d918 oris|oris r4, r22, 0xd918
+0 0x2aac9287 cmpli|cmpli 5, 1, r12, 0x9287
+0 0x71013c0a andi_dot|andi. r1, r8, 0x3c0a
+0 0x5b3a0511 Invalid|(invalid)
+0 0xc802d44c lfd|lfd f0, -0x2bb4(r2)
+0 0xa77486ab lhzu|lhzu r27, -0x7955(r20)
+0 0x5b39025e Invalid|(invalid)
+0 0x914f8dd5 stw|stw r10, -0x722b(r15)
+0 0xc2b91ac0 lfs|lfs f21, 0x1ac0(r25)
+0 0x97f6750f stwu|stwu r31, 0x750f(r22)
+0 0x878785f2 lwzu|lwzu r28, -0x7a0e(r7)
+0 0xd3871ad9 stfs|stfs f28, 0x1ad9(r7)
+0 0x38c5e074 addi|subi r6, r5, 0x1f8c
+0 0x300d81b3 addic|subic r0, r13, 0x7e4d
+0 0xbe4e1ac6 stmw|stmw r18, 0x1ac6(r14)
+0 0x87a8701d lwzu|lwzu r29, 0x701d(r8)
+0 0x3c829968 addis|subis r4, r2, 0x6698
+0 0x8dff1097 lbzu|lbzu r15, 0x1097(r31)
+0 0xf25b54da psq_st|psq_st f18, 0x4da(r27), 0, 5
+0 0xfb6f91a1 Invalid|(invalid)
+0 0x11f7f99c ps_madds0|ps_madds0 f15, f23, f6, f31
+0 0xbc9ec5bb stmw|stmw r4, -0x3a45(r30)
+0 0x7d3f082e lwzx|lwzx r9, r31, r1
+0 0xab50c365 lha|lha r26, -0x3c9b(r16)
+0 0xdb51f510 stfd|stfd f26, -0xaf0(r17)
+0 0x8fb2851f lbzu|lbzu r29, -0x7ae1(r18)
+0 0x78de48c2 Invalid|(invalid)
+0 0x6d7c8969 xoris|xoris r28, r11, 0x8969
+0 0x2493bfc4 Invalid|(invalid)
+0 0x7e9672c3 Invalid|(invalid)
+0 0x8a476a96 lbz|lbz r18, 0x6a96(r7)
+0 0x4523a7ad Invalid|(invalid)
+0 0xc28bcdb8 lfs|lfs f20, -0x3248(r11)
+0 0xe120f2a7 psq_l|psq_l f9, 0x2a7(r0), 1, 7
+0 0xb1c601aa sth|sth r14, 0x1aa(r6)
+0 0xe1fb2231 psq_l|psq_l f15, 0x231(r27), 0, 2
+0 0xb907d2ec lmw|lmw r8, -0x2d14(r7)
+0 0x32c6a8cb addic|subic r22, r6, 0x5735
+0 0xf436e1fe psq_stu|psq_stu f1, 0x1fe(r22), 1, 6
+0 0x10003cf5 Invalid|(invalid)
+0 0x1c48c360 mulli|mulli r2, r8, -0x3ca0
+0 0x3ffe792f addis|addis r31, r30, 0x792f
+0 0xf19c1f92 psq_st|psq_st f12, -0x6e(r28), 0, 1
+0 0x9b7c7bf9 stb|stb r27, 0x7bf9(r28)
+0 0x21b6d314 subfic|subfic r13, r22, -0x2cec
+0 0x61e587d3 ori|ori r5, r15, 0x87d3
+0 0xbcf10e66 stmw|stmw r7, 0xe66(r17)
+0 0x6d49a33d xoris|xoris r9, r10, 0xa33d
+0 0xd3d57608 stfs|stfs f30, 0x7608(r21)
+0 0x2c2338b7 cmpi|cmpi 0, 1, r3, 0x38b7
+0 0x893e427a lbz|lbz r9, 0x427a(r30)
+0 0xe355b6c1 psq_l|psq_l f26, 0x6c1(r21), 1, 3
+0 0x1d77603c mulli|mulli r11, r23, 0x603c
+0 0x310d2fdb addic|addic r8, r13, 0x2fdb
+0 0xffed8fce Invalid|(invalid)
+0 0xa966fa85 lha|lha r11, -0x57b(r6)
+0 0x203285b0 subfic|subfic r1, r18, -0x7a50
+0 0xc00b513f lfs|lfs f0, 0x513f(r11)
+0 0x545e0a62 rlwinmx|rlwinm r30, r2, 1, 9, 17
+0 0x961ff289 stwu|stwu r16, -0xd77(r31)
+0 0xa141a64 Invalid|(invalid)
+0 0xc23bc0e3 lfs|lfs f17, -0x3f1d(r27)
+0 0x68b80636 xori|xori r24, r5, 0x636
+0 0x504362cd rlwimix|rlwimi. r3, r2, 12, 11, 6
+0 0xde949258 stfdu|stfdu f20, -0x6da8(r20)
+0 0x1956e2c7 Invalid|(invalid)
+0 0x9801174a stb|stb r0, 0x174a(r1)
+0 0xc0384f51 lfs|lfs f1, 0x4f51(r24)
+0 0xe6cba18c psq_lu|psq_lu f22, 0x18c(r11), 1, 2
+0 0x24d35aeb Invalid|(invalid)
+0 0xf970119e Invalid|(invalid)
+0 0x91cdfc15 stw|stw r14, -0x3eb(r13)
+0 0xbce43c00 stmw|stmw r7, 0x3c00(r4)
+0 0x514a0d4f rlwimix|rlwimi. r10, r10, 1, 21, 7
+0 0x31010932 addic|addic r8, r1, 0x932
+0 0x4a3fed19 bx|bl -0x1c012e8
+0 0x26d095b4 Invalid|(invalid)
+0 0xd61a1df3 stfsu|stfsu f16, 0x1df3(r26)
+0 0x21495206 subfic|subfic r10, r9, 0x5206
+0 0xb679e65d sthu|sthu r19, -0x19a3(r25)
+0 0x343e22a8 addic_dot|addic. r1, r30, 0x22a8
+0 0x54cf0d7 Invalid|(invalid)
+0 0x128b801a Invalid|(invalid)
+0 0xb59bebe1 sthu|sthu r12, -0x141f(r27)
+0 0x53c996dc rlwimix|rlwimi r9, r30, 18, 27, 14
+0 0xd1ba29fb stfs|stfs f13, 0x29fb(r26)
+0 0x230b676e subfic|subfic r24, r11, 0x676e
+0 0xa3be41a5 lhz|lhz r29, 0x41a5(r30)
+0 0x5372e650 rlwimix|rlwimi r18, r27, 28, 25, 8
+0 0x6f6bad5f xoris|xoris r11, r27, 0xad5f
+0 0x14a21c02 Invalid|(invalid)
+0 0xe8f56ba9 Invalid|(invalid)
+0 0x80514504 lwz|lwz r2, 0x4504(r17)
+0 0x32419f03 addic|subic r18, r1, 0x60fd
+0 0xcb91f1d6 lfd|lfd f28, -0xe2a(r17)
+0 0x70962ded andi_dot|andi. r22, r4, 0x2ded
+0 0x598726f8 Invalid|(invalid)
+0 0xed662e7 twi|twi 22, r22, 0x62e7
+0 0x129a7cea Invalid|(invalid)
+0 0xcb98c71 twi|twi 5, r25, -0x738f
+0 0x8a76402c lbz|lbz r19, 0x402c(r22)
+0 0x61a29d0b ori|ori r2, r13, 0x9d0b
+0 0x784c913e Invalid|(invalid)
+0 0xa00cb35 Invalid|(invalid)
+0 0x203384a0 subfic|subfic r1, r19, -0x7b60
+0 0xe061316f psq_l|psq_l f3, 0x16f(r1), 0, 3
+0 0x599e42d2 Invalid|(invalid)
+0 0x77996e39 andis_dot|andis. r25, r28, 0x6e39
+0 0x2e3b2854 cmpi|cmpi 4, 1, r27, 0x2854
+0 0xd9b34413 stfd|stfd f13, 0x4413(r19)
+0 0x6dbee5a6 xoris|xoris r30, r13, 0xe5a6
+0 0xe781397d psq_lu|psq_lu f28, -0x683(r1), 0, 3
+0 0x56649f48 rlwinmx|rlwinm r4, r19, 19, 29, 4
+0 0x270438f7 Invalid|(invalid)
+0 0x672b0dba oris|oris r11, r25, 0xdba
+0 0xab0a3101 lha|lha r24, 0x3101(r10)
+0 0xe8169d7c Invalid|(invalid)
+0 0x74adb41b andis_dot|andis. r13, r5, 0xb41b
+0 0x7e008f0e Invalid|(invalid)
+0 0xcf9e98c5 lfdu|lfdu f28, -0x673b(r30)
+0 0x8abb16f0 lbz|lbz r21, 0x16f0(r27)
+0 0xc45b997f lfsu|lfsu f2, -0x6681(r27)
+0 0xf7927da2 psq_stu|psq_stu f28, -0x25e(r18), 0, 7
+0 0x5fc4f4c9 rlwnmx|rlwnm. r4, r30, r30, 19, 4
+0 0xa7733fa4 lhzu|lhzu r27, 0x3fa4(r19)
+0 0x4db00d23 Invalid|(invalid)
+0 0xff3d2d76 Invalid|(invalid)
+0 0xac64090d lhau|lhau r3, 0x90d(r4)
+0 0x60b8b98 Invalid|(invalid)
+0 0x21277307 subfic|subfic r9, r7, 0x7307
+0 0x647a328a oris|oris r26, r3, 0x328a
+0 0xa246d991 lhz|lhz r18, -0x266f(r6)
+0 0x512faecc rlwimix|rlwimi r15, r9, 21, 27, 6
+0 0x313c6f2b addic|addic r9, r28, 0x6f2b
+0 0x123460de ps_madds1|ps_madds1 f17, f20, f3, f12
+0 0x6fe0aa55 xoris|xoris r0, r31, 0xaa55
+0 0x75de9d40 andis_dot|andis. r30, r14, 0x9d40
+0 0xa5cbe58f lhzu|lhzu r14, -0x1a71(r11)
+0 0x535bcc72 rlwimix|rlwimi r27, r26, 25, 17, 25
+0 0xff50ff59 Invalid|(invalid)
+0 0x121e8af4 Invalid|(invalid)
+0 0x9db8fa33 stbu|stbu r13, -0x5cd(r24)
+0 0x38b9c946 addi|subi r5, r25, 0x36ba
+0 0x8a79c9d Invalid|(invalid)
+0 0x66f0ebe8 oris|oris r16, r23, 0xebe8
+0 0xc2d11117 lfs|lfs f22, 0x1117(r17)
+0 0xb404eb5a sthu|sthu r0, -0x14a6(r4)
+0 0xc0688621 lfs|lfs f3, -0x79df(r8)
+0 0x8186741c lwz|lwz r12, 0x741c(r6)
+0 0x53efce3b rlwimix|rlwimi. r15, r31, 25, 24, 29
+0 0x3c3506ae addis|addis r1, r21, 0x6ae
+0 0x664fffe5 oris|oris r15, r18, 0xffe5
+0 0x8fb31790 lbzu|lbzu r29, 0x1790(r19)
+0 0x8963159f lbz|lbz r11, 0x159f(r3)
+0 0xf172f42 twi|twi 24, r23, 0x2f42
+0 0x38568de9 addi|subi r2, r22, 0x7217
+0 0x93a20a44 stw|stw r29, 0xa44(r2)
+0 0x778f0b43 andis_dot|andis. r15, r28, 0xb43
+0 0x6421b916 oris|oris r1, r1, 0xb916
+0 0x8df4f42d lbzu|lbzu r15, -0xbd3(r20)
+0 0xeac9c038 Invalid|(invalid)
+0 0xd3d21327 stfs|stfs f30, 0x1327(r18)
+0 0x2488382a Invalid|(invalid)
+0 0x1fa836b1 mulli|mulli r29, r8, 0x36b1
+0 0x5c1fed6c rlwnmx|rlwnm r31, r0, r29, 21, 22
+0 0x3fa8d14b addis|subis r29, r8, 0x2eb5
+0 0xfc8f807e fnmaddx|fnmadd f4, f15, f1, f16
+0 0xbeb59975 stmw|stmw r21, -0x668b(r21)
+0 0xa18d85e0 lhz|lhz r12, -0x7a20(r13)
+0 0xfe1229af fselx|fsel. f16, f18, f6, f5
+0 0xda21a612 stfd|stfd f17, -0x59ee(r1)
+0 0x12ea079 Invalid|(invalid)
+0 0xa0a2bd94 lhz|lhz r5, -0x426c(r2)
+0 0x37334053 addic_dot|addic. r25, r19, 0x4053
+0 0x2ca1fce6 cmpi|cmpi 1, 1, r1, -0x31a
+0 0xa6350fbd lhzu|lhzu r17, 0xfbd(r21)
+0 0xc68b0888 lfsu|lfsu f20, 0x888(r11)
+0 0x2e3b7937 cmpi|cmpi 4, 1, r27, 0x7937
+0 0x7a0118fa Invalid|(invalid)
+0 0xb67eeb41 sthu|sthu r19, -0x14bf(r30)
+0 0x3b411abc addi|addi r26, r1, 0x1abc
+0 0xd88785b twi|twi 12, r8, 0x785b
+0 0x1d10ce4e mulli|mulli r8, r16, -0x31b2
+0 0xa51a7705 lhzu|lhzu r8, 0x7705(r26)
+0 0xe002e830 psq_l|psq_l f0, -0x7d0(r2), 1, 6
+0 0x2d0a21bf cmpi|cmpwi cr2, r10, 0x21bf
+0 0x411830e2 bcx|bca 8, 24, 0x30e0
+0 0xf4723709 psq_stu|psq_stu f3, 0x709(r18), 0, 3
+0 0x4d05a4e4 Invalid|(invalid)
+0 0xf6e69963 psq_stu|psq_stu f23, -0x69d(r6), 1, 1
+0 0x6ea794b6 xoris|xoris r7, r21, 0x94b6
+0 0x2390ef4d subfic|subfic r28, r16, -0x10b3
+0 0x4269c4d8 bcx|bdz+ -0x3b28
+0 0xce5e4347 lfdu|lfdu f18, 0x4347(r30)
+0 0x3dac8dca addis|subis r13, r12, 0x7236
+0 0xe7a5a3d1 psq_lu|psq_lu f29, 0x3d1(r5), 1, 2
+0 0x406efc0c bcx|bc 3, 14, -0x3f4
+0 0x9cefc36b stbu|stbu r7, -0x3c95(r15)
+0 0xc5f01e Invalid|(invalid)
+0 0xf5c79895 psq_stu|psq_stu f14, -0x76b(r7), 1, 1
+0 0x3ae83e80 addi|addi r23, r8, 0x3e80
+0 0xe9bbfdcf Invalid|(invalid)
+0 0x7dd7cfb2 Invalid|(invalid)
+0 0xe0fa5199 psq_l|psq_l f7, 0x199(r26), 0, 5
+0 0x9befc034 stb|stb r31, -0x3fcc(r15)
+0 0x9f2a1673 stbu|stbu r25, 0x1673(r10)
+0 0x7df8086 Invalid|(invalid)
+0 0xd07192dd stfs|stfs f3, -0x6d23(r17)
+0 0x9daf528 Invalid|(invalid)
+0 0xe2cb7157 psq_l|psq_l f22, 0x157(r11), 0, 7
+0 0x8e07969a lbzu|lbzu r16, -0x6966(r7)
+0 0x12156061 Invalid|(invalid)
+0 0xa46e915c lhzu|lhzu r3, -0x6ea4(r14)
+0 0xa37fb27b lhz|lhz r27, -0x4d85(r31)
+0 0x73fbe5ee andi_dot|andi. r27, r31, 0xe5ee
+0 0xcd45fe25 lfdu|lfdu f10, -0x1db(r5)
+0 0xad5288d0 lhau|lhau r10, -0x7730(r18)
+0 0xc1d8bddf lfs|lfs f14, -0x4221(r24)
+0 0x477d8282 Invalid|(invalid)
+0 0x59dff029 Invalid|(invalid)
+0 0xcfc60f84 lfdu|lfdu f30, 0xf84(r6)
+0 0xf6beb783 psq_stu|psq_stu f21, 0x783(r30), 1, 3
+0 0xa736c056 lhzu|lhzu r25, -0x3faa(r22)
+0 0xff7ffa6d Invalid|(invalid)
+0 0x7b939978 Invalid|(invalid)
+0 0xdc540367 stfdu|stfdu f2, 0x367(r20)
+0 0xeecf336a Invalid|(invalid)
+0 0x210720f1 subfic|subfic r8, r7, 0x20f1
+0 0x744daac Invalid|(invalid)
+0 0xbd19458b stmw|stmw r8, 0x458b(r25)
+0 0x7c3fafbe Invalid|(invalid)
+0 0x185ea7b5 Invalid|(invalid)
+0 0x8d96c720 lbzu|lbzu r12, -0x38e0(r22)
+0 0xd5161ef twi|twi 10, r17, 0x61ef
+0 0xa2664952 lhz|lhz r19, 0x4952(r6)
+0 0x467c12b9 Invalid|(invalid)
+0 0xba2d92d4 lmw|lmw r17, -0x6d2c(r13)
+0 0xb2a57c93 sth|sth r21, 0x7c93(r5)
+0 0x9cda5426 stbu|stbu r6, 0x5426(r26)
+0 0x1ba525fd Invalid|(invalid)
+0 0xf988b1c8 Invalid|(invalid)
+0 0x7e08f977 Invalid|(invalid)
+0 0x1900643a Invalid|(invalid)
+0 0x1bf3e581 Invalid|(invalid)
+0 0xc036d7fc lfs|lfs f1, -0x2804(r22)
+0 0x7bdd7c9b Invalid|(invalid)
+0 0x285e4d8e Invalid|(invalid)
+0 0x241a9545 Invalid|(invalid)
+0 0xdd49f970 stfdu|stfdu f10, -0x690(r9)
+0 0xfe56e9ff fnmaddx|fnmadd. f18, f22, f7, f29
+0 0xb02f2422 sth|sth r1, 0x2422(r15)
+0 0x7267b949 andi_dot|andi. r7, r19, 0xb949
+0 0xc0b4a24 twi|twi 0, r11, 0x4a24
+0 0x861f65a3 lwzu|lwzu r16, 0x65a3(r31)
+0 0xaa373bf6 lha|lha r17, 0x3bf6(r23)
+0 0x380a158d addi|addi r0, r10, 0x158d
+0 0x38ef3e18 addi|addi r7, r15, 0x3e18
+0 0xed3b5387 Invalid|(invalid)
+0 0xcad8290a lfd|lfd f22, 0x290a(r24)
+0 0xb694ae11 sthu|sthu r20, -0x51ef(r20)
+0 0x2dc9894c Invalid|(invalid)
+0 0x782d57ab Invalid|(invalid)
+0 0x6064bf5e ori|ori r4, r3, 0xbf5e
+0 0x2dc2c6d5 Invalid|(invalid)
+0 0x99411fc0 stb|stb r10, 0x1fc0(r1)
+0 0xb15a560f sth|sth r10, 0x560f(r26)
+0 0x7fb512f2 Invalid|(invalid)
+0 0x1d7be3d9 mulli|mulli r11, r27, -0x1c27
+0 0xa5843574 lhzu|lhzu r12, 0x3574(r4)
+0 0x32ad72b3 addic|addic r21, r13, 0x72b3
+0 0xd1fa77c6 stfs|stfs f15, 0x77c6(r26)
+0 0xa017c91d lhz|lhz r0, -0x36e3(r23)
+0 0x923c3e68 stw|stw r17, 0x3e68(r28)
+0 0xc17c1197 lfs|lfs f11, 0x1197(r28)
+0 0x97d381da stwu|stwu r30, -0x7e26(r19)
+0 0xe0e27aa1 psq_l|psq_l f7, -0x55f(r2), 0, 7
+0 0x5c1ee9c Invalid|(invalid)
+0 0x60a9d6bb ori|ori r9, r5, 0xd6bb
+0 0xb5a0052e sthu|sthu r13, 0x52e(r0)
+0 0xf2e03c65 psq_st|psq_st f23, -0x39b(r0), 0, 3
+0 0x9913a10 Invalid|(invalid)
+0 0x3d0ca61f addis|subis r8, r12, 0x59e1
+0 0xdd1515c2 stfdu|stfdu f8, 0x15c2(r21)
+0 0x8bd19269 lbz|lbz r30, -0x6d97(r17)
+0 0xe5fd54c4 psq_lu|psq_lu f15, 0x4c4(r29), 0, 5
+0 0x9810a3c3 stb|stb r0, -0x5c3d(r16)
+0 0x28110796 cmpli|cmplwi r17, 0x796
+0 0x677740ad oris|oris r23, r27, 0x40ad
+0 0x5124b2b8 rlwimix|inslwi r4, r9, 19, 10
+0 0x149c33a7 Invalid|(invalid)
+0 0xb8af6eaa lmw|lmw r5, 0x6eaa(r15)
+0 0x57164b31 rlwinmx|rlwinm. r22, r24, 9, 12, 24
+0 0xa52507ec lhzu|lhzu r9, 0x7ec(r5)
+0 0xa33f9cb Invalid|(invalid)
+0 0x329d1efe addic|addic r20, r29, 0x1efe
+0 0x413bf5f5 bcx|bcl 9, 27, -0xa0c
+0 0x118f4860 Invalid|(invalid)
+0 0xc25eda2f lfs|lfs f18, -0x25d1(r30)
+0 0x21ac2c92 subfic|subfic r13, r12, 0x2c92
+0 0x95c1c4f9 stwu|stwu r14, -0x3b07(r1)
+0 0xfc1ba814 Invalid|(invalid)
+0 0xc449f8d3 lfsu|lfsu f2, -0x72d(r9)
+0 0xa1a7eb66 lhz|lhz r13, -0x149a(r7)
+0 0xfa117c3d Invalid|(invalid)
+0 0x49d9b08 Invalid|(invalid)
+0 0x92acb9b7 stw|stw r21, -0x4649(r12)
+0 0xdb68ef7a stfd|stfd f27, -0x1086(r8)
+0 0x31a91fc1 addic|addic r13, r9, 0x1fc1
+0 0x6037d53c ori|ori r23, r1, 0xd53c
+0 0x7fecc0db Invalid|(invalid)
+0 0x2b290cce cmpli|cmpli 6, 1, r9, 0xcce
+0 0x86def385 lwzu|lwzu r22, -0xc7b(r30)
+0 0x7fd04ab0 Invalid|(invalid)
+0 0x7c81f23f Invalid|(invalid)
+0 0x4175762 Invalid|(invalid)
+0 0x37e57b89 addic_dot|addic. r31, r5, 0x7b89
+0 0x35c42f64 addic_dot|addic. r14, r4, 0x2f64
+0 0x39a71e3 Invalid|(invalid)
+0 0xe52c2336 psq_lu|psq_lu f9, 0x336(r12), 0, 2
+0 0xac0f7bcd lhau|lhau r0, 0x7bcd(r15)
+0 0xcedbf758 lfdu|lfdu f22, -0x8a8(r27)
+0 0x89fea3c7 lbz|lbz r15, -0x5c39(r30)
+0 0xf33d044a psq_st|psq_st f25, 0x44a(r29), 0, 0
+0 0x7553f851 andis_dot|andis. r19, r10, 0xf851
+0 0xd27f568c stfs|stfs f19, 0x568c(r31)
+0 0x13352beb Invalid|(invalid)
+0 0xc50ce9e twi|twi 2, r16, -0x3162
+0 0x62123515 ori|ori r18, r16, 0x3515
+0 0x5e294100 rlwnmx|rlwnm r9, r17, r8, 4, 0
+0 0xd0e6ee4f stfs|stfs f7, -0x11b1(r6)
+0 0x68339632 xori|xori r19, r1, 0x9632
+0 0x2315b619 subfic|subfic r24, r21, -0x49e7
+0 0x501beab4 rlwimix|rlwimi r27, r0, 29, 10, 26
+0 0xf0830ef3 psq_st|psq_st f4, -0x10d(r3), 0, 0
+0 0x1a4aaf06 Invalid|(invalid)
+0 0x49da3f5d bx|bl 0x1da3f5c
+0 0xb554c7a8 sthu|sthu r10, -0x3858(r20)
+0 0xfb22f1d7 Invalid|(invalid)
+0 0x8a8ad1a Invalid|(invalid)
+0 0xa30fd4e1 lhz|lhz r24, -0x2b1f(r15)
+0 0x2ec08bdc Invalid|(invalid)
+0 0x6bae3afb xori|xori r14, r29, 0x3afb
+0 0x2c61646e Invalid|(invalid)
+0 0x315ebaa5 addic|subic r10, r30, 0x455b
+0 0x41af2b50 bcx|bso+ cr3, 0x2b50
+0 0x5f3ece5f rlwnmx|rlwnm. r30, r25, r25, 25, 15
+0 0x2f1de902 cmpi|cmpwi cr6, r29, -0x16fe
+0 0x4c6b74a9 Invalid|(invalid)
+0 0xc787da04 lfsu|lfsu f28, -0x25fc(r7)
+0 0x83c4d003 lwz|lwz r30, -0x2ffd(r4)
+0 0xb9f08ed6 lmw|lmw r15, -0x712a(r16)
+0 0xa81ac6ed lha|lha r0, -0x3913(r26)
+0 0xf0bd0bf8 psq_st|psq_st f5, -0x408(r29), 0, 0
+0 0xa8eaa3e7 lha|lha r7, -0x5c19(r10)
+0 0x968e9ea Invalid|(invalid)
+0 0x4815b571 bx|bl 0x15b570
+0 0x8f00752c lbzu|lbzu r24, 0x752c(r0)
+0 0x9738ee0b stwu|stwu r25, -0x11f5(r24)
+0 0x9ae7ce3e stb|stb r23, -0x31c2(r7)
+0 0xa38d8435 lhz|lhz r28, -0x7bcb(r13)
+0 0x9ab709a0 stb|stb r21, 0x9a0(r23)
+0 0x117a926f ps_sel|ps_sel. f11, f26, f9, f18
+0 0x7334fd2 Invalid|(invalid)
+0 0x7d3fb739 Invalid|(invalid)
+0 0x27acfd54 Invalid|(invalid)
+0 0x2460b513 Invalid|(invalid)
+0 0x5e4ac2a6 rlwnmx|rlwnm r10, r18, r24, 10, 19
+0 0x33ba127d addic|addic r29, r26, 0x127d
+0 0x3d09c448 addis|subis r8, r9, 0x3bb8
+0 0x2866b9f7 Invalid|(invalid)
+0 0x987ababa stb|stb r3, -0x4546(r26)
+0 0x8dde9a01 lbzu|lbzu r14, -0x65ff(r30)
+0 0x4484127c Invalid|(invalid)
+0 0x19f6451b Invalid|(invalid)
+0 0xf0b10c0e psq_st|psq_st f5, -0x3f2(r17), 0, 0
+0 0x47a791c5 Invalid|(invalid)
+0 0x4d5dbf0 Invalid|(invalid)
+0 0x2bcb3a7f Invalid|(invalid)
+0 0x3c10caa2 addis|subis r0, r16, 0x355e
+0 0xe32b7dc9 psq_l|psq_l f25, -0x237(r11), 0, 7
+0 0x5b7054a4 Invalid|(invalid)
+0 0xb797be23 sthu|sthu r28, -0x41dd(r23)
+0 0x92c64a76 stw|stw r22, 0x4a76(r6)
+0 0x81e1220d lwz|lwz r15, 0x220d(r1)
+0 0x296ff098 Invalid|(invalid)
+0 0xf0e83407 psq_st|psq_st f7, 0x407(r8), 0, 3
+0 0xde1b1f8a stfdu|stfdu f16, 0x1f8a(r27)
+0 0xca238291 lfd|lfd f17, -0x7d6f(r3)
+0 0x27d063cc Invalid|(invalid)
+0 0xfe47402b faddx|fadd. f18, f7, f8
+0 0x1fca1dde mulli|mulli r30, r10, 0x1dde
+0 0x1cf5e355 mulli|mulli r7, r21, -0x1cab
+0 0x96e0a240 stwu|stwu r23, -0x5dc0(r0)
+0 0x5ca1c68f rlwnmx|rlwnm. r1, r5, r24, 26, 7
+0 0x86935972 lwzu|lwzu r20, 0x5972(r19)
+0 0xa007c859 lhz|lhz r0, -0x37a7(r7)
+0 0xfcf6dff4 Invalid|(invalid)
+0 0xb0eaeb33 sth|sth r7, -0x14cd(r10)
+0 0xa4102646 lhzu|lhzu r0, 0x2646(r16)
+0 0xdff8f59d stfdu|stfdu f31, -0xa63(r24)
+0 0x686490e8 xori|xori r4, r3, 0x90e8
+0 0x6c001217 xoris|xoris r0, r0, 0x1217
+0 0x57c7185a rlwinmx|rlwinm r7, r30, 3, 1, 13
+0 0xedd6f21 twi|twi 22, r29, 0x6f21
+0 0xe8aa691c Invalid|(invalid)
+0 0xe4ccdf3b psq_lu|psq_lu f6, -0xc5(r12), 1, 5
+0 0x438003ae bcx|bca 28, 0, 0x3ac
+0 0x230178e5 subfic|subfic r24, r1, 0x78e5
+0 0x32ec5c90 addic|addic r23, r12, 0x5c90
+0 0xccaf369f lfdu|lfdu f5, 0x369f(r15)
+0 0xdcd7fc42 stfdu|stfdu f6, -0x3be(r23)
+0 0x59ed96e9 Invalid|(invalid)
+0 0xa5a59f44 lhzu|lhzu r13, -0x60bc(r5)
+0 0x221b3c43 subfic|subfic r16, r27, 0x3c43
+0 0x70155616 andi_dot|andi. r21, r0, 0x5616
+0 0xe3aa8d2d psq_l|psq_l f29, -0x2d3(r10), 1, 0
+0 0x1f9ca538 mulli|mulli r28, r28, -0x5ac8
+0 0x57f5427 Invalid|(invalid)
+0 0xa83ba52a lha|lha r1, -0x5ad6(r27)
+0 0xba455fb1 lmw|lmw r18, 0x5fb1(r5)
+0 0x5e17226c rlwnmx|rlwnm r23, r16, r4, 9, 22
+0 0x1468224b Invalid|(invalid)
+0 0x705fbd7e andi_dot|andi. r31, r2, 0xbd7e
+0 0xe9935275 Invalid|(invalid)
+0 0xd64e0ae0 stfsu|stfsu f18, 0xae0(r14)
+0 0x2ee48aaf Invalid|(invalid)
+0 0x423bb312 bcx|bdnz+a -0x4cf0
+0 0xcb35e979 lfd|lfd f25, -0x1687(r21)
+0 0x3e219294 addis|subis r17, r1, 0x6d6c
+0 0xcb29b153 lfd|lfd f25, -0x4ead(r9)
+0 0x3602d9e6 addic_dot|subic. r16, r2, 0x261a
+0 0xfadee8bd Invalid|(invalid)
+0 0x380d2d88 addi|addi r0, r13, 0x2d88
+0 0x3b76fa37 addi|subi r27, r22, 0x5c9
+0 0x6775c5fa oris|oris r21, r27, 0xc5fa
+0 0x6d45441 Invalid|(invalid)
+0 0xd65b8fbc stfsu|stfsu f18, -0x7044(r27)
+0 0x8a3a095b lbz|lbz r17, 0x95b(r26)
+0 0x84364b4e lwzu|lwzu r1, 0x4b4e(r22)
+0 0x20b47005 subfic|subfic r5, r20, 0x7005
+0 0xe99aad30 Invalid|(invalid)
+0 0xd072c2bf stfs|stfs f3, -0x3d41(r18)
+0 0x975b7de2 stwu|stwu r26, 0x7de2(r27)
+0 0x5279c009 rlwimix|rlwimi. r25, r19, 24, 0, 4
+0 0x4e4fb9e4 Invalid|(invalid)
+0 0x2a574a63 Invalid|(invalid)
+0 0x6645b1b6 oris|oris r5, r18, 0xb1b6
+0 0xfbbf084d Invalid|(invalid)
+0 0xadeb29d8 lhau|lhau r15, 0x29d8(r11)
+0 0xae380447 lhau|lhau r17, 0x447(r24)
+0 0xf2b27aca psq_st|psq_st f21, -0x536(r18), 0, 7
+0 0x9b434cd1 stb|stb r26, 0x4cd1(r3)
+0 0x66fcb10c oris|oris r28, r23, 0xb10c
+0 0x9a3946b Invalid|(invalid)
+0 0xf610ad1e psq_stu|psq_stu f16, -0x2e2(r16), 1, 2
+0 0x28add195 cmpli|cmpli 1, 1, r13, 0xd195
+0 0x90a74380 stw|stw r5, 0x4380(r7)
+0 0xa8cadecf lha|lha r6, -0x2131(r10)
+0 0x6a145cb2 xori|xori r20, r16, 0x5cb2
+0 0x82921a99 lwz|lwz r20, 0x1a99(r18)
+0 0x4d551534 Invalid|(invalid)
+0 0x8c250773 lbzu|lbzu r1, 0x773(r5)
+0 0x728add86 andi_dot|andi. r10, r20, 0xdd86
+0 0xb4b3ebdd sthu|sthu r5, -0x1423(r19)
+0 0xe0ab9a28 psq_l|psq_l f5, -0x5d8(r11), 1, 1
+0 0x30537257 addic|addic r2, r19, 0x7257
+0 0x3c6ec39a addis|subis r3, r14, 0x3c66
+0 0x1a8b4961 Invalid|(invalid)
+0 0x3cbf865c addis|subis r5, r31, 0x79a4
+0 0x2c45c37b Invalid|(invalid)
+0 0xa63be2ee lhzu|lhzu r17, -0x1d12(r27)
+0 0xa2087725 lhz|lhz r16, 0x7725(r8)
+0 0xfa88cdd0 Invalid|(invalid)
+0 0x699ddedf xori|xori r29, r12, 0xdedf
+0 0xc5834f82 lfsu|lfsu f12, 0x4f82(r3)
+0 0xb297f929 sth|sth r20, -0x6d7(r23)
+0 0xf196a484 psq_st|psq_st f12, 0x484(r22), 1, 2
+0 0x1b53e883 Invalid|(invalid)
+0 0x9dbf5d56 stbu|stbu r13, 0x5d56(r31)
+0 0x7c66936d Invalid|(invalid)
+0 0xe3037e78 psq_l|psq_l f24, -0x188(r3), 0, 7
+0 0xd69a4467 stfsu|stfsu f20, 0x4467(r26)
+0 0x9c67a06a stbu|stbu r3, -0x5f96(r7)
+0 0xb3e549f1 sth|sth r31, 0x49f1(r5)
+0 0xeba90fac Invalid|(invalid)
+0 0x7201968b andi_dot|andi. r1, r16, 0x968b
+0 0xae44ecbe lhau|lhau r18, -0x1342(r4)
+0 0xfd8d60b5 Invalid|(invalid)
+0 0xb1944c20 sth|sth r12, 0x4c20(r20)
+0 0x8edcc2ef lbzu|lbzu r22, -0x3d11(r28)
+0 0x2055652 Invalid|(invalid)
+0 0x8de45bb9 lbzu|lbzu r15, 0x5bb9(r4)
+0 0x80b967d4 lwz|lwz r5, 0x67d4(r25)
+0 0xf0e4ed93 psq_st|psq_st f7, -0x26d(r4), 1, 6
+0 0xcc103126 lfdu|lfdu f0, 0x3126(r16)
+0 0xc1bffefd lfs|lfs f13, -0x103(r31)
+0 0xcae7d6c8 lfd|lfd f23, -0x2938(r7)
+0 0x81d7a77 Invalid|(invalid)
+0 0x9f9a113a stbu|stbu r28, 0x113a(r26)
+0 0xb2ca4e81 sth|sth r22, 0x4e81(r10)
+0 0xbefe4cfc stmw|stmw r23, 0x4cfc(r30)
+0 0x50f80d9b rlwimix|rlwimi. r24, r7, 1, 22, 13
+0 0x30f8ca8e addic|subic r7, r24, 0x3572
+0 0xc458e45 twi|twi 2, r5, -0x71bb
+0 0xeb5ebe70 Invalid|(invalid)
+0 0x6eb88aff xoris|xoris r24, r21, 0x8aff
+0 0x95377122 stwu|stwu r9, 0x7122(r23)
+0 0xa4104249 lhzu|lhzu r0, 0x4249(r16)
+0 0x1fa25f24 mulli|mulli r29, r2, 0x5f24
+0 0x241916a3 Invalid|(invalid)
+0 0x52ea58f6 rlwimix|rlwimi r10, r23, 11, 3, 27
+0 0x9be92e8d stb|stb r31, 0x2e8d(r9)
+0 0x18da318 Invalid|(invalid)
+0 0x8e2e1487 lbzu|lbzu r17, 0x1487(r14)
+0 0xd843160a stfd|stfd f2, 0x160a(r3)
+0 0xef35711 twi|twi 23, r19, 0x5711
+0 0x9443e4c Invalid|(invalid)
+0 0x458a28ab Invalid|(invalid)
+0 0x2a647c5e Invalid|(invalid)
+0 0x8f79ffd5 lbzu|lbzu r27, -0x2b(r25)
+0 0xd8bd24c0 stfd|stfd f5, 0x24c0(r29)
+0 0x49a2370f bx|bla 0x1a2370c
+0 0xe1f69ff2 psq_l|psq_l f15, -0xe(r22), 1, 1
+0 0xf8f4acd9 Invalid|(invalid)
+0 0x22768a74 subfic|subfic r19, r22, -0x758c
+0 0xda7163b3 stfd|stfd f19, 0x63b3(r17)
+0 0xc8fad4c6 lfd|lfd f7, -0x2b3a(r26)
+0 0x5a4b221d Invalid|(invalid)
+0 0x9369e368 stw|stw r27, -0x1c98(r9)
+0 0xa45d1297 lhzu|lhzu r2, 0x1297(r29)
+0 0xaddfaeda lhau|lhau r14, -0x5126(r31)
+0 0xfc5963a1 Invalid|(invalid)
+0 0x743fe39c andis_dot|andis. r31, r1, 0xe39c
+0 0xe258e7bb psq_l|psq_l f18, 0x7bb(r24), 1, 6
+0 0x3fd5022e addis|addis r30, r21, 0x22e
+0 0xc8b3b565 lfd|lfd f5, -0x4a9b(r19)
+0 0xf5c47f10 psq_stu|psq_stu f14, -0xf0(r4), 0, 7
+0 0x5a4ac71f Invalid|(invalid)
+0 0x85fe2c2 Invalid|(invalid)
+0 0x94aa9b69 stwu|stwu r5, -0x6497(r10)
+0 0x5c9ae9c4 rlwnmx|rlwnm r26, r4, r29, 7, 2
+0 0x57aed4c3 rlwinmx|rlwinm. r14, r29, 26, 19, 1
+0 0xd62ea496 stfsu|stfsu f17, -0x5b6a(r14)
+0 0x148ed9ad Invalid|(invalid)
+0 0x803197b8 lwz|lwz r1, -0x6848(r17)
+0 0x87b74a7 Invalid|(invalid)
+0 0x2d2cdbaa cmpi|cmpi 2, 1, r12, -0x2456
+0 0x7b357431 Invalid|(invalid)
+0 0x50f63cec rlwimix|rlwimi r22, r7, 7, 19, 22
+0 0xe0454acb psq_l|psq_l f2, -0x535(r5), 0, 4
+0 0x8fd75bfe lbzu|lbzu r30, 0x5bfe(r23)
+0 0x9bbaef5 Invalid|(invalid)
+0 0x59c9cd60 Invalid|(invalid)
+0 0xe5a33b2f psq_lu|psq_lu f13, -0x4d1(r3), 0, 3
+0 0xb5d03992 sthu|sthu r14, 0x3992(r16)
+0 0x138b0df9 ps_msub|ps_msub. f28, f11, f23, f1
+0 0x70b47d14 andi_dot|andi. r20, r5, 0x7d14
+0 0xdd269d3 twi|twi 14, r18, 0x69d3
+0 0x3b2c866 Invalid|(invalid)
+0 0x3a9d553d addi|addi r20, r29, 0x553d
+0 0xad9c008 Invalid|(invalid)
+0 0xa9a3ab7 Invalid|(invalid)
+0 0xd8279c7a stfd|stfd f1, -0x6386(r7)
+0 0xe80088c1 Invalid|(invalid)
+0 0xe7ac4a3c psq_lu|psq_lu f29, -0x5c4(r12), 0, 4
+0 0x2e7051db Invalid|(invalid)
+0 0x823889ce lwz|lwz r17, -0x7632(r24)
+0 0x449aec85 Invalid|(invalid)
+0 0x7620fb0 Invalid|(invalid)
+0 0x4adc933f bx|bla -0x1236cc4
+0 0xf4e4a462 psq_stu|psq_stu f7, 0x462(r4), 1, 2
+0 0x362f0489 addic_dot|addic. r17, r15, 0x489
+0 0x20a84464 subfic|subfic r5, r8, 0x4464
+0 0xad1d22e3 lhau|lhau r8, 0x22e3(r29)
+0 0x8bf44036 lbz|lbz r31, 0x4036(r20)
+0 0x249f94cd Invalid|(invalid)
+0 0x9975c58 Invalid|(invalid)
+0 0x9d0a64c7 stbu|stbu r8, 0x64c7(r10)
+0 0x760cf14a andis_dot|andis. r12, r16, 0xf14a
+0 0x8b73a151 lbz|lbz r27, -0x5eaf(r19)
+0 0xc7e70b8c lfsu|lfsu f31, 0xb8c(r7)
+0 0x23afceb Invalid|(invalid)
+0 0x98058b9e stb|stb r0, -0x7462(r5)
+0 0x9b9a6e15 stb|stb r28, 0x6e15(r26)
+0 0x3c624600 addis|addis r3, r2, 0x4600
+0 0x1367cf4f Invalid|(invalid)
+0 0xfd7a2332 Invalid|(invalid)
+0 0x716f7f19 andi_dot|andi. r15, r11, 0x7f19
+0 0x9d9b3fb4 stbu|stbu r12, 0x3fb4(r27)
+0 0x340ffff3 addic_dot|subic. r0, r15, 0xd
+0 0x2aa00c06 cmpli|cmpli 5, 1, r0, 0xc06
+0 0xa2fe985d lhz|lhz r23, -0x67a3(r30)
+0 0x35df6ca8 addic_dot|addic. r14, r31, 0x6ca8
+0 0x645cf2d7 oris|oris r28, r2, 0xf2d7
+0 0xe359da1a psq_l|psq_l f26, -0x5e6(r25), 1, 5
+0 0x2a87bde1 cmpli|cmplwi cr5, r7, 0xbde1
+0 0x186b80dc Invalid|(invalid)
+0 0xe7464bfb psq_lu|psq_lu f26, -0x405(r6), 0, 4
+0 0x3b8b616e addi|addi r28, r11, 0x616e
+0 0xf14333a5 psq_st|psq_st f10, 0x3a5(r3), 0, 3
+0 0xc1df7050 lfs|lfs f14, 0x7050(r31)
+0 0x2f5ef5f Invalid|(invalid)
+0 0x4adb602 Invalid|(invalid)
+0 0x7e657da9 Invalid|(invalid)
+0 0xd7f26f04 stfsu|stfsu f31, 0x6f04(r18)
+0 0xff6c0103 Invalid|(invalid)
+0 0xeca32bd6 Invalid|(invalid)
+0 0x8e635fed lbzu|lbzu r19, 0x5fed(r3)
+0 0x7c66f0f8 norx|nor r6, r3, r30
+0 0xc762e4e7 lfsu|lfsu f27, -0x1b19(r2)
+0 0xe1cb56ea psq_l|psq_l f14, 0x6ea(r11), 0, 5
+0 0x9675de71 stwu|stwu r19, -0x218f(r21)
+0 0xe73eaa2c psq_lu|psq_lu f25, -0x5d4(r30), 1, 2
+0 0xcf733f0b lfdu|lfdu f27, 0x3f0b(r19)
+0 0x90570b3e stw|stw r2, 0xb3e(r23)
+0 0x785e3d35 Invalid|(invalid)
+0 0x3c2e8ea0 addis|subis r1, r14, 0x7160
+0 0x2777f36f Invalid|(invalid)
+0 0xcdc5cd2 twi|twi 6, r28, 0x5cd2
+0 0xea6a0039 Invalid|(invalid)
+0 0xcf52d254 lfdu|lfdu f26, -0x2dac(r18)
+0 0xda322613 stfd|stfd f17, 0x2613(r18)
+0 0x2a9fa6 Invalid|(invalid)
+0 0x57b6eb7d rlwinmx|rlwinm. r22, r29, 29, 13, 30
+0 0x4d22e948 Invalid|(invalid)
+0 0xff2d3af7 Invalid|(invalid)
+0 0xe85e67ba Invalid|(invalid)
+0 0x3cb70301 addis|addis r5, r23, 0x301
+0 0x79a5877c Invalid|(invalid)
+0 0x22e2d61b subfic|subfic r23, r2, -0x29e5
+0 0x4335890e bcx|bca 25, 21, -0x76f4
+0 0x43f48ac5 bcx|bcl 31, 20, -0x753c
+0 0x7ae4a0f0 Invalid|(invalid)
+0 0xe91edb7f Invalid|(invalid)
+0 0xb5a317a2 sthu|sthu r13, 0x17a2(r3)
+0 0xa71606c9 lhzu|lhzu r24, 0x6c9(r22)
+0 0xe2a169a4 psq_l|psq_l f21, -0x65c(r1), 0, 6
+0 0xda36f23 twi|twi 13, r3, 0x6f23
+0 0x84a36776 lwzu|lwzu r5, 0x6776(r3)
+0 0x98223b0d stb|stb r1, 0x3b0d(r2)
+0 0xeb485598 Invalid|(invalid)
+0 0x270cf507 Invalid|(invalid)
+0 0xf3500c8a psq_st|psq_st f26, -0x376(r16), 0, 0
+0 0xb7042b91 sthu|sthu r24, 0x2b91(r4)
+0 0x9c2518cc stbu|stbu r1, 0x18cc(r5)
+0 0xcff6112b lfdu|lfdu f31, 0x112b(r22)
+0 0x5a33dade Invalid|(invalid)
+0 0xd74f1c55 stfsu|stfsu f26, 0x1c55(r15)
+0 0xc8d6a740 lfd|lfd f6, -0x58c0(r22)
+0 0x1a5ba78f Invalid|(invalid)
+0 0xbdee672 Invalid|(invalid)
+0 0x9a429159 stb|stb r18, -0x6ea7(r2)
+0 0x200334f4 subfic|subfic r0, r3, 0x34f4
+0 0x7140dc33 andi_dot|andi. r0, r10, 0xdc33
+0 0x5aba8346 Invalid|(invalid)
+0 0xa10e4e9d lhz|lhz r8, 0x4e9d(r14)
+0 0xbd4c35e8 stmw|stmw r10, 0x35e8(r12)
+0 0x4c931317 Invalid|(invalid)
+0 0x541d455a rlwinmx|rlwinm r29, r0, 8, 21, 13
+0 0x5b565821 Invalid|(invalid)
+0 0xf2825e1c psq_st|psq_st f20, -0x1e4(r2), 0, 5
+0 0x5b4df03b Invalid|(invalid)
+0 0x49f00ae Invalid|(invalid)
+0 0xb5f6f1e5 sthu|sthu r15, -0xe1b(r22)
+0 0x3c19a190 addis|subis r0, r25, 0x5e70
+0 0x7df579f Invalid|(invalid)
+0 0x59acc942 Invalid|(invalid)
+0 0x2e089fe9 cmpi|cmpwi cr4, r8, -0x6017
+0 0x94dd3444 stwu|stwu r6, 0x3444(r29)
+0 0x7acb6d43 Invalid|(invalid)
+0 0xf45cf316 psq_stu|psq_stu f2, 0x316(r28), 1, 7
+0 0xc24262d twi|twi 1, r4, 0x262d
+0 0x9ce38a38 stbu|stbu r7, -0x75c8(r3)
+0 0x7f909527 Invalid|(invalid)
+0 0x8183122a lwz|lwz r12, 0x122a(r3)
+0 0xcbe688b1 lfd|lfd f31, -0x774f(r6)
+0 0x47c2576c Invalid|(invalid)
+0 0xefcb734b Invalid|(invalid)
+0 0x6b03fa7e xori|xori r3, r24, 0xfa7e
+0 0xf3b50b75 psq_st|psq_st f29, -0x48b(r21), 0, 0
+0 0x6028fe0 Invalid|(invalid)
+0 0x889aebaf lbz|lbz r4, -0x1451(r26)
+0 0xf669c012 psq_stu|psq_stu f19, 0x12(r9), 1, 4
+0 0xe0c13279 psq_l|psq_l f6, 0x279(r1), 0, 3
+0 0x9dd46794 stbu|stbu r14, 0x6794(r20)
+0 0x4e442253 Invalid|(invalid)
+0 0x24b7b6e6 Invalid|(invalid)
+0 0x4b4cc1bd bx|bl -0xb33e44
+0 0x27035288 Invalid|(invalid)
+0 0xe2167b37 psq_l|psq_l f16, -0x4c9(r22), 0, 7
+0 0xe77e72fa psq_lu|psq_lu f27, 0x2fa(r30), 0, 7
+0 0x872dbd41 lwzu|lwzu r25, -0x42bf(r13)
+0 0xde2a04bc stfdu|stfdu f17, 0x4bc(r10)
+0 0x6e8f9a5b xoris|xoris r15, r20, 0x9a5b
+0 0x7f2fc84e Invalid|(invalid)
+0 0xc4926905 lfsu|lfsu f4, 0x6905(r18)
+0 0xc3267230 lfs|lfs f25, 0x7230(r6)
+0 0xdbf63bf twi|twi 13, r31, 0x63bf
+0 0x16b2cae2 Invalid|(invalid)
+0 0xd5054909 stfsu|stfsu f8, 0x4909(r5)
+0 0x36cdcee4 addic_dot|subic. r22, r13, 0x311c
+0 0xcdebfb63 lfdu|lfdu f15, -0x49d(r11)
+0 0xf037ceb6 psq_st|psq_st f1, -0x14a(r23), 1, 4
+0 0x38b1214d addi|addi r5, r17, 0x214d
+0 0xbe08ed8 Invalid|(invalid)
+0 0xb875c547 lmw|lmw r3, -0x3ab9(r21)
+0 0xb74c67ca sthu|sthu r26, 0x67ca(r12)
+0 0x77e4f5d1 andis_dot|andis. r4, r31, 0xf5d1
+0 0xbf3e660c stmw|stmw r25, 0x660c(r30)
+0 0x7efb656b Invalid|(invalid)
+0 0xcc2f6a1e lfdu|lfdu f1, 0x6a1e(r15)
+0 0xcd80a95 twi|twi 6, r24, 0xa95
+0 0xcb5a4880 lfd|lfd f26, 0x4880(r26)
+0 0xb2bdbfcf sth|sth r21, -0x4031(r29)
+0 0x9c64e9b2 stbu|stbu r3, -0x164e(r4)
+0 0x61ade399 ori|ori r13, r13, 0xe399
+0 0x4aee6a34 bx|b -0x11195cc
+0 0xaa43f873 lha|lha r18, -0x78d(r3)
+0 0x5c8a3a86 rlwnmx|rlwnm r10, r4, r7, 10, 3
+0 0xa6ba44dd lhzu|lhzu r21, 0x44dd(r26)
+0 0x5ef03f28 rlwnmx|rlwnm r16, r23, r7, 28, 20
+0 0x793f7357 Invalid|(invalid)
+0 0xb769f09a sthu|sthu r27, -0xf66(r9)
+0 0x85053261 lwzu|lwzu r8, 0x3261(r5)
+0 0xbc47b5c Invalid|(invalid)
+0 0x9eafd47b stbu|stbu r21, -0x2b85(r15)
+0 0x464fdfee Invalid|(invalid)
+0 0xf10ef025 psq_st|psq_st f8, 0x25(r14), 1, 7
+0 0x81b312d0 lwz|lwz r13, 0x12d0(r19)
+0 0x4d46ffdf Invalid|(invalid)
+0 0xe69d1c82 psq_lu|psq_lu f20, -0x37e(r29), 0, 1
+0 0xa1d40229 lhz|lhz r14, 0x229(r20)
+0 0x49b3984 Invalid|(invalid)
+0 0x720d1983 andi_dot|andi. r13, r16, 0x1983
+0 0x409bfa56 bcx|bnsa cr6, -0x5ac
+0 0xf0112c6d psq_st|psq_st f0, -0x393(r17), 0, 2
+0 0xe6e76378 psq_lu|psq_lu f23, 0x378(r7), 0, 6
+0 0xdd448567 stfdu|stfdu f10, -0x7a99(r4)
+0 0x13940d6a Invalid|(invalid)
+0 0x21c772f1 subfic|subfic r14, r7, 0x72f1
+0 0x4bc144ac bx|b -0x3ebb54
+0 0x318de78b addic|subic r12, r13, 0x1875
+0 0x1b1e29be Invalid|(invalid)
+0 0x660019b5 oris|oris r0, r16, 0x19b5
+0 0xa485d120 lhzu|lhzu r4, -0x2ee0(r5)
+0 0x7d4c23ef Invalid|(invalid)
+0 0xa1b86352 lhz|lhz r13, 0x6352(r24)
+0 0x4d0a4b9 Invalid|(invalid)
+0 0x1d793cd4 mulli|mulli r11, r25, 0x3cd4
+0 0xa2485e93 lhz|lhz r18, 0x5e93(r8)
+0 0x149a0e26 Invalid|(invalid)
+0 0x879ed7fd lwzu|lwzu r28, -0x2803(r30)
+0 0x6dbafbc8 xoris|xoris r26, r13, 0xfbc8
+0 0xef95fb77 Invalid|(invalid)
+0 0x2cc7be3a Invalid|(invalid)
+0 0xdda4b781 stfdu|stfdu f13, -0x487f(r4)
+0 0xbe79c1fc stmw|stmw r19, -0x3e04(r25)
+0 0x91b69e9b stw|stw r13, -0x6165(r22)
+0 0x8167478e lwz|lwz r11, 0x478e(r7)
+0 0xc0b48745 lfs|lfs f5, -0x78bb(r20)
+0 0x9d678370 stbu|stbu r11, -0x7c90(r7)
+0 0xbcfe2bff stmw|stmw r7, 0x2bff(r30)
+0 0x9753be22 stwu|stwu r26, -0x41de(r19)
+0 0xde3ccb49 stfdu|stfdu f17, -0x34b7(r28)
+0 0x2e6d7424 Invalid|(invalid)
+0 0xb636c7a3 sthu|sthu r17, -0x385d(r22)
+0 0xc1f175f6 lfs|lfs f15, 0x75f6(r17)
+0 0x888c478d lbz|lbz r4, 0x478d(r12)
+0 0x10a00818 Invalid|(invalid)
+0 0x1d84d587 mulli|mulli r12, r4, -0x2a79
+0 0x6942030a xori|xori r2, r10, 0x30a
+0 0xf4560011 psq_stu|psq_stu f2, 0x11(r22), 0, 0
+0 0xaa72f34c lha|lha r19, -0xcb4(r18)
+0 0x1f8af9ab mulli|mulli r28, r10, -0x655
+0 0x8938395e lbz|lbz r9, 0x395e(r24)
+0 0x467538d5 Invalid|(invalid)
+0 0xd12d29c0 stfs|stfs f9, 0x29c0(r13)
+0 0x70ce180f andi_dot|andi. r14, r6, 0x180f
+0 0x7e4c2cf2 Invalid|(invalid)
+0 0xf5f175d9 psq_stu|psq_stu f15, 0x5d9(r17), 0, 7
+0 0xff9cdf74 Invalid|(invalid)
+0 0x375954b3 addic_dot|addic. r26, r25, 0x54b3
+0 0x734f31c6 andi_dot|andi. r15, r26, 0x31c6
+0 0x46427b1d Invalid|(invalid)
+0 0x900b8868 stw|stw r0, -0x7798(r11)
+0 0x46a21397 Invalid|(invalid)
+0 0x47fdbda Invalid|(invalid)
+0 0xddd44ca1 stfdu|stfdu f14, 0x4ca1(r20)
+0 0xad71d89c lhau|lhau r11, -0x2764(r17)
+0 0x51abf8bb rlwimix|rlwimi. r11, r13, 31, 2, 29
+0 0xebddff2e Invalid|(invalid)
+0 0xbccb2e65 stmw|stmw r6, 0x2e65(r11)
+0 0xefebc410 Invalid|(invalid)
+0 0xf76ce81f psq_stu|psq_stu f27, -0x7e1(r12), 1, 6
+0 0xcabeafc2 lfd|lfd f21, -0x503e(r30)
+0 0x1807a469 Invalid|(invalid)
+0 0xd86c7ec4 stfd|stfd f3, 0x7ec4(r12)
+0 0xcd7105c3 lfdu|lfdu f11, 0x5c3(r17)
+0 0x64a04196 oris|oris r0, r5, 0x4196
+0 0xdc6a72ad stfdu|stfdu f3, 0x72ad(r10)
+0 0x9fb27cb8 stbu|stbu r29, 0x7cb8(r18)
+0 0xccbeb5a7 lfdu|lfdu f5, -0x4a59(r30)
+0 0xdf3e48aa stfdu|stfdu f25, 0x48aa(r30)
+0 0xde589d31 stfdu|stfdu f18, -0x62cf(r24)
+0 0xc7b71ec twi|twi 3, r27, 0x71ec
+0 0xc4fa9bcb lfsu|lfsu f7, -0x6435(r26)
+0 0xdbe598fe stfd|stfd f31, -0x6702(r5)
+0 0xf97f67f5 Invalid|(invalid)
+0 0x44f85260 Invalid|(invalid)
+0 0xb9cb9c2f lmw|lmw r14, -0x63d1(r11)
+0 0x7e084692 Invalid|(invalid)
+0 0xa4d856f9 lhzu|lhzu r6, 0x56f9(r24)
+0 0xcf815214 lfdu|lfdu f28, 0x5214(r1)
+0 0x4e7edad3 Invalid|(invalid)
+0 0xb311a566 sth|sth r24, -0x5a9a(r17)
+0 0xbeed2e3d stmw|stmw r23, 0x2e3d(r13)
+0 0x3689e508 addic_dot|subic. r20, r9, 0x1af8
+0 0xa3ebbbb7 lhz|lhz r31, -0x4449(r11)
+0 0x4f7a497a Invalid|(invalid)
+0 0x965bf1c1 stwu|stwu r18, -0xe3f(r27)
+0 0x3d4bf3c Invalid|(invalid)
+0 0x4c97e2db Invalid|(invalid)
+0 0xd51c06ce stfsu|stfsu f8, 0x6ce(r28)
+0 0x729ae585 andi_dot|andi. r26, r20, 0xe585
+0 0x6e7d4b0 Invalid|(invalid)
+0 0x3b1b343f addi|addi r24, r27, 0x343f
+0 0xf6c5f162 psq_stu|psq_stu f22, 0x162(r5), 1, 7
+0 0x20fc8d89 subfic|subfic r7, r28, -0x7277
+0 0x1ac05964 Invalid|(invalid)
+0 0xcec3d3e3 lfdu|lfdu f22, -0x2c1d(r3)
+0 0x2d105d36 cmpi|cmpwi cr2, r16, 0x5d36
+0 0x49f3adcd bx|bl 0x1f3adcc
+0 0xdec6c158 stfdu|stfdu f22, -0x3ea8(r6)
+0 0x627a25c7 ori|ori r26, r19, 0x25c7
+0 0xf070de4a psq_st|psq_st f3, -0x1b6(r16), 1, 5
+0 0x92974a51 stw|stw r20, 0x4a51(r23)
+0 0x1702c08c Invalid|(invalid)
+0 0x1e4cdeb Invalid|(invalid)
+0 0x6c8e489e xoris|xoris r14, r4, 0x489e
+0 0xce66a715 lfdu|lfdu f19, -0x58eb(r6)
+0 0xa78f4b00 lhzu|lhzu r28, 0x4b00(r15)
+0 0x28ccb04f Invalid|(invalid)
+0 0xc0d4b032 lfs|lfs f6, -0x4fce(r20)
+0 0xc54d4819 lfsu|lfsu f10, 0x4819(r13)
+0 0x5f4e94b4 rlwnmx|rlwnm r14, r26, r18, 18, 26
+0 0xb0c0f0f3 sth|sth r6, -0xf0d(r0)
+0 0x22496906 subfic|subfic r18, r9, 0x6906
+0 0x51e6f15d rlwimix|rlwimi. r6, r15, 30, 5, 14
+0 0x5de11a8 Invalid|(invalid)
+0 0x50faf3d7 rlwimix|rlwimi. r26, r7, 30, 15, 11
+0 0x729f071a andi_dot|andi. r31, r20, 0x71a
+0 0xdc03a6e1 stfdu|stfdu f0, -0x591f(r3)
+0 0x60ca75dc ori|ori r10, r6, 0x75dc
+0 0x54825cfb rlwinmx|rlwinm. r2, r4, 11, 19, 29
+0 0x20895e6e subfic|subfic r4, r9, 0x5e6e
+0 0x736baca5 andi_dot|andi. r11, r27, 0xaca5
+0 0x2403b550 Invalid|(invalid)
+0 0x6a91105f xori|xori r17, r20, 0x105f
+0 0x65518302 oris|oris r17, r10, 0x8302
+0 0xee386a9 twi|twi 23, r3, -0x7957
+0 0x1910404 Invalid|(invalid)
+0 0xb5373203 sthu|sthu r9, 0x3203(r23)
+0 0x33a9c8d6 addic|subic r29, r9, 0x372a
+0 0xb36ff8ed sth|sth r27, -0x713(r15)
+0 0x4c84d5f8 Invalid|(invalid)
+0 0x7a3f25e7 Invalid|(invalid)
+0 0x6bc1c3ea xori|xori r1, r30, 0xc3ea
+0 0x87da0771 lwzu|lwzu r30, 0x771(r26)
+0 0xe330df2c psq_l|psq_l f25, -0xd4(r16), 1, 5
+0 0x1a51900b Invalid|(invalid)
+0 0x289a483e cmpli|cmplwi cr1, r26, 0x483e
+0 0x1872f635 Invalid|(invalid)
+0 0x549a13a0 rlwinmx|rlwinm r26, r4, 2, 14, 16
+0 0x3259546f addic|addic r18, r25, 0x546f
+0 0x3a9969d2 addi|addi r20, r25, 0x69d2
+0 0x4f184939 Invalid|(invalid)
+0 0x752ca754 andis_dot|andis. r12, r9, 0xa754
+0 0xb279713 Invalid|(invalid)
+0 0x235e7ca6 subfic|subfic r26, r30, 0x7ca6
+0 0xe377c47d psq_l|psq_l f27, 0x47d(r23), 1, 4
+0 0xd6b00e48 stfsu|stfsu f21, 0xe48(r16)
+0 0xbb57bbf7 lmw|lmw r26, -0x4409(r23)
+0 0x26d614ba Invalid|(invalid)
+0 0x47936c01 Invalid|(invalid)
+0 0xd77afc7c stfsu|stfsu f27, -0x384(r26)
+0 0x9f73671b stbu|stbu r27, 0x671b(r19)
+0 0x458e060e Invalid|(invalid)
+0 0x548583c5 rlwinmx|rlwinm. r5, r4, 16, 15, 2
+0 0x3ce765f0 addis|addis r7, r7, 0x65f0
+0 0xc567c7f twi|twi 2, r22, 0x7c7f
+0 0x344964a2 addic_dot|addic. r2, r9, 0x64a2
+0 0x3b848fc9 addi|subi r28, r4, 0x7037
+0 0x8d067ea4 lbzu|lbzu r8, 0x7ea4(r6)
+0 0x5fd32023 rlwnmx|rlwnm. r19, r30, r4, 0, 17
+0 0xa4d48476 lhzu|lhzu r6, -0x7b8a(r20)
+0 0x7f27540d Invalid|(invalid)
+0 0x9b94ba98 stb|stb r28, -0x4568(r20)
+0 0xd395b607 stfs|stfs f28, -0x49f9(r21)
+0 0x7418f98a andis_dot|andis. r24, r0, 0xf98a
+0 0xf8e8d491 Invalid|(invalid)
+0 0xfe2dcdcc Invalid|(invalid)
+0 0xb648e22b sthu|sthu r18, -0x1dd5(r8)
+0 0x917197de stw|stw r11, -0x6822(r17)
+0 0x2eec5555 Invalid|(invalid)
+0 0x5bc0ac40 Invalid|(invalid)
+0 0xeef9888f Invalid|(invalid)
+0 0xb33e7372 sth|sth r25, 0x7372(r30)
+0 0x7e015a59 Invalid|(invalid)
+0 0xcb4389f4 lfd|lfd f26, -0x760c(r3)
+0 0xeebacd33 Invalid|(invalid)
+0 0x2cb8e046 cmpi|cmpi 1, 1, r24, -0x1fba
+0 0xdbe7a79d stfd|stfd f31, -0x5863(r7)
+0 0xb5a7dae8 sthu|sthu r13, -0x2518(r7)
+0 0x748a1417 andis_dot|andis. r10, r4, 0x1417
+0 0x7907725a Invalid|(invalid)
+0 0x35d34121 addic_dot|addic. r14, r19, 0x4121
+0 0xef0e531c Invalid|(invalid)
+0 0xc773013b lfsu|lfsu f27, 0x13b(r19)
+0 0x4f91fdae Invalid|(invalid)
+0 0xaf306ae5 lhau|lhau r25, 0x6ae5(r16)
+0 0xfb3ae690 Invalid|(invalid)
+0 0x4af3789f bx|bla -0x10c8764
+0 0x55959642 rlwinmx|rlwinm r21, r12, 18, 25, 1
+0 0x44a7a8e9 Invalid|(invalid)
+0 0xb148c944 sth|sth r10, -0x36bc(r8)
+0 0x919f9e43 stw|stw r12, -0x61bd(r31)
+0 0xc0f89016 lfs|lfs f7, -0x6fea(r24)
+0 0x9761bf2d stwu|stwu r27, -0x40d3(r1)
+0 0xb29e6f38 sth|sth r20, 0x6f38(r30)
+0 0x5205d627 rlwimix|rlwimi. r5, r16, 26, 24, 19
+0 0x805e7f2a lwz|lwz r2, 0x7f2a(r30)
+0 0xe48bb1b1 psq_lu|psq_lu f4, 0x1b1(r11), 1, 3
+0 0x69218c6c xori|xori r1, r9, 0x8c6c
+0 0xe1d2c44b psq_l|psq_l f14, 0x44b(r18), 1, 4
+0 0xbc7c377e stmw|stmw r3, 0x377e(r28)
+0 0x6d1ac475 xoris|xoris r26, r8, 0xc475
+0 0x80ab14e0 lwz|lwz r5, 0x14e0(r11)
+0 0x1b354caf Invalid|(invalid)
+0 0xc6abcd12 lfsu|lfsu f21, -0x32ee(r11)
+0 0xd1d07b79 stfs|stfs f14, 0x7b79(r16)
+0 0xfbb3c94 twi|twi 29, r27, 0x3c94
+0 0xd0829353 stfs|stfs f4, -0x6cad(r2)
+0 0xc8c093e6 lfd|lfd f6, -0x6c1a(r0)
+0 0x277e9abd Invalid|(invalid)
+0 0xe36d7788 psq_l|psq_l f27, 0x788(r13), 0, 7
+0 0x3219fc37 addic|subic r16, r25, 0x3c9
+0 0xca1b1ffa lfd|lfd f16, 0x1ffa(r27)
+0 0xc78b2641 lfsu|lfsu f28, 0x2641(r11)
+0 0xa2ac79bc lhz|lhz r21, 0x79bc(r12)
+0 0xca892b5b lfd|lfd f20, 0x2b5b(r9)
+0 0xddfd454e stfdu|stfdu f15, 0x454e(r29)
+0 0x20b46205 subfic|subfic r5, r20, 0x6205
+0 0xbca63730 stmw|stmw r5, 0x3730(r6)
+0 0xf4f004bf psq_stu|psq_stu f7, 0x4bf(r16), 0, 0
+0 0x8f1e17e2 lbzu|lbzu r24, 0x17e2(r30)
+0 0xc14d209 twi|twi 0, r20, -0x2df7
+0 0x567fe3e4 rlwinmx|rlwinm r31, r19, 28, 15, 18
+0 0xf1a4ac63 psq_st|psq_st f13, -0x39d(r4), 1, 2
+0 0xdc7debb6 stfdu|stfdu f3, -0x144a(r29)
+0 0x6a673a4d xori|xori r7, r19, 0x3a4d
+0 0xac49f3d8 lhau|lhau r2, -0xc28(r9)
+0 0xfd178647 Invalid|(invalid)
+0 0x5b7a54ca Invalid|(invalid)
+0 0xd8a9ed1 twi|twi 12, r10, -0x612f
+0 0x99341b0c stb|stb r9, 0x1b0c(r20)
+0 0xcf7366b twi|twi 7, r23, 0x366b
+0 0x5322271e rlwimix|rlwimi r2, r25, 4, 28, 15
+0 0x32464395 addic|addic r18, r6, 0x4395
+0 0x3b014d80 addi|addi r24, r1, 0x4d80
+0 0x1794a0cf Invalid|(invalid)
+0 0xe4c976b2 psq_lu|psq_lu f6, 0x6b2(r9), 0, 7
+0 0xe4dac99 twi|twi 18, r13, -0x5367
+0 0xe4bbbf34 psq_lu|psq_lu f5, -0xcc(r27), 1, 3
+0 0x986e973 Invalid|(invalid)
+0 0x95dd9786 stwu|stwu r14, -0x687a(r29)
+0 0x36849ddd addic_dot|subic. r20, r4, 0x6223
+0 0xd4a8e428 stfsu|stfsu f5, -0x1bd8(r8)
+0 0xcd8f7457 lfdu|lfdu f12, 0x7457(r15)
+0 0xcef91d9a lfdu|lfdu f23, 0x1d9a(r25)
+0 0xe1831b61 psq_l|psq_l f12, -0x49f(r3), 0, 1
+0 0x617d705c ori|ori r29, r11, 0x705c
+0 0xabde57b Invalid|(invalid)
+0 0x2437dcee Invalid|(invalid)
+0 0x4a596925 bx|bl -0x1a696dc
+0 0x92d157d0 stw|stw r22, 0x57d0(r17)
+0 0x7cd420df Invalid|(invalid)
+0 0x7acae982 Invalid|(invalid)
+0 0xb7940b29 sthu|sthu r28, 0xb29(r20)
+0 0x58d3ce84 Invalid|(invalid)
+0 0xaea4a83 Invalid|(invalid)
+0 0x5fcc9756 rlwnmx|rlwnm r12, r30, r18, 29, 11
+0 0xea7fc56d Invalid|(invalid)
+0 0xd73f4878 stfsu|stfsu f25, 0x4878(r31)
+0 0x52c667 Invalid|(invalid)
+0 0x24547a6a Invalid|(invalid)
+0 0xfaad9bf1 Invalid|(invalid)
+0 0x778d79ac andis_dot|andis. r13, r28, 0x79ac
+0 0xbbe388b Invalid|(invalid)
+0 0x92cb66be stw|stw r22, 0x66be(r11)
+0 0xe1b6d2b5 psq_l|psq_l f13, 0x2b5(r22), 1, 5
+0 0xb66b5620 sthu|sthu r19, 0x5620(r11)
+0 0xe89f84ef Invalid|(invalid)
+0 0x517f7052 rlwimix|rlwimi r31, r11, 14, 1, 9
+0 0x3b40edb9 addi|li r26, -0x1247
+0 0xe06d11d4 psq_l|psq_l f3, 0x1d4(r13), 0, 1
+0 0xd6cfcf93 stfsu|stfsu f22, -0x306d(r15)
+0 0x4677eb26 Invalid|(invalid)
+0 0xfd41b0fd fnmsubx|fnmsub. f10, f1, f3, f22
+0 0x320220c8 addic|addic r16, r2, 0x20c8
+0 0x44727c77 Invalid|(invalid)
+0 0x90896b3a stw|stw r4, 0x6b3a(r9)
+0 0x2c832081 cmpi|cmpwi cr1, r3, 0x2081
+0 0xea936fc twi|twi 21, r9, 0x36fc
+0 0x4e192f9b Invalid|(invalid)
+0 0xe9a9c48e Invalid|(invalid)
+0 0xd1678045 stfs|stfs f11, -0x7fbb(r7)
+0 0x43644870 bcx|bc 27, 4, 0x4870
+0 0xf927ccff Invalid|(invalid)
+0 0x86840b22 lwzu|lwzu r20, 0xb22(r4)
+0 0xb0ed5449 sth|sth r7, 0x5449(r13)
+0 0x886c8924 lbz|lbz r3, -0x76dc(r12)
+0 0x4c7878a3 Invalid|(invalid)
+0 0xc74c92f6 lfsu|lfsu f26, -0x6d0a(r12)
+0 0x8df3608d lbzu|lbzu r15, 0x608d(r19)
+0 0xb6266d18 sthu|sthu r17, 0x6d18(r6)
+0 0xab3f9687 lha|lha r25, -0x6979(r31)
+0 0x4dd4f00a Invalid|(invalid)
+0 0xf6bca911 psq_stu|psq_stu f21, -0x6ef(r28), 1, 2
+0 0x6155a84c ori|ori r21, r10, 0xa84c
+0 0x162fcaab Invalid|(invalid)
+0 0x4cdff65e Invalid|(invalid)
+0 0xe2b471d5 psq_l|psq_l f21, 0x1d5(r20), 0, 7
+0 0xd2912ec0 stfs|stfs f20, 0x2ec0(r17)
+0 0x36ddf90f addic_dot|subic. r22, r29, 0x6f1
+0 0x24b5b9f2 Invalid|(invalid)
+0 0xa4723ed9 lhzu|lhzu r3, 0x3ed9(r18)
+0 0x8cf73474 lbzu|lbzu r7, 0x3474(r23)
+0 0x596545b3 Invalid|(invalid)
+0 0xa0f78ec6 lhz|lhz r7, -0x713a(r23)
+0 0xf3fdd41d psq_st|psq_st f31, 0x41d(r29), 1, 5
+0 0xd8212d68 stfd|stfd f1, 0x2d68(r1)
+0 0xb84b1497 lmw|lmw r2, 0x1497(r11)
+0 0x6bb408da xori|xori r20, r29, 0x8da
+0 0x155335a1 Invalid|(invalid)
+0 0x157cd9c Invalid|(invalid)
+0 0xbea309bb stmw|stmw r21, 0x9bb(r3)
+0 0x89bafc2e lbz|lbz r13, -0x3d2(r26)
+0 0x5f26a765 rlwnmx|rlwnm. r6, r25, r20, 29, 18
+0 0x48070910 bx|b 0x70910
+0 0x2473091f Invalid|(invalid)
+0 0xf4317cc2 psq_stu|psq_stu f1, -0x33e(r17), 0, 7
+0 0xa5e8ad69 lhzu|lhzu r15, -0x5297(r8)
+0 0xa97213c4 lha|lha r11, 0x13c4(r18)
+0 0x95736c3 Invalid|(invalid)
+0 0xa365de96 lhz|lhz r27, -0x216a(r5)
+0 0x4f0a0bad Invalid|(invalid)
+0 0xffa761b8 fmsubx|fmsub f29, f7, f6, f12
+0 0x7165f6a7 andi_dot|andi. r5, r11, 0xf6a7
+0 0x9ee3b5aa stbu|stbu r23, -0x4a56(r3)
+0 0x107fc631 Invalid|(invalid)
+0 0x27b4a6ec Invalid|(invalid)
+0 0xc853eccb lfd|lfd f2, -0x1335(r19)
+0 0xe6c7d5fe psq_lu|psq_lu f22, 0x5fe(r7), 1, 5
+0 0xa08720f5 lhz|lhz r4, 0x20f5(r7)
+0 0x231ad760 subfic|subfic r24, r26, -0x28a0
+0 0x4ed7fd2f Invalid|(invalid)
+0 0x4a545392 bx|ba -0x1abac70
+0 0xd9a99ff9 stfd|stfd f13, -0x6007(r9)
+0 0x68822714 xori|xori r2, r4, 0x2714
+0 0x964f4bd3 stwu|stwu r18, 0x4bd3(r15)
+0 0x7fc48266 Invalid|(invalid)
+0 0x1701073d Invalid|(invalid)
+0 0xd7ae0a08 stfsu|stfsu f29, 0xa08(r14)
+0 0x6ea13cb7 xoris|xoris r1, r21, 0x3cb7
+0 0x1160f67a ps_madd|ps_madd f11, f0, f25, f30
+0 0xccbb5ac1 lfdu|lfdu f5, 0x5ac1(r27)
+0 0x4b1343c Invalid|(invalid)
+0 0xea6373db Invalid|(invalid)
+0 0xf3d383ce psq_st|psq_st f30, 0x3ce(r19), 1, 0
+0 0xa0dede85 lhz|lhz r6, -0x217b(r30)
+0 0xce6199b0 lfdu|lfdu f19, -0x6650(r1)
+0 0x5d3dd53f rlwnmx|rlwnm. r29, r9, r26, 20, 31
+0 0xd9bb3e62 stfd|stfd f13, 0x3e62(r27)
+0 0x884e1689 lbz|lbz r2, 0x1689(r14)
+0 0x740c6e64 andis_dot|andis. r12, r0, 0x6e64
+0 0x788e84e3 Invalid|(invalid)
+0 0x98807a36 stb|stb r4, 0x7a36(r0)
+0 0xac0bc6cd lhau|lhau r0, -0x3933(r11)
+0 0x9e6a2658 stbu|stbu r19, 0x2658(r10)
+0 0xea4de6c7 Invalid|(invalid)
+0 0x3268cb4a addic|subic r19, r8, 0x34b6
+0 0x1abef351 Invalid|(invalid)
+0 0xfd2758c twi|twi 30, r18, 0x758c
+0 0x22329eeb subfic|subfic r17, r18, -0x6115
+0 0x59eb059e Invalid|(invalid)
+0 0x8a76e015 lbz|lbz r19, -0x1feb(r22)
+0 0xefb05000 Invalid|(invalid)

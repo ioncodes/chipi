@@ -6,7 +6,7 @@
 //! prefix scan).
 
 use crate::names::{ident, sanitize};
-use chipi_core::compute::{infer_width_fields, infer_width_locals, mask128};
+use chipi_core::compute::{infer_width_locals, mask128};
 use chipi_core::model::Field;
 use chipi_syntax::ast::{BinOp, Expr, UnOp};
 use std::collections::{BTreeMap, HashMap};
@@ -14,10 +14,14 @@ use std::collections::{BTreeMap, HashMap};
 /// Name-resolution scope for the `u128` value evaluator.
 pub enum Scope<'a> {
     /// Operand/guard/length context: `word` and the leaf's bound fields, read off `base`.
+    /// `vars` maps decode-variable names to runtime Rust expressions (e.g. a context field read
+    /// as `ctx.osize`); host modes and word-level context reads are constant-folded before
+    /// emission and never reach this map.
     Computed {
         fields: &'a [Field],
         window: u16,
         base: &'a str,
+        vars: &'a [(String, String, u16)],
     },
     /// `fn` body context: params and `let`s, bound to `v_<name>` locals with tracked widths.
     Fn { widths: HashMap<String, u16> },
@@ -26,7 +30,9 @@ pub enum Scope<'a> {
 impl Scope<'_> {
     fn resolve(&self, name: &str) -> String {
         match self {
-            Scope::Computed { fields, base, .. } => {
+            Scope::Computed {
+                fields, base, vars, ..
+            } => {
                 if name == "word" {
                     format!("({base} as u128)")
                 } else if let Some(f) = fields.iter().find(|f| f.name == name) {
@@ -35,6 +41,8 @@ impl Scope<'_> {
                         f.range.lo,
                         f.range.width()
                     )
+                } else if let Some((_, expr, _)) = vars.iter().find(|(n, _, _)| n == name) {
+                    format!("({expr} as u128)")
                 } else {
                     "0u128".to_string()
                 }
@@ -45,7 +53,27 @@ impl Scope<'_> {
 
     fn width_of(&self, e: &Expr) -> u16 {
         match self {
-            Scope::Computed { fields, window, .. } => infer_width_fields(e, fields, *window),
+            Scope::Computed {
+                fields,
+                window,
+                vars,
+                ..
+            } => {
+                let fw = |n: &str| {
+                    fields
+                        .iter()
+                        .find(|f| f.name == n)
+                        .map(|f| f.range.width())
+                        .or_else(|| vars.iter().find(|(vn, _, _)| vn == n).map(|(_, _, w)| *w))
+                };
+                chipi_core::compute::infer_width(
+                    e,
+                    &chipi_core::compute::WidthEnv {
+                        word_width: *window,
+                        field_width: &fw,
+                    },
+                )
+            }
             Scope::Fn { widths } => infer_width_locals(e, widths),
         }
     }
@@ -195,11 +223,23 @@ fn emit_call(name: &str, args: &[Expr], scope: &Scope) -> String {
 
 /// Lower a display-arm condition to a signed `i128`-valued Rust expression. `recv` is the receiver
 /// (`self` in `Display`, `inst` in `disasm_ctx`); `acc` maps an operand name to its accessor method.
-pub fn emit_cond(e: &Expr, recv: &str, acc: &BTreeMap<String, String>) -> String {
+/// `raw` wins over both: it maps a name straight to a runtime expression, which is how mode reads
+/// (and, in the enum renderer, operand locals and the re-read `word`) resolve.
+pub fn emit_cond(
+    e: &Expr,
+    recv: &str,
+    acc: &BTreeMap<String, String>,
+    raw: &BTreeMap<String, String>,
+) -> String {
     match e {
         Expr::Int(i) => format!("({}i128)", i.value),
         Expr::Name(n) => {
-            if n.text == "word" {
+            if let Some(r) = raw.get(&n.text) {
+                // A name resolved to a raw runtime expression: a `ctx.mode(..)` read, or (in the
+                // enum renderer, which has no accessor receiver) a bound operand local or the
+                // re-read `word`.
+                format!("(({r}) as i128)")
+            } else if n.text == "word" {
                 format!("({recv}.0 as i128)")
             } else {
                 let m = acc
@@ -210,7 +250,7 @@ pub fn emit_cond(e: &Expr, recv: &str, acc: &BTreeMap<String, String>) -> String
             }
         }
         Expr::Unary { op, rhs, .. } => {
-            let r = emit_cond(rhs, recv, acc);
+            let r = emit_cond(rhs, recv, acc, raw);
             match op {
                 UnOp::Not => format!("(!({r}))"),
                 UnOp::Neg => format!("(({r}).wrapping_neg())"),
@@ -223,20 +263,22 @@ pub fn emit_cond(e: &Expr, recv: &str, acc: &BTreeMap<String, String>) -> String
                 let mask = mask128((hi - lo + 1) as u16);
                 format!(
                     "((((({}) as u128) >> {lo}) & {mask:#x}u128) as i128)",
-                    emit_cond(base, recv, acc)
+                    emit_cond(base, recv, acc, raw)
                 )
             }
         }
-        Expr::Binary { op, lhs, rhs, .. } => {
-            cond_binop(*op, &emit_cond(lhs, recv, acc), &emit_cond(rhs, recv, acc))
-        }
+        Expr::Binary { op, lhs, rhs, .. } => cond_binop(
+            *op,
+            &emit_cond(lhs, recv, acc, raw),
+            &emit_cond(rhs, recv, acc, raw),
+        ),
         Expr::Cond {
             cond, then, els, ..
         } => format!(
             "(if ({}) != 0 {{ {} }} else {{ {} }})",
-            emit_cond(cond, recv, acc),
-            emit_cond(then, recv, acc),
-            emit_cond(els, recv, acc)
+            emit_cond(cond, recv, acc, raw),
+            emit_cond(then, recv, acc, raw),
+            emit_cond(els, recv, acc, raw)
         ),
         Expr::Assemble { .. } | Expr::Call { .. } => "(0i128)".to_string(),
     }
@@ -332,5 +374,44 @@ fn prefix_binop(op: BinOp, a: &str, b: &str) -> String {
         BinOp::Ge => format!("((({a}) >= ({b})) as u64)"),
         BinOp::LAnd => format!("((({a}) != 0 && ({b}) != 0) as u64)"),
         BinOp::LOr => format!("((({a}) != 0 || ({b}) != 0) as u64)"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chipi_core::compute::BUILTINS;
+    use chipi_syntax::ast::IntLit;
+    use chipi_syntax::Span;
+
+    fn int(v: u128) -> Expr {
+        Expr::Int(IntLit {
+            value: v,
+            width_hint: Some(4),
+            span: Span::at(0),
+        })
+    }
+
+    /// Sync test against the canonical table in `chipi_core::compute`: every builtin must
+    /// have an `emit_call` arm here. The unknown-name fallback emits a user-fn call
+    /// (`fn_<name>(...)`), so any builtin producing that shape was forgotten.
+    #[test]
+    fn every_builtin_has_an_emit_call_arm() {
+        let scope = Scope::Computed {
+            fields: &[],
+            window: 32,
+            base: "word",
+            vars: &[],
+        };
+
+        for b in BUILTINS {
+            let args: Vec<Expr> = (0..b.min_args).map(|_| int(1)).collect();
+            let out = emit_call(b.name, &args, &scope);
+            assert!(
+                !out.starts_with("fn_"),
+                "builtin `{}` fell through to the user-fn fallback in the Rust backend: {out}",
+                b.name
+            );
+        }
     }
 }

@@ -1,0 +1,284 @@
+decoder SPC700 {
+    width     = 8
+    bit_order = lsb0
+    endian    = little
+}
+
+selector op [0:7]
+
+operand byte8  = u8  fetch(8)
+operand word16 = u16 fetch(16)
+operand rel8   = i8  fetch(8)
+
+mov.a_imm   op=0xE8 imm:byte8  | "mov a, #${imm:02x}"
+mov.a_xind  op=0xE6            | "mov a, (x)"
+mov.a_xinc  op=0xBF            | "mov a, (x)+"
+mov.a_dp    op=0xE4 dp:byte8   | "mov a, ${dp:02x:sym}"
+mov.a_dpx   op=0xF4 dp:byte8   | "mov a, ${dp:02x},x"
+mov.a_abs   op=0xE5 addr:word16 | "mov a, ${addr:04x:sym}"
+mov.a_absx  op=0xF5 addr:word16 | "mov a, ${addr:04x},x"
+mov.a_absy  op=0xF6 addr:word16 | "mov a, ${addr:04x},y"
+mov.a_idx   op=0xE7 dp:byte8   | "mov a, [${dp:02x}+x]"
+mov.a_idy   op=0xF7 dp:byte8   | "mov a, [${dp:02x}]+y"
+mov.x_imm   op=0xCD imm:byte8  | "mov x, #${imm:02x}"
+mov.x_dp    op=0xF8 dp:byte8   | "mov x, ${dp:02x:sym}"
+mov.x_dpy   op=0xF9 dp:byte8   | "mov x, ${dp:02x},y"
+mov.x_abs   op=0xE9 addr:word16 | "mov x, ${addr:04x:sym}"
+mov.y_imm   op=0x8D imm:byte8  | "mov y, #${imm:02x}"
+mov.y_dp    op=0xEB dp:byte8   | "mov y, ${dp:02x:sym}"
+mov.y_dpx   op=0xFB dp:byte8   | "mov y, ${dp:02x},x"
+mov.y_abs   op=0xEC addr:word16 | "mov y, ${addr:04x:sym}"
+
+mov.xind_a  op=0xC6            | "mov (x), a"
+mov.xinc_a  op=0xAF            | "mov (x)+, a"
+mov.dp_a    op=0xC4 dp:byte8   | "mov ${dp:02x:sym}, a"
+mov.dpx_a   op=0xD4 dp:byte8   | "mov ${dp:02x},x, a"
+mov.abs_a   op=0xC5 addr:word16 | "mov ${addr:04x:sym}, a"
+mov.absx_a  op=0xD5 addr:word16 | "mov ${addr:04x},x, a"
+mov.absy_a  op=0xD6 addr:word16 | "mov ${addr:04x},y, a"
+mov.idx_a   op=0xC7 dp:byte8   | "mov [${dp:02x}+x], a"
+mov.idy_a   op=0xD7 dp:byte8   | "mov [${dp:02x}]+y, a"
+mov.dp_x    op=0xD8 dp:byte8   | "mov ${dp:02x:sym}, x"
+mov.dpy_x   op=0xD9 dp:byte8   | "mov ${dp:02x},y, x"
+mov.abs_x   op=0xC9 addr:word16 | "mov ${addr:04x:sym}, x"
+mov.dp_y    op=0xCB dp:byte8   | "mov ${dp:02x:sym}, y"
+mov.dpx_y   op=0xDB dp:byte8   | "mov ${dp:02x},x, y"
+mov.abs_y   op=0xCC addr:word16 | "mov ${addr:04x:sym}, y"
+
+mov.a_x     op=0x7D | "mov a, x"
+mov.a_y     op=0xDD | "mov a, y"
+mov.x_a     op=0x5D | "mov x, a"
+mov.y_a     op=0xFD | "mov y, a"
+mov.x_sp    op=0x9D | "mov x, sp"
+mov.sp_x    op=0xBD | "mov sp, x"
+
+mov.dp_dp   op=0xFA src:byte8 dst:byte8 | "mov ${dst:02x}, ${src:02x}"
+mov.dp_imm  op=0x8F imm:byte8 dp:byte8  | "mov ${dp:02x:sym}, #${imm:02x}"
+
+movw.ya_dp  op=0xBA dp:byte8 | "movw ya, ${dp:02x:sym}"
+movw.dp_ya  op=0xDA dp:byte8 | "movw ${dp:02x:sym}, ya"
+incw.dp     op=0x3A dp:byte8 | "incw ${dp:02x:sym}"
+decw.dp     op=0x1A dp:byte8 | "decw ${dp:02x:sym}"
+addw.ya_dp  op=0x7A dp:byte8 | "addw ya, ${dp:02x:sym}"
+subw.ya_dp  op=0x9A dp:byte8 | "subw ya, ${dp:02x:sym}"
+cmpw.ya_dp  op=0x5A dp:byte8 | "cmpw ya, ${dp:02x:sym}"
+
+or.a_imm    op=0x08 imm:byte8  | "or a, #${imm:02x}"
+or.a_xind   op=0x06            | "or a, (x)"
+or.a_dp     op=0x04 dp:byte8   | "or a, ${dp:02x:sym}"
+or.a_dpx    op=0x14 dp:byte8   | "or a, ${dp:02x},x"
+or.a_abs    op=0x05 addr:word16 | "or a, ${addr:04x:sym}"
+or.a_absx   op=0x15 addr:word16 | "or a, ${addr:04x},x"
+or.a_absy   op=0x16 addr:word16 | "or a, ${addr:04x},y"
+or.a_idx    op=0x07 dp:byte8   | "or a, [${dp:02x}+x]"
+or.a_idy    op=0x17 dp:byte8   | "or a, [${dp:02x}]+y"
+or.xy       op=0x19            | "or (x), (y)"
+or.dp_dp    op=0x09 src:byte8 dst:byte8 | "or ${dst:02x}, ${src:02x}"
+or.dp_imm   op=0x18 imm:byte8 dp:byte8  | "or ${dp:02x:sym}, #${imm:02x}"
+and.a_imm   op=0x28 imm:byte8  | "and a, #${imm:02x}"
+and.a_xind  op=0x26            | "and a, (x)"
+and.a_dp    op=0x24 dp:byte8   | "and a, ${dp:02x:sym}"
+and.a_dpx   op=0x34 dp:byte8   | "and a, ${dp:02x},x"
+and.a_abs   op=0x25 addr:word16 | "and a, ${addr:04x:sym}"
+and.a_absx  op=0x35 addr:word16 | "and a, ${addr:04x},x"
+and.a_absy  op=0x36 addr:word16 | "and a, ${addr:04x},y"
+and.a_idx   op=0x27 dp:byte8   | "and a, [${dp:02x}+x]"
+and.a_idy   op=0x37 dp:byte8   | "and a, [${dp:02x}]+y"
+and.xy      op=0x39            | "and (x), (y)"
+and.dp_dp   op=0x29 src:byte8 dst:byte8 | "and ${dst:02x}, ${src:02x}"
+and.dp_imm  op=0x38 imm:byte8 dp:byte8  | "and ${dp:02x:sym}, #${imm:02x}"
+eor.a_imm   op=0x48 imm:byte8  | "eor a, #${imm:02x}"
+eor.a_xind  op=0x46            | "eor a, (x)"
+eor.a_dp    op=0x44 dp:byte8   | "eor a, ${dp:02x:sym}"
+eor.a_dpx   op=0x54 dp:byte8   | "eor a, ${dp:02x},x"
+eor.a_abs   op=0x45 addr:word16 | "eor a, ${addr:04x:sym}"
+eor.a_absx  op=0x55 addr:word16 | "eor a, ${addr:04x},x"
+eor.a_absy  op=0x56 addr:word16 | "eor a, ${addr:04x},y"
+eor.a_idx   op=0x47 dp:byte8   | "eor a, [${dp:02x}+x]"
+eor.a_idy   op=0x57 dp:byte8   | "eor a, [${dp:02x}]+y"
+eor.xy      op=0x59            | "eor (x), (y)"
+eor.dp_dp   op=0x49 src:byte8 dst:byte8 | "eor ${dst:02x}, ${src:02x}"
+eor.dp_imm  op=0x58 imm:byte8 dp:byte8  | "eor ${dp:02x:sym}, #${imm:02x}"
+cmp.a_imm   op=0x68 imm:byte8  | "cmp a, #${imm:02x}"
+cmp.a_xind  op=0x66            | "cmp a, (x)"
+cmp.a_dp    op=0x64 dp:byte8   | "cmp a, ${dp:02x:sym}"
+cmp.a_dpx   op=0x74 dp:byte8   | "cmp a, ${dp:02x},x"
+cmp.a_abs   op=0x65 addr:word16 | "cmp a, ${addr:04x:sym}"
+cmp.a_absx  op=0x75 addr:word16 | "cmp a, ${addr:04x},x"
+cmp.a_absy  op=0x76 addr:word16 | "cmp a, ${addr:04x},y"
+cmp.a_idx   op=0x67 dp:byte8   | "cmp a, [${dp:02x}+x]"
+cmp.a_idy   op=0x77 dp:byte8   | "cmp a, [${dp:02x}]+y"
+cmp.xy      op=0x79            | "cmp (x), (y)"
+cmp.dp_dp   op=0x69 src:byte8 dst:byte8 | "cmp ${dst:02x}, ${src:02x}"
+cmp.dp_imm  op=0x78 imm:byte8 dp:byte8  | "cmp ${dp:02x:sym}, #${imm:02x}"
+cmp.x_imm   op=0xC8 imm:byte8  | "cmp x, #${imm:02x}"
+cmp.x_dp    op=0x3E dp:byte8   | "cmp x, ${dp:02x:sym}"
+cmp.x_abs   op=0x1E addr:word16 | "cmp x, ${addr:04x:sym}"
+cmp.y_imm   op=0xAD imm:byte8  | "cmp y, #${imm:02x}"
+cmp.y_dp    op=0x7E dp:byte8   | "cmp y, ${dp:02x:sym}"
+cmp.y_abs   op=0x5E addr:word16 | "cmp y, ${addr:04x:sym}"
+adc.a_imm   op=0x88 imm:byte8  | "adc a, #${imm:02x}"
+adc.a_xind  op=0x86            | "adc a, (x)"
+adc.a_dp    op=0x84 dp:byte8   | "adc a, ${dp:02x:sym}"
+adc.a_dpx   op=0x94 dp:byte8   | "adc a, ${dp:02x},x"
+adc.a_abs   op=0x85 addr:word16 | "adc a, ${addr:04x:sym}"
+adc.a_absx  op=0x95 addr:word16 | "adc a, ${addr:04x},x"
+adc.a_absy  op=0x96 addr:word16 | "adc a, ${addr:04x},y"
+adc.a_idx   op=0x87 dp:byte8   | "adc a, [${dp:02x}+x]"
+adc.a_idy   op=0x97 dp:byte8   | "adc a, [${dp:02x}]+y"
+adc.xy      op=0x99            | "adc (x), (y)"
+adc.dp_dp   op=0x89 src:byte8 dst:byte8 | "adc ${dst:02x}, ${src:02x}"
+adc.dp_imm  op=0x98 imm:byte8 dp:byte8  | "adc ${dp:02x:sym}, #${imm:02x}"
+sbc.a_imm   op=0xA8 imm:byte8  | "sbc a, #${imm:02x}"
+sbc.a_xind  op=0xA6            | "sbc a, (x)"
+sbc.a_dp    op=0xA4 dp:byte8   | "sbc a, ${dp:02x:sym}"
+sbc.a_dpx   op=0xB4 dp:byte8   | "sbc a, ${dp:02x},x"
+sbc.a_abs   op=0xA5 addr:word16 | "sbc a, ${addr:04x:sym}"
+sbc.a_absx  op=0xB5 addr:word16 | "sbc a, ${addr:04x},x"
+sbc.a_absy  op=0xB6 addr:word16 | "sbc a, ${addr:04x},y"
+sbc.a_idx   op=0xA7 dp:byte8   | "sbc a, [${dp:02x}+x]"
+sbc.a_idy   op=0xB7 dp:byte8   | "sbc a, [${dp:02x}]+y"
+sbc.xy      op=0xB9            | "sbc (x), (y)"
+sbc.dp_dp   op=0xA9 src:byte8 dst:byte8 | "sbc ${dst:02x}, ${src:02x}"
+sbc.dp_imm  op=0xB8 imm:byte8 dp:byte8  | "sbc ${dp:02x:sym}, #${imm:02x}"
+
+inc.a       op=0xBC | "inc a"
+inc.x       op=0x3D | "inc x"
+inc.y       op=0xFC | "inc y"
+dec.a       op=0x9C | "dec a"
+dec.x       op=0x1D | "dec x"
+dec.y       op=0xDC | "dec y"
+
+inc.dp      op=0xAB dp:byte8   | "inc ${dp:02x:sym}"
+inc.dpx     op=0xBB dp:byte8   | "inc ${dp:02x},x"
+inc.abs     op=0xAC addr:word16 | "inc ${addr:04x:sym}"
+dec.dp      op=0x8B dp:byte8   | "dec ${dp:02x:sym}"
+dec.dpx     op=0x9B dp:byte8   | "dec ${dp:02x},x"
+dec.abs     op=0x8C addr:word16 | "dec ${addr:04x:sym}"
+
+asl.a       op=0x1C | "asl a"
+asl.dp      op=0x0B dp:byte8   | "asl ${dp:02x:sym}"
+asl.dpx     op=0x1B dp:byte8   | "asl ${dp:02x},x"
+asl.abs     op=0x0C addr:word16 | "asl ${addr:04x:sym}"
+lsr.a       op=0x5C | "lsr a"
+lsr.dp      op=0x4B dp:byte8   | "lsr ${dp:02x:sym}"
+lsr.dpx     op=0x5B dp:byte8   | "lsr ${dp:02x},x"
+lsr.abs     op=0x4C addr:word16 | "lsr ${addr:04x:sym}"
+rol.a       op=0x3C | "rol a"
+rol.dp      op=0x2B dp:byte8   | "rol ${dp:02x:sym}"
+rol.dpx     op=0x3B dp:byte8   | "rol ${dp:02x},x"
+rol.abs     op=0x2C addr:word16 | "rol ${addr:04x:sym}"
+ror.a       op=0x7C | "ror a"
+ror.dp      op=0x6B dp:byte8   | "ror ${dp:02x:sym}"
+ror.dpx     op=0x7B dp:byte8   | "ror ${dp:02x},x"
+ror.abs     op=0x6C addr:word16 | "ror ${addr:04x:sym}"
+xcn.a       op=0x9F | "xcn a"
+
+mul.ya      op=0xCF | "mul ya"
+div.ya_x    op=0x9E | "div ya, x"
+
+daa.a       op=0xDF | "daa a"
+das.a       op=0xBE | "das a"
+
+bra.rel     op=0x2F disp:rel8 | "bra ${disp:rel}"
+beq.rel     op=0xF0 disp:rel8 | "beq ${disp:rel}"
+bne.rel     op=0xD0 disp:rel8 | "bne ${disp:rel}"
+bcs.rel     op=0xB0 disp:rel8 | "bcs ${disp:rel}"
+bcc.rel     op=0x90 disp:rel8 | "bcc ${disp:rel}"
+bvs.rel     op=0x70 disp:rel8 | "bvs ${disp:rel}"
+bvc.rel     op=0x50 disp:rel8 | "bvc ${disp:rel}"
+bmi.rel     op=0x30 disp:rel8 | "bmi ${disp:rel}"
+bpl.rel     op=0x10 disp:rel8 | "bpl ${disp:rel}"
+
+# The bit-branch and bit-set families pack the bit index into the opcode in
+# 0x20 steps; tcall packs its target in 0x10 steps.
+
+for n in 0..8 {
+    bbs_b{n} op = 0x03 + n * 0x20 dp:byte8 disp:rel8 | "bbs ${dp:02x}.{n}, ${disp:rel}"
+}
+
+for n in 0..8 {
+    bbc_b{n} op = 0x13 + n * 0x20 dp:byte8 disp:rel8 | "bbc ${dp:02x}.{n}, ${disp:rel}"
+}
+
+cbne_dp     op=0x2E dp:byte8 disp:rel8 | "cbne ${dp:02x:sym}, ${disp:rel}"
+cbne_dpx    op=0xDE dp:byte8 disp:rel8 | "cbne ${dp:02x},x, ${disp:rel}"
+dbnz_dp     op=0x6E dp:byte8 disp:rel8 | "dbnz ${dp:02x:sym}, ${disp:rel}"
+dbnz_y      op=0xFE disp:rel8 | "dbnz y, ${disp:rel}"
+
+jmp.abs     op=0x5F addr:word16 | "jmp ${addr:04x:sym}"
+jmp.iax     op=0x1F addr:word16 | "jmp [${addr:04x}+x]"
+
+call.abs    op=0x3F addr:word16 | "call ${addr:04x:sym}"
+pcall       op=0x4F u:byte8     | "pcall ${u:02x}"
+
+for n in 0..16 {
+    tcall_{n} op = 0x01 + n * 0x10 | "tcall {n}"
+}
+
+ret         op=0x6F | "ret"
+reti        op=0x7F | "reti"
+
+push.psw    op=0x0D | "push psw"
+push.a      op=0x2D | "push a"
+push.x      op=0x4D | "push x"
+push.y      op=0x6D | "push y"
+pop.psw     op=0x8E | "pop psw"
+pop.a       op=0xAE | "pop a"
+pop.x       op=0xCE | "pop x"
+pop.y       op=0xEE | "pop y"
+
+clrc        op=0x60 | "clrc"
+setc        op=0x80 | "setc"
+notc        op=0xED | "notc"
+clrv        op=0xE0 | "clrv"
+clrp        op=0x20 | "clrp"
+setp        op=0x40 | "setp"
+ei          op=0xA0 | "ei"
+di          op=0xC0 | "di"
+
+for n in 0..8 {
+    set1_b{n} op = 0x02 + n * 0x20 dp:byte8 | "set1 ${dp:02x}.{n}"
+}
+
+for n in 0..8 {
+    clr1_b{n} op = 0x12 + n * 0x20 dp:byte8 | "clr1 ${dp:02x}.{n}"
+}
+
+tset1.abs   op=0x0E addr:word16 | "tset1 ${addr:04x:sym}"
+tclr1.abs   op=0x4E addr:word16 | "tclr1 ${addr:04x:sym}"
+or1.mb      op=0x0A mb:word16 | "or1 c, ${mb:04x}"
+or1n.mb     op=0x2A mb:word16 | "or1 c, /${mb:04x}"
+and1.mb     op=0x4A mb:word16 | "and1 c, ${mb:04x}"
+and1n.mb    op=0x6A mb:word16 | "and1 c, /${mb:04x}"
+eor1.mb     op=0x8A mb:word16 | "eor1 c, ${mb:04x}"
+mov1.c_mb   op=0xAA mb:word16 | "mov1 c, ${mb:04x}"
+mov1.mb_c   op=0xCA mb:word16 | "mov1 ${mb:04x}, c"
+not1.mb     op=0xEA mb:word16 | "not1 ${mb:04x}"
+
+nop         op=0x00 | "nop"
+brk         op=0x0F | "brk"
+sleep       op=0xEF | "sleep"
+stop        op=0xFF | "stop"
+
+# Dispatch groups. Address-mode metadata rides on the form axis; mov splits by
+# role, so those groups are explicit lists.
+
+dispatch load       { mov.a_imm, mov.a_xind, mov.a_xinc, mov.a_dp, mov.a_dpx, mov.a_abs, mov.a_absx, mov.a_absy, mov.a_idx, mov.a_idy, mov.x_imm, mov.x_dp, mov.x_dpy, mov.x_abs, mov.y_imm, mov.y_dp, mov.y_dpx, mov.y_abs }
+dispatch store      { mov.xind_a, mov.xinc_a, mov.dp_a, mov.dpx_a, mov.abs_a, mov.absx_a, mov.absy_a, mov.idx_a, mov.idy_a, mov.dp_x, mov.dpy_x, mov.abs_x, mov.dp_y, mov.dpx_y, mov.abs_y }
+dispatch move_reg   { mov.a_x, mov.a_y, mov.x_a, mov.y_a, mov.x_sp, mov.sp_x }
+dispatch move_mem   { mov.dp_dp, mov.dp_imm }
+dispatch word       { movw.*, incw.*, decw.*, addw.*, subw.*, cmpw.* }
+dispatch alu        { or.*, and.*, eor.*, cmp.*, adc.*, sbc.* }
+dispatch muldiv     { mul.*, div.* }
+dispatch decimal    { daa.*, das.* }
+dispatch shift      { asl.*, lsr.*, rol.*, ror.*, xcn.* }
+dispatch reg_step   { inc.a, inc.x, inc.y, dec.a, dec.x, dec.y }
+dispatch mem_step   { inc.dp, inc.dpx, inc.abs, dec.dp, dec.dpx, dec.abs }
+dispatch branches   { bra.*, beq.*, bne.*, bcs.*, bcc.*, bvs.*, bvc.*, bmi.*, bpl.* }
+dispatch bit_branch { bbs_b0, bbs_b1, bbs_b2, bbs_b3, bbs_b4, bbs_b5, bbs_b6, bbs_b7, bbc_b0, bbc_b1, bbc_b2, bbc_b3, bbc_b4, bbc_b5, bbc_b6, bbc_b7, cbne_dp, cbne_dpx, dbnz_dp, dbnz_y }
+dispatch call       { call.*, pcall, tcall_0, tcall_1, tcall_2, tcall_3, tcall_4, tcall_5, tcall_6, tcall_7, tcall_8, tcall_9, tcall_10, tcall_11, tcall_12, tcall_13, tcall_14, tcall_15 }
+dispatch returns    { ret, reti }
+dispatch flag_ops   { clrc, setc, notc, clrv, clrp, setp, ei, di }
+dispatch bit_ops    { set1_b0, set1_b1, set1_b2, set1_b3, set1_b4, set1_b5, set1_b6, set1_b7, clr1_b0, clr1_b1, clr1_b2, clr1_b3, clr1_b4, clr1_b5, clr1_b6, clr1_b7, tset1.*, tclr1.*, or1.*, or1n.*, and1.*, and1n.*, eor1.*, mov1.*, not1.* }
+dispatch halt       { sleep, stop }
