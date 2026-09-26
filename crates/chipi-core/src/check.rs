@@ -8,7 +8,7 @@
 
 use crate::compute::mask_u64;
 use crate::lower::Resolved;
-use crate::model::{BitRange, Endian, Field, Insn, Mode};
+use crate::model::{BaseTy, BitRange, Endian, Field, Insn, Mode};
 use chipi_syntax::ast::Expr;
 use chipi_syntax::{Diag, Span};
 use std::collections::HashMap;
@@ -82,15 +82,15 @@ pub fn validate(r: &Resolved) -> (Vec<Diag>, Vec<Diag>) {
 }
 
 /// Leaves sharing a form axis must bind the same operand shape (names, value widths,
-/// signedness of bound fields and computed operands, in order). That is what makes the derived
+/// signedness and boolean types of bound fields and computed operands, in order). That makes the derived
 /// form enum useful: a consumer can match over the form once and use one accessor set per form.
 fn form_shapes(r: &Resolved, errors: &mut Vec<Diag>) {
-    // (operand name, value width, signedness, computation key) per operand, in binding order.
+    // (operand name, value width, signedness, boolean type, computation key) in binding order.
     // The computation key (empty for plain fields) is the same structural identity the accessor
     // dedup uses, so two leaves of one form that compute an operand differently (e.g. an m-width
     // and an x-width fetch) are a shape mismatch even though widths agree: they would split into
     // different accessors and the form's promise of one uniform accessor set would break silently.
-    type Shape = Vec<(String, u16, bool, String)>;
+    type Shape = Vec<(String, u16, bool, bool, String)>;
     let mut seen: HashMap<&str, (Shape, &str, Span)> = HashMap::new();
     for inst in &r.instrs {
         let Some(form) = &inst.form else {
@@ -99,12 +99,21 @@ fn form_shapes(r: &Resolved, errors: &mut Vec<Diag>) {
         let shape: Shape = inst
             .fields
             .iter()
-            .map(|f| (f.name.clone(), f.ty.value_width, f.ty.signed, String::new()))
+            .map(|f| {
+                (
+                    f.name.clone(),
+                    f.ty.value_width,
+                    f.ty.signed,
+                    f.ty.base == BaseTy::Bool,
+                    String::new(),
+                )
+            })
             .chain(inst.computed.iter().map(|c| {
                 (
                     c.name.clone(),
                     c.ty.value_width,
                     c.ty.signed,
+                    c.ty.base == BaseTy::Bool,
                     crate::accessor::expr_key(&c.expr, inst),
                 )
             }))
@@ -243,13 +252,18 @@ fn runs(bits: &[u16]) -> String {
 /// One global accessor is emitted per field name, so a name shared across instructions must agree
 /// on its bit range and value type.
 fn field_layout(r: &Resolved, errors: &mut Vec<Diag>) {
-    let mut seen: HashMap<&str, (BitRange, bool, u16, Span)> = HashMap::new();
+    let mut seen: HashMap<&str, (BitRange, bool, u16, bool, Span)> = HashMap::new();
     for inst in &r.instrs {
         for f in &inst.fields {
-            let sig = (f.range, f.ty.signed, f.ty.value_width);
+            let sig = (
+                f.range,
+                f.ty.signed,
+                f.ty.value_width,
+                f.ty.base == BaseTy::Bool,
+            );
             match seen.get(f.name.as_str()) {
-                Some(&(range, signed, vw, prev)) => {
-                    if (range, signed, vw) != sig {
+                Some(&(range, signed, vw, boolean, prev)) => {
+                    if (range, signed, vw, boolean) != sig {
                         errors.push(
                             Diag::error(
                                 "FieldLayout",
@@ -268,7 +282,13 @@ fn field_layout(r: &Resolved, errors: &mut Vec<Diag>) {
                 None => {
                     seen.insert(
                         f.name.as_str(),
-                        (f.range, f.ty.signed, f.ty.value_width, f.span),
+                        (
+                            f.range,
+                            f.ty.signed,
+                            f.ty.value_width,
+                            f.ty.base == BaseTy::Bool,
+                            f.span,
+                        ),
                     );
                 }
             }

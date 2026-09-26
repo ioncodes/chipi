@@ -1,6 +1,6 @@
 //! Identifier and naming helpers for emitted Rust code.
 
-use chipi_core::model::FieldTy;
+use chipi_core::model::{BaseTy, FieldTy};
 
 /// Map non-identifier characters to `_`. Prefix `_` if the result is empty or starts with a digit.
 pub fn sanitize(name: &str) -> String {
@@ -69,11 +69,14 @@ pub fn computed_method(logical: &str) -> String {
     sanitize(logical)
 }
 
-/// The Rust return type for a value: the smallest standard integer width that
+/// Boolean operands retain `bool`. Integer operands use the smallest standard width that
 /// holds `value_width` bits, preserving signedness. A 16bit field gets `i16`/`u16`
 /// rather than being widened to `i32`/`u32`. The accessor body sign-extends or masks
 /// within `value_width` before the final `as {ret_type}` cast, so the narrowing is lossless.
 pub fn ret_type(ty: &FieldTy) -> &'static str {
+    if ty.base == BaseTy::Bool {
+        return "bool";
+    }
     let bits = match ty.value_width {
         0..=8 => 8,
         9..=16 => 16,
@@ -92,6 +95,15 @@ pub fn ret_type(ty: &FieldTy) -> &'static str {
         (false, 64) => "u64",
         (true, _) => "i128",
         (false, _) => "u128",
+    }
+}
+
+/// Convert an already extracted/transformed numeric value to its public Rust type.
+pub fn cast_value(ty: &FieldTy, value: &str) -> String {
+    if ty.base == BaseTy::Bool {
+        format!("({value}) != 0")
+    } else {
+        format!("({value}) as {}", ret_type(ty))
     }
 }
 

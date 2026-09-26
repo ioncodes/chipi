@@ -17,7 +17,7 @@
 //! identifier rules on top.
 
 use crate::interp::fetch_expr;
-use crate::model::{FieldTy, Insn, Isa};
+use crate::model::{BaseTy, FieldTy, Insn, Isa};
 use chipi_syntax::ast::Expr;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -65,8 +65,12 @@ pub fn computed_accessor_names(isa: &Isa) -> HashMap<(String, String), String> {
                 None => expr_key(&c.expr, inst),
             };
             let identity = format!(
-                "{}|s={}|w={}|{}",
-                c.name, c.ty.signed, c.ty.value_width, body
+                "{}|s={}|w={}|bool={}|{}",
+                c.name,
+                c.ty.signed,
+                c.ty.value_width,
+                c.ty.base == BaseTy::Bool,
+                body
             );
 
             // An expression-width fetch folds the decode variables it reads into the
@@ -154,6 +158,9 @@ pub fn computed_accessor_names(isa: &Isa) -> HashMap<(String, String), String> {
 fn disambiguator(ty: &FieldTy) -> String {
     if let Some(t) = &ty.type_name {
         return t.clone();
+    }
+    if ty.base == BaseTy::Bool {
+        return "bool".to_string();
     }
     let c = if ty.signed { 'i' } else { 'u' };
     format!("{c}{}", ty.value_width)

@@ -31,7 +31,7 @@ use chipi_core::render::{segs_have_sym, FmtSpec, Seg};
 use chipi_core::Isa;
 use chipi_syntax::ast::{BinOp, Expr, UnOp};
 use exprgen::{emit_cond, emit_prefix, emit_value, Scope};
-use names::{const_name, ident, mask_u64, pascal, ret_type};
+use names::{cast_value, const_name, ident, mask_u64, pascal, ret_type};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write as _;
 
@@ -831,7 +831,7 @@ fn accessor_body_base(f: &Field, base: &str) -> String {
         }
     }
 
-    s.push_str(&format!(" v as {} }}", ret_type(&f.ty)));
+    s.push_str(&format!(" {} }}", cast_value(&f.ty, "v")));
     s
 }
 
@@ -974,15 +974,12 @@ fn computed_accessors(isa: &Isa) -> String {
             };
             let body = emit_value(&c.expr, &scope);
 
-            let cast = if c.ty.signed {
-                format!("sext128(__v, {}) as {}", c.ty.value_width, ret_type(&c.ty))
+            let value = if c.ty.signed {
+                format!("sext128(__v, {})", c.ty.value_width)
             } else {
-                format!(
-                    "(__v & cmask128({})) as {}",
-                    c.ty.value_width,
-                    ret_type(&c.ty)
-                )
+                format!("__v & cmask128({})", c.ty.value_width)
             };
+            let cast = cast_value(&c.ty, &value);
             let _ = writeln!(
                 s,
                 "    /// computed operand `{}` of `{}`",
@@ -1923,11 +1920,12 @@ fn disasm_ctx_support(isa: &Isa, m: &Model) -> String {
                     // Static offset and width: a single-expression body.
                     let nb = (bits as usize).div_ceil(8);
                     let raw = byte_read(off, nb, isa.decoder.endian);
-                    let val = if c.ty.signed {
-                        format!("sext64(({raw}) & {mask:#x}, {}) as {ret}", c.ty.value_width)
+                    let value = if c.ty.signed {
+                        format!("sext64(({raw}) & {mask:#x}, {})", c.ty.value_width)
                     } else {
-                        format!("(({raw}) & {mask:#x}) as {ret}")
+                        format!("({raw}) & {mask:#x}")
                     };
+                    let val = cast_value(&c.ty, &value);
                     let _ = writeln!(
                         s,
                         "    #[inline]\n    pub fn {method}<C: DisasmCtx>(self, pc: u64, ctx: &C) -> {ret} {{ {val} }}"
@@ -1944,11 +1942,12 @@ fn disasm_ctx_support(isa: &Isa, m: &Model) -> String {
                         Endian::Little => "8 * i",
                         Endian::Big => "8 * (nb - 1 - i)",
                     };
-                    let val = if c.ty.signed {
-                        format!("sext64(raw & {mask:#x}, {}) as {ret}", c.ty.value_width)
+                    let value = if c.ty.signed {
+                        format!("sext64(raw & {mask:#x}, {})", c.ty.value_width)
                     } else {
-                        format!("(raw & {mask:#x}) as {ret}")
+                        format!("raw & {mask:#x}")
                     };
+                    let val = cast_value(&c.ty, &value);
                     let _ = writeln!(
                         s,
                         "    #[inline]\n    pub fn {method}<C: DisasmCtx>(self, pc: u64, ctx: &C) -> {ret} {{\n\
@@ -2481,15 +2480,12 @@ fn variant_ctor(isa: &Isa, inst: &Insn) -> String {
             let raw = byte_read(off, nb, isa.decoder.endian);
             let mask = mask_u64(c.ty.value_width);
 
-            let val = if c.ty.signed {
-                format!(
-                    "sext64(({raw}) & {mask:#x}, {}) as {}",
-                    c.ty.value_width,
-                    ret_type(&c.ty)
-                )
+            let value = if c.ty.signed {
+                format!("sext64(({raw}) & {mask:#x}, {})", c.ty.value_width)
             } else {
-                format!("(({raw}) & {mask:#x}) as {}", ret_type(&c.ty))
+                format!("({raw}) & {mask:#x}")
             };
+            let val = cast_value(&c.ty, &value);
             parts.push(format!("{}: {val}", ident(&c.name)));
             off += nb;
         } else {
@@ -2500,15 +2496,12 @@ fn variant_ctor(isa: &Isa, inst: &Insn) -> String {
                 vars: &[],
             };
             let body = emit_value(&c.expr, &scope);
-            let cast = if c.ty.signed {
-                format!("sext128(__v, {}) as {}", c.ty.value_width, ret_type(&c.ty))
+            let value = if c.ty.signed {
+                format!("sext128(__v, {})", c.ty.value_width)
             } else {
-                format!(
-                    "(__v & cmask128({})) as {}",
-                    c.ty.value_width,
-                    ret_type(&c.ty)
-                )
+                format!("__v & cmask128({})", c.ty.value_width)
             };
+            let cast = cast_value(&c.ty, &value);
             parts.push(format!(
                 "{}: {{ let __v: u128 = {body}; {cast} }}",
                 ident(&c.name)
