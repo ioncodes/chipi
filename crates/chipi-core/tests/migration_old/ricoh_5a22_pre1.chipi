@@ -1,0 +1,339 @@
+decoder Ricoh5A22 {
+    width     = 8         # 8-bit fetch unit (one opcode byte)
+    bit_order = lsb0
+    endian    = little    # operands are little-endian in the byte stream
+    mode m: bool = 1      # accumulator/memory width: 1 = 8-bit, 0 = 16-bit
+    mode x: bool = 1      # index (X/Y) width:        1 = 8-bit, 0 = 16-bit
+}
+
+selector op [0:7]
+
+operand byte8  = u8  fetch(8)
+operand word16 = u16 fetch(16)
+operand long24 = u24 fetch(24)
+operand rel8   = i8  fetch(8)
+operand rel16  = i16 fetch(16)
+
+lda_idx       op=0xA1 dp:byte8 | "lda (${dp:02x},x)"
+lda_sr        op=0xA3 sr:byte8 | "lda ${sr:02x},s"
+lda_dp        op=0xA5 dp:byte8 | "lda ${dp:02x}"
+lda_idl       op=0xA7 dp:byte8 | "lda [${dp:02x}]"
+lda_imm_m16   m=0 op=0xA9 imm:word16 | "lda #${imm:04x}"
+lda_imm_m8    m=1 op=0xA9 imm:byte8 | "lda #${imm:02x}"
+lda_abs       op=0xAD addr:word16 | "lda ${addr:04x:sym}"
+lda_abl       op=0xAF addr:long24 | "lda ${addr:06x:sym}"
+lda_idy       op=0xB1 dp:byte8 | "lda (${dp:02x}),y"
+lda_idp       op=0xB2 dp:byte8 | "lda (${dp:02x})"
+lda_isy       op=0xB3 sr:byte8 | "lda (${sr:02x},s),y"
+lda_dpx       op=0xB5 dp:byte8 | "lda ${dp:02x},x"
+lda_idly      op=0xB7 dp:byte8 | "lda [${dp:02x}],y"
+lda_aby       op=0xB9 addr:word16 | "lda ${addr:04x:sym},y"
+lda_abx       op=0xBD addr:word16 | "lda ${addr:04x:sym},x"
+lda_alx       op=0xBF addr:long24 | "lda ${addr:06x:sym},x"
+ldx_imm_x16   x=0 op=0xA2 imm:word16 | "ldx #${imm:04x}"
+ldx_imm_x8    x=1 op=0xA2 imm:byte8 | "ldx #${imm:02x}"
+ldx_dp        op=0xA6 dp:byte8 | "ldx ${dp:02x}"
+ldx_abs       op=0xAE addr:word16 | "ldx ${addr:04x:sym}"
+ldx_dpy       op=0xB6 dp:byte8 | "ldx ${dp:02x},y"
+ldx_aby       op=0xBE addr:word16 | "ldx ${addr:04x:sym},y"
+ldy_imm_x16   x=0 op=0xA0 imm:word16 | "ldy #${imm:04x}"
+ldy_imm_x8    x=1 op=0xA0 imm:byte8 | "ldy #${imm:02x}"
+ldy_dp        op=0xA4 dp:byte8 | "ldy ${dp:02x}"
+ldy_abs       op=0xAC addr:word16 | "ldy ${addr:04x:sym}"
+ldy_dpx       op=0xB4 dp:byte8 | "ldy ${dp:02x},x"
+ldy_abx       op=0xBC addr:word16 | "ldy ${addr:04x:sym},x"
+
+sta_idx       op=0x81 dp:byte8 | "sta (${dp:02x},x)"
+sta_sr        op=0x83 sr:byte8 | "sta ${sr:02x},s"
+sta_dp        op=0x85 dp:byte8 | "sta ${dp:02x}"
+sta_idl       op=0x87 dp:byte8 | "sta [${dp:02x}]"
+sta_abs       op=0x8D addr:word16 | "sta ${addr:04x:sym}"
+sta_abl       op=0x8F addr:long24 | "sta ${addr:06x:sym}"
+sta_idy       op=0x91 dp:byte8 | "sta (${dp:02x}),y"
+sta_idp       op=0x92 dp:byte8 | "sta (${dp:02x})"
+sta_isy       op=0x93 sr:byte8 | "sta (${sr:02x},s),y"
+sta_dpx       op=0x95 dp:byte8 | "sta ${dp:02x},x"
+sta_idly      op=0x97 dp:byte8 | "sta [${dp:02x}],y"
+sta_aby       op=0x99 addr:word16 | "sta ${addr:04x:sym},y"
+sta_abx       op=0x9D addr:word16 | "sta ${addr:04x:sym},x"
+sta_alx       op=0x9F addr:long24 | "sta ${addr:06x:sym},x"
+stx_dp        op=0x86 dp:byte8 | "stx ${dp:02x}"
+stx_abs       op=0x8E addr:word16 | "stx ${addr:04x:sym}"
+stx_dpy       op=0x96 dp:byte8 | "stx ${dp:02x},y"
+sty_dp        op=0x84 dp:byte8 | "sty ${dp:02x}"
+sty_abs       op=0x8C addr:word16 | "sty ${addr:04x:sym}"
+sty_dpx       op=0x94 dp:byte8 | "sty ${dp:02x},x"
+stz_dp        op=0x64 dp:byte8 | "stz ${dp:02x}"
+stz_dpx       op=0x74 dp:byte8 | "stz ${dp:02x},x"
+stz_abs       op=0x9C addr:word16 | "stz ${addr:04x:sym}"
+stz_abx       op=0x9E addr:word16 | "stz ${addr:04x:sym},x"
+
+adc_idx       op=0x61 dp:byte8 | "adc (${dp:02x},x)"
+adc_sr        op=0x63 sr:byte8 | "adc ${sr:02x},s"
+adc_dp        op=0x65 dp:byte8 | "adc ${dp:02x}"
+adc_idl       op=0x67 dp:byte8 | "adc [${dp:02x}]"
+adc_imm_m16   m=0 op=0x69 imm:word16 | "adc #${imm:04x}"
+adc_imm_m8    m=1 op=0x69 imm:byte8 | "adc #${imm:02x}"
+adc_abs       op=0x6D addr:word16 | "adc ${addr:04x:sym}"
+adc_abl       op=0x6F addr:long24 | "adc ${addr:06x:sym}"
+adc_idy       op=0x71 dp:byte8 | "adc (${dp:02x}),y"
+adc_idp       op=0x72 dp:byte8 | "adc (${dp:02x})"
+adc_isy       op=0x73 sr:byte8 | "adc (${sr:02x},s),y"
+adc_dpx       op=0x75 dp:byte8 | "adc ${dp:02x},x"
+adc_idly      op=0x77 dp:byte8 | "adc [${dp:02x}],y"
+adc_aby       op=0x79 addr:word16 | "adc ${addr:04x:sym},y"
+adc_abx       op=0x7D addr:word16 | "adc ${addr:04x:sym},x"
+adc_alx       op=0x7F addr:long24 | "adc ${addr:06x:sym},x"
+sbc_idx       op=0xE1 dp:byte8 | "sbc (${dp:02x},x)"
+sbc_sr        op=0xE3 sr:byte8 | "sbc ${sr:02x},s"
+sbc_dp        op=0xE5 dp:byte8 | "sbc ${dp:02x}"
+sbc_idl       op=0xE7 dp:byte8 | "sbc [${dp:02x}]"
+sbc_imm_m16   m=0 op=0xE9 imm:word16 | "sbc #${imm:04x}"
+sbc_imm_m8    m=1 op=0xE9 imm:byte8 | "sbc #${imm:02x}"
+sbc_abs       op=0xED addr:word16 | "sbc ${addr:04x:sym}"
+sbc_abl       op=0xEF addr:long24 | "sbc ${addr:06x:sym}"
+sbc_idy       op=0xF1 dp:byte8 | "sbc (${dp:02x}),y"
+sbc_idp       op=0xF2 dp:byte8 | "sbc (${dp:02x})"
+sbc_isy       op=0xF3 sr:byte8 | "sbc (${sr:02x},s),y"
+sbc_dpx       op=0xF5 dp:byte8 | "sbc ${dp:02x},x"
+sbc_idly      op=0xF7 dp:byte8 | "sbc [${dp:02x}],y"
+sbc_aby       op=0xF9 addr:word16 | "sbc ${addr:04x:sym},y"
+sbc_abx       op=0xFD addr:word16 | "sbc ${addr:04x:sym},x"
+sbc_alx       op=0xFF addr:long24 | "sbc ${addr:06x:sym},x"
+
+and_idx       op=0x21 dp:byte8 | "and (${dp:02x},x)"
+and_sr        op=0x23 sr:byte8 | "and ${sr:02x},s"
+and_dp        op=0x25 dp:byte8 | "and ${dp:02x}"
+and_idl       op=0x27 dp:byte8 | "and [${dp:02x}]"
+and_imm_m16   m=0 op=0x29 imm:word16 | "and #${imm:04x}"
+and_imm_m8    m=1 op=0x29 imm:byte8 | "and #${imm:02x}"
+and_abs       op=0x2D addr:word16 | "and ${addr:04x:sym}"
+and_abl       op=0x2F addr:long24 | "and ${addr:06x:sym}"
+and_idy       op=0x31 dp:byte8 | "and (${dp:02x}),y"
+and_idp       op=0x32 dp:byte8 | "and (${dp:02x})"
+and_isy       op=0x33 sr:byte8 | "and (${sr:02x},s),y"
+and_dpx       op=0x35 dp:byte8 | "and ${dp:02x},x"
+and_idly      op=0x37 dp:byte8 | "and [${dp:02x}],y"
+and_aby       op=0x39 addr:word16 | "and ${addr:04x:sym},y"
+and_abx       op=0x3D addr:word16 | "and ${addr:04x:sym},x"
+and_alx       op=0x3F addr:long24 | "and ${addr:06x:sym},x"
+ora_idx       op=0x01 dp:byte8 | "ora (${dp:02x},x)"
+ora_sr        op=0x03 sr:byte8 | "ora ${sr:02x},s"
+ora_dp        op=0x05 dp:byte8 | "ora ${dp:02x}"
+ora_idl       op=0x07 dp:byte8 | "ora [${dp:02x}]"
+ora_imm_m16   m=0 op=0x09 imm:word16 | "ora #${imm:04x}"
+ora_imm_m8    m=1 op=0x09 imm:byte8 | "ora #${imm:02x}"
+ora_abs       op=0x0D addr:word16 | "ora ${addr:04x:sym}"
+ora_abl       op=0x0F addr:long24 | "ora ${addr:06x:sym}"
+ora_idy       op=0x11 dp:byte8 | "ora (${dp:02x}),y"
+ora_idp       op=0x12 dp:byte8 | "ora (${dp:02x})"
+ora_isy       op=0x13 sr:byte8 | "ora (${sr:02x},s),y"
+ora_dpx       op=0x15 dp:byte8 | "ora ${dp:02x},x"
+ora_idly      op=0x17 dp:byte8 | "ora [${dp:02x}],y"
+ora_aby       op=0x19 addr:word16 | "ora ${addr:04x:sym},y"
+ora_abx       op=0x1D addr:word16 | "ora ${addr:04x:sym},x"
+ora_alx       op=0x1F addr:long24 | "ora ${addr:06x:sym},x"
+eor_idx       op=0x41 dp:byte8 | "eor (${dp:02x},x)"
+eor_sr        op=0x43 sr:byte8 | "eor ${sr:02x},s"
+eor_dp        op=0x45 dp:byte8 | "eor ${dp:02x}"
+eor_idl       op=0x47 dp:byte8 | "eor [${dp:02x}]"
+eor_imm_m16   m=0 op=0x49 imm:word16 | "eor #${imm:04x}"
+eor_imm_m8    m=1 op=0x49 imm:byte8 | "eor #${imm:02x}"
+eor_abs       op=0x4D addr:word16 | "eor ${addr:04x:sym}"
+eor_abl       op=0x4F addr:long24 | "eor ${addr:06x:sym}"
+eor_idy       op=0x51 dp:byte8 | "eor (${dp:02x}),y"
+eor_idp       op=0x52 dp:byte8 | "eor (${dp:02x})"
+eor_isy       op=0x53 sr:byte8 | "eor (${sr:02x},s),y"
+eor_dpx       op=0x55 dp:byte8 | "eor ${dp:02x},x"
+eor_idly      op=0x57 dp:byte8 | "eor [${dp:02x}],y"
+eor_aby       op=0x59 addr:word16 | "eor ${addr:04x:sym},y"
+eor_abx       op=0x5D addr:word16 | "eor ${addr:04x:sym},x"
+eor_alx       op=0x5F addr:long24 | "eor ${addr:06x:sym},x"
+
+cmp_idx       op=0xC1 dp:byte8 | "cmp (${dp:02x},x)"
+cmp_sr        op=0xC3 sr:byte8 | "cmp ${sr:02x},s"
+cmp_dp        op=0xC5 dp:byte8 | "cmp ${dp:02x}"
+cmp_idl       op=0xC7 dp:byte8 | "cmp [${dp:02x}]"
+cmp_imm_m16   m=0 op=0xC9 imm:word16 | "cmp #${imm:04x}"
+cmp_imm_m8    m=1 op=0xC9 imm:byte8 | "cmp #${imm:02x}"
+cmp_abs       op=0xCD addr:word16 | "cmp ${addr:04x:sym}"
+cmp_abl       op=0xCF addr:long24 | "cmp ${addr:06x:sym}"
+cmp_idy       op=0xD1 dp:byte8 | "cmp (${dp:02x}),y"
+cmp_idp       op=0xD2 dp:byte8 | "cmp (${dp:02x})"
+cmp_isy       op=0xD3 sr:byte8 | "cmp (${sr:02x},s),y"
+cmp_dpx       op=0xD5 dp:byte8 | "cmp ${dp:02x},x"
+cmp_idly      op=0xD7 dp:byte8 | "cmp [${dp:02x}],y"
+cmp_aby       op=0xD9 addr:word16 | "cmp ${addr:04x:sym},y"
+cmp_abx       op=0xDD addr:word16 | "cmp ${addr:04x:sym},x"
+cmp_alx       op=0xDF addr:long24 | "cmp ${addr:06x:sym},x"
+cpx_imm_x16   x=0 op=0xE0 imm:word16 | "cpx #${imm:04x}"
+cpx_imm_x8    x=1 op=0xE0 imm:byte8 | "cpx #${imm:02x}"
+cpx_dp        op=0xE4 dp:byte8 | "cpx ${dp:02x}"
+cpx_abs       op=0xEC addr:word16 | "cpx ${addr:04x:sym}"
+cpy_imm_x16   x=0 op=0xC0 imm:word16 | "cpy #${imm:04x}"
+cpy_imm_x8    x=1 op=0xC0 imm:byte8 | "cpy #${imm:02x}"
+cpy_dp        op=0xC4 dp:byte8 | "cpy ${dp:02x}"
+cpy_abs       op=0xCC addr:word16 | "cpy ${addr:04x:sym}"
+bit_dp        op=0x24 dp:byte8 | "bit ${dp:02x}"
+bit_abs       op=0x2C addr:word16 | "bit ${addr:04x:sym}"
+bit_dpx       op=0x34 dp:byte8 | "bit ${dp:02x},x"
+bit_abx       op=0x3C addr:word16 | "bit ${addr:04x:sym},x"
+bit_imm_m16   m=0 op=0x89 imm:word16 | "bit #${imm:04x}"
+bit_imm_m8    m=1 op=0x89 imm:byte8 | "bit #${imm:02x}"
+
+inc_a         op=0x1A | "inc a"
+inc_dp        op=0xE6 dp:byte8 | "inc ${dp:02x}"
+inc_abs       op=0xEE addr:word16 | "inc ${addr:04x:sym}"
+inc_dpx       op=0xF6 dp:byte8 | "inc ${dp:02x},x"
+inc_abx       op=0xFE addr:word16 | "inc ${addr:04x:sym},x"
+dec_a         op=0x3A | "dec a"
+dec_dp        op=0xC6 dp:byte8 | "dec ${dp:02x}"
+dec_abs       op=0xCE addr:word16 | "dec ${addr:04x:sym}"
+dec_dpx       op=0xD6 dp:byte8 | "dec ${dp:02x},x"
+dec_abx       op=0xDE addr:word16 | "dec ${addr:04x:sym},x"
+inx           op=0xE8 | "inx"
+iny           op=0xC8 | "iny"
+dex           op=0xCA | "dex"
+dey           op=0x88 | "dey"
+
+asl_dp        op=0x06 dp:byte8 | "asl ${dp:02x}"
+asl_a         op=0x0A | "asl a"
+asl_abs       op=0x0E addr:word16 | "asl ${addr:04x:sym}"
+asl_dpx       op=0x16 dp:byte8 | "asl ${dp:02x},x"
+asl_abx       op=0x1E addr:word16 | "asl ${addr:04x:sym},x"
+lsr_dp        op=0x46 dp:byte8 | "lsr ${dp:02x}"
+lsr_a         op=0x4A | "lsr a"
+lsr_abs       op=0x4E addr:word16 | "lsr ${addr:04x:sym}"
+lsr_dpx       op=0x56 dp:byte8 | "lsr ${dp:02x},x"
+lsr_abx       op=0x5E addr:word16 | "lsr ${addr:04x:sym},x"
+rol_dp        op=0x26 dp:byte8 | "rol ${dp:02x}"
+rol_a         op=0x2A | "rol a"
+rol_abs       op=0x2E addr:word16 | "rol ${addr:04x:sym}"
+rol_dpx       op=0x36 dp:byte8 | "rol ${dp:02x},x"
+rol_abx       op=0x3E addr:word16 | "rol ${addr:04x:sym},x"
+ror_dp        op=0x66 dp:byte8 | "ror ${dp:02x}"
+ror_a         op=0x6A | "ror a"
+ror_abs       op=0x6E addr:word16 | "ror ${addr:04x:sym}"
+ror_dpx       op=0x76 dp:byte8 | "ror ${dp:02x},x"
+ror_abx       op=0x7E addr:word16 | "ror ${addr:04x:sym},x"
+
+tsb_dp        op=0x04 dp:byte8 | "tsb ${dp:02x}"
+tsb_abs       op=0x0C addr:word16 | "tsb ${addr:04x:sym}"
+trb_dp        op=0x14 dp:byte8 | "trb ${dp:02x}"
+trb_abs       op=0x1C addr:word16 | "trb ${addr:04x:sym}"
+
+bpl_rel       op=0x10 disp:rel8 | "bpl ${disp:rel}"
+bmi_rel       op=0x30 disp:rel8 | "bmi ${disp:rel}"
+bvc_rel       op=0x50 disp:rel8 | "bvc ${disp:rel}"
+bvs_rel       op=0x70 disp:rel8 | "bvs ${disp:rel}"
+bcc_rel       op=0x90 disp:rel8 | "bcc ${disp:rel}"
+bcs_rel       op=0xB0 disp:rel8 | "bcs ${disp:rel}"
+bne_rel       op=0xD0 disp:rel8 | "bne ${disp:rel}"
+beq_rel       op=0xF0 disp:rel8 | "beq ${disp:rel}"
+bra_rel       op=0x80 disp:rel8 | "bra ${disp:rel}"
+brl_rell      op=0x82 disp:rel16 | "brl ${disp:rel}"
+
+jmp_abs       op=0x4C addr:word16 | "jmp ${addr:04x:sym}"
+jmp_abl       op=0x5C addr:long24 | "jmp ${addr:06x:sym}"
+jmp_ind       op=0x6C addr:word16 | "jmp (${addr:04x:sym})"
+jmp_iax       op=0x7C addr:word16 | "jmp (${addr:04x:sym},x)"
+jml_ial       op=0xDC addr:word16 | "jml [${addr:04x:sym}]"
+jsr_abs       op=0x20 addr:word16 | "jsr ${addr:04x:sym}"
+jsl_abl       op=0x22 addr:long24 | "jsl ${addr:06x:sym}"
+jsr_iax       op=0xFC addr:word16 | "jsr (${addr:04x:sym},x)"
+rts           op=0x60 | "rts"
+rtl           op=0x6B | "rtl"
+rti           op=0x40 | "rti"
+
+pha           op=0x48 | "pha"
+pla           op=0x68 | "pla"
+phx           op=0xDA | "phx"
+plx           op=0xFA | "plx"
+phy           op=0x5A | "phy"
+ply           op=0x7A | "ply"
+php           op=0x08 | "php"
+plp           op=0x28 | "plp"
+phb           op=0x8B | "phb"
+plb           op=0xAB | "plb"
+phd           op=0x0B | "phd"
+pld           op=0x2B | "pld"
+phk           op=0x4B | "phk"
+pea_abs       op=0xF4 addr:word16 | "pea ${addr:04x:sym}"
+pei_idp       op=0xD4 dp:byte8 | "pei (${dp:02x})"
+per_rell      op=0x62 disp:rel16 | "per ${disp:rel}"
+
+tax           op=0xAA | "tax"
+txa           op=0x8A | "txa"
+tay           op=0xA8 | "tay"
+tya           op=0x98 | "tya"
+tsx           op=0xBA | "tsx"
+txs           op=0x9A | "txs"
+txy           op=0x9B | "txy"
+tyx           op=0xBB | "tyx"
+tcs           op=0x1B | "tcs"
+tsc           op=0x3B | "tsc"
+tcd           op=0x5B | "tcd"
+tdc           op=0x7B | "tdc"
+
+clc           op=0x18 | "clc"
+sec           op=0x38 | "sec"
+cli           op=0x58 | "cli"
+sei           op=0x78 | "sei"
+cld           op=0xD8 | "cld"
+sed           op=0xF8 | "sed"
+clv           op=0xB8 | "clv"
+
+rep_imm       op=0xC2 mask:byte8 | "rep #${mask:02x}"
+sep_imm       op=0xE2 mask:byte8 | "sep #${mask:02x}"
+xce           op=0xFB | "xce"
+
+mvn_bm        op=0x54 dst:byte8 src:byte8 | "mvn ${src:02x},${dst:02x}"
+mvp_bm        op=0x44 dst:byte8 src:byte8 | "mvp ${src:02x},${dst:02x}"
+
+nop           op=0xEA | "nop"
+brk_imm       op=0x00 sig:byte8 | "brk #${sig:02x}"
+cop_imm       op=0x02 sig:byte8 | "cop #${sig:02x}"
+wdm_imm       op=0x42 sig:byte8 | "wdm #${sig:02x}"
+stp           op=0xDB | "stp"
+wai           op=0xCB | "wai"
+xba           op=0xEB | "xba"
+
+dispatch branches   { bra_rel, beq_rel, bne_rel, bcc_rel, bcs_rel, bpl_rel, bmi_rel, bvc_rel, bvs_rel, brl_rell }
+dispatch flag_ops   { clc, sec, cli, sei, cld, sed, clv }
+dispatch flag_mask  { rep_imm, sep_imm }
+dispatch sw_trap    { brk_imm, cop_imm }
+dispatch reg_step   { inc_a, dec_a, inx, iny, dex, dey }
+dispatch store      { sta_idx, sta_sr, sta_dp, sta_idl, sta_abs, sta_abl, sta_idy, sta_idp, sta_isy, sta_dpx, sta_idly, sta_aby, sta_abx, sta_alx, stx_dp, stx_abs, stx_dpy, sty_dp, sty_abs, sty_dpx, stz_dp, stz_dpx, stz_abs, stz_abx }
+dispatch load       { lda_idx, lda_sr, lda_dp, lda_idl, lda_imm_m16, lda_imm_m8, lda_abs, lda_abl, lda_idy, lda_idp, lda_isy, lda_dpx, lda_idly, lda_aby, lda_abx, lda_alx, ldx_imm_x16, ldx_imm_x8, ldx_dp, ldx_abs, ldx_dpy, ldx_aby, ldy_imm_x16, ldy_imm_x8, ldy_dp, ldy_abs, ldy_dpx, ldy_abx }
+dispatch alu        { adc_idx, adc_sr, adc_dp, adc_idl, adc_imm_m16, adc_imm_m8, adc_abs, adc_abl, adc_idy, adc_idp, adc_isy, adc_dpx, adc_idly, adc_aby, adc_abx, adc_alx, sbc_idx, sbc_sr, sbc_dp, sbc_idl, sbc_imm_m16, sbc_imm_m8, sbc_abs, sbc_abl, sbc_idy, sbc_idp, sbc_isy, sbc_dpx, sbc_idly, sbc_aby, sbc_abx, sbc_alx, and_idx, and_sr, and_dp, and_idl, and_imm_m16, and_imm_m8, and_abs, and_abl, and_idy, and_idp, and_isy, and_dpx, and_idly, and_aby, and_abx, and_alx, ora_idx, ora_sr, ora_dp, ora_idl, ora_imm_m16, ora_imm_m8, ora_abs, ora_abl, ora_idy, ora_idp, ora_isy, ora_dpx, ora_idly, ora_aby, ora_abx, ora_alx, eor_idx, eor_sr, eor_dp, eor_idl, eor_imm_m16, eor_imm_m8, eor_abs, eor_abl, eor_idy, eor_idp, eor_isy, eor_dpx, eor_idly, eor_aby, eor_abx, eor_alx }
+dispatch compare    { cmp_idx, cmp_sr, cmp_dp, cmp_idl, cmp_imm_m16, cmp_imm_m8, cmp_abs, cmp_abl, cmp_idy, cmp_idp, cmp_isy, cmp_dpx, cmp_idly, cmp_aby, cmp_abx, cmp_alx, cpx_imm_x16, cpx_imm_x8, cpx_dp, cpx_abs, cpy_imm_x16, cpy_imm_x8, cpy_dp, cpy_abs }
+dispatch bit_test   { bit_dp, bit_abs, bit_dpx, bit_abx, bit_imm_m16, bit_imm_m8 }
+dispatch shift      { asl_dp, asl_a, asl_abs, asl_dpx, asl_abx, lsr_dp, lsr_a, lsr_abs, lsr_dpx, lsr_abx, rol_dp, rol_a, rol_abs, rol_dpx, rol_abx, ror_dp, ror_a, ror_abs, ror_dpx, ror_abx }
+dispatch mem_step   { inc_dp, inc_abs, inc_dpx, inc_abx, dec_dp, dec_abs, dec_dpx, dec_abx }
+dispatch bit_modify { tsb_dp, tsb_abs, trb_dp, trb_abs }
+dispatch transfer   { tax, txa, tay, tya, tsx, txs, txy, tyx, tcs, tsc, tcd, tdc }
+dispatch push       { pha, phx, phy, php, phb, phd, phk, pea_abs, pei_idp, per_rell }
+dispatch pop        { pla, plx, ply, plp, plb, pld }
+dispatch jump       { jmp_abs, jmp_abl, jmp_ind, jmp_iax, jml_ial }
+dispatch call       { jsr_abs, jsl_abl, jsr_iax }
+dispatch ret        { rts, rtl, rti }
+dispatch block_move { mvn_bm, mvp_bm }
+dispatch halt       { stp, wai }
+
+# address mode tags
+am_dp   { lda_dp, ldx_dp, ldy_dp, sta_dp, stx_dp, sty_dp, stz_dp, adc_dp, sbc_dp, and_dp, ora_dp, eor_dp, cmp_dp, cpx_dp, cpy_dp, bit_dp, inc_dp, dec_dp, asl_dp, lsr_dp, rol_dp, ror_dp, tsb_dp, trb_dp }
+am_dpx  { lda_dpx, ldy_dpx, sta_dpx, sty_dpx, stz_dpx, adc_dpx, sbc_dpx, and_dpx, ora_dpx, eor_dpx, cmp_dpx, bit_dpx, inc_dpx, dec_dpx, asl_dpx, lsr_dpx, rol_dpx, ror_dpx }
+am_dpy  { ldx_dpy, stx_dpy }
+am_idp  { lda_idp, sta_idp, adc_idp, sbc_idp, and_idp, ora_idp, eor_idp, cmp_idp }
+am_idx  { lda_idx, sta_idx, adc_idx, sbc_idx, and_idx, ora_idx, eor_idx, cmp_idx }
+am_idy  { lda_idy, sta_idy, adc_idy, sbc_idy, and_idy, ora_idy, eor_idy, cmp_idy }
+am_idl  { lda_idl, sta_idl, adc_idl, sbc_idl, and_idl, ora_idl, eor_idl, cmp_idl }
+am_idly { lda_idly, sta_idly, adc_idly, sbc_idly, and_idly, ora_idly, eor_idly, cmp_idly }
+am_abs  { lda_abs, ldx_abs, ldy_abs, sta_abs, stx_abs, sty_abs, stz_abs, adc_abs, sbc_abs, and_abs, ora_abs, eor_abs, cmp_abs, cpx_abs, cpy_abs, bit_abs, inc_abs, dec_abs, asl_abs, lsr_abs, rol_abs, ror_abs, tsb_abs, trb_abs }
+am_abx  { lda_abx, ldy_abx, sta_abx, stz_abx, adc_abx, sbc_abx, and_abx, ora_abx, eor_abx, cmp_abx, bit_abx, inc_abx, dec_abx, asl_abx, lsr_abx, rol_abx, ror_abx }
+am_aby  { lda_aby, ldx_aby, sta_aby, adc_aby, sbc_aby, and_aby, ora_aby, eor_aby, cmp_aby }
+am_abl  { lda_abl, sta_abl, adc_abl, sbc_abl, and_abl, ora_abl, eor_abl, cmp_abl }
+am_alx  { lda_alx, sta_alx, adc_alx, sbc_alx, and_alx, ora_alx, eor_alx, cmp_alx }
+am_sr   { lda_sr, sta_sr, adc_sr, sbc_sr, and_sr, ora_sr, eor_sr, cmp_sr }
+am_isy  { lda_isy, sta_isy, adc_isy, sbc_isy, and_isy, ora_isy, eor_isy, cmp_isy }
+am_imm  { lda_imm_m16, lda_imm_m8, ldx_imm_x16, ldx_imm_x8, ldy_imm_x16, ldy_imm_x8, adc_imm_m16, adc_imm_m8, sbc_imm_m16, sbc_imm_m8, and_imm_m16, and_imm_m8, ora_imm_m16, ora_imm_m8, eor_imm_m16, eor_imm_m8, cmp_imm_m16, cmp_imm_m8, cpx_imm_x16, cpx_imm_x8, cpy_imm_x16, cpy_imm_x8, bit_imm_m16, bit_imm_m8 }

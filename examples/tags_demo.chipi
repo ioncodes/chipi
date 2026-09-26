@@ -1,0 +1,24 @@
+# Tags & dispatch groups. `name { ... }` blocks tag instructions (metadata, surfaced via
+# `inst.tags()` / OPCODE_TAGS); `dispatch name { ... }` additionally folds members into one grouped
+# handler (`fn alu(op: AluKind, inst)`), with the individual handlers kept (defaulting to no-op) so a
+# consumer can implement either layer.
+
+decoder Tags {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+selector op    [26:31]
+selector funct [0:5]
+
+operand greg = u5 { display("r{}") }
+
+add op=0 funct=0b100000 rd:greg[11:15] rs:greg[21:25] rt:greg[16:20] | "add {rd}, {rs}, {rt}"
+sub op=0 funct=0b100010 rd:greg[11:15] rs:greg[21:25] rt:greg[16:20] | "sub {rd}, {rs}, {rt}"
+ori op=0b001101 rt:greg[16:20] rs:greg[21:25] imm:u16[0:15]          | "ori {rt}, {rs}, {imm}"
+
+# metadata tag: add/sub/ori are all "arith"
+arith { add, sub, ori }
+# dispatch group: fold add/sub into one handler (ori stays its own)
+dispatch alu { add, sub }

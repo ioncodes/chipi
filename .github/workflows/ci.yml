@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [master, '1.0']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  rust:
+    name: Rust ${{ matrix.toolchain }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: ['1.74.0', stable]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: rustfmt, clippy
+      - name: Tooling for cross-backend tests
+        run: |
+          g++ --version
+          python3 --version
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Build
+        run: cargo build --workspace --all-targets --locked
+      - name: Test
+        run: cargo test --workspace --locked
+      - name: Verify crate archives
+        if: matrix.toolchain == 'stable'
+        run: cargo package --workspace --locked
+
+  vscode:
+    name: VS Code extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p chipi-lsp --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: editors/vscode/package-lock.json
+      - run: npm ci
+        working-directory: editors/vscode
+      - run: npm test
+        working-directory: editors/vscode
+      - name: Test in VS Code
+        run: xvfb-run -a npm run test:host
+        working-directory: editors/vscode
+      - run: npm run package
+        working-directory: editors/vscode
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chipi-vscode
+          path: editors/vscode/*.vsix
+          if-no-files-found: error

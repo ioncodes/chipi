@@ -1,0 +1,20 @@
+# Guard-separated leaves. `eq` and `mov` share every fixed bit, so masks alone cannot
+# decide the slot; the guarded leaf is tried first and a failed guard falls through to
+# the unguarded fallback. `lo` and `hi` are both guarded (declaration order sets the
+# priority) with no fallback, so the gap between their guards decodes invalid.
+
+decoder GuardChain {
+    width = 16
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [12:15]
+
+operand reg = u4 { display("r{}") }
+
+eq  op=0 a:reg[3:0] b:reg[7:4] when a == b | "eq {a}"
+mov op=0 a:reg[3:0] b:reg[7:4]             | "mov {a}, {b}"
+
+lo op=1 v:u8[7:0] when v < 0x80  | "lo ${v:02x}"
+hi op=1 v:u8[7:0] when v >= 0xc0 | "hi ${v:02x}"

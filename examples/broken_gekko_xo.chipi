@@ -1,0 +1,24 @@
+# Negative fixture: a 10bit XO-form selector `[21:30]` overlaps the OE bit
+# (msb0 [21]) bound by the XO form. chipi's field-overlap pass rejects it. A
+# global `xo [21:30]` selector is wrong for XO-form; the 9bit [22:30] in gekko.chipi is correct.
+
+decoder GekkoBroken {
+    width = 32
+    bit_order = msb0
+    endian = big
+}
+
+selector primary [0:5]
+selector xo      [21:30]   # WRONG for XO-form: bit 21 is OE, so this overlaps the `oe` field.
+
+operand gpr = u5 { display("r{}") }
+
+form XO {
+    rd:gpr[6:10]
+    ra:gpr[11:15]
+    rb:gpr[16:20]
+    oe:u1[21]
+    rc:u1[31]
+}
+
+add primary=31 xo=266 uses XO | "add {rd}, {ra}, {rb}"

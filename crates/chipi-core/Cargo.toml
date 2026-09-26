@@ -1,0 +1,14 @@
+[package]
+name = "chipi-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Resolution, validation, decode-tree lowering, the reference evaluator, encoder and codegen model for chipi."
+
+[dependencies]
+chipi-syntax.workspace = true
+
+[lints]
+workspace = true

@@ -1,424 +1,211 @@
 # chipi
 
-A declarative instruction decoder generator. You define a CPUs encoding in
-a portable `.chipi` DSL file. You then describe per-project codegen choices
-in a `*.bindings.chipi` file. chipi produces decoders, disassemblers and
-emulator dispatch code.
+[![CI](https://github.com/ioncodes/chipi/actions/workflows/ci.yml/badge.svg)](https://github.com/ioncodes/chipi/actions/workflows/ci.yml)
 
-`.chipi` files are language-agnostic. They describe bit patterns, field
-extractions and display formats. They contain no language-specific
-information.
+chipi generates instruction decoders, disassemblers and dispatchers in Rust, C++
+and Python. You write the bit layouts, operands and display text once in a
+`.chipi` file. The generated code handles the matching and extraction.
 
-`*.bindings.chipi` files are project-specific. They pick which decoders to
-lower, pick which language/processor to target (Rust, C++, IDA, Binary Ninja)
-and much more.
+It also has a reference encoder and text assembler in the core library and CLI.
+These are useful for checking a spec and assembling individual instructions;
+they are not emitted into generated decoders.
 
-## Backends
+## Get started
 
-| Backend | Output                                                             |
-| ------- | ------------------------------------------------------------------ |
-| `rust`  | Decoder enum + `decode()` + `Display`. Optional emulator dispatch. |
-| `cpp`   | Single-header decoder with `std::format`.                          |
-| `ida`   | IDA Pro 9.x processor module (Python).                             |
-| `binja` | Binary Ninja Architecture plugin (Python).                         |
+Install the released tools from crates.io with Rust 1.74 or newer:
 
-The IDA and Binary Ninja outputs are experimental. They do not replace
-hand-written processor modules.
-
-## Architecture
-
-```
-*.chipi --------------+
-                      |
-*.bindings.chipi -----+--> bindings parser/lower --> codegen
-                      |
-                      +--> chipi-cli / chipi-build
+```sh
+cargo install chipi-cli --locked
+cargo install chipi-lsp --locked
 ```
 
-Three crates:
+The first command installs `chipi`. The second installs the language server used
+by the [VS Code extension](#editor-support) and other LSP clients.
 
-| Crate             | Purpose                                                      |
-| ----------------- | ------------------------------------------------------------ |
-| **`chipi-core`**  | Parser, IR, validation, bindings frontend, codegen backends. |
-| **`chipi-cli`**   | CLI: `generate`, `check`, `explain`, `preview`.              |
-| **`chipi-build`** | `build.rs` helper for Rust projects.                         |
+With the specs in this repository's `examples/` directory, check a spec, decode a
+word and generate a decoder:
 
-## Quick start
+```sh
+chipi check examples/mips.chipi
+chipi explain examples/mips.chipi -- 0x00851020
+chipi emit --target rust examples/mips.chipi -o mips_decoder.rs
+```
 
-A `.chipi` instruction spec describes the encoding:
+Use `--target cpp` or `--target python` for the other backends. Generated decoders
+are self-contained; they do not require chipi at runtime.
+
+## A small spec
+
+This describes three MIPS instructions:
 
 ```text
-decoder Gekko {
+decoder Mips {
     width = 32
-    bit_order = msb0
+    bit_order = lsb0
+    endian = little
 }
 
-addi   [0:5]=001110 rd:u5[6:10] ra:u5[11:15] simm:s16[16:31]
-       | "addi r{rd}, r{ra}, {simm}"
+selector op    [31:26]
+selector funct [5:0]
 
-ori    [0:5]=011000 rs:u5[6:10] ra:u5[11:15] uimm:u16[16:31]
-       | "ori r{ra}, r{rs}, 0x{uimm:04x}"
+operand greg = u5  { display("$r{}") }
+type simm16  = i32 { sign_extend(16), display(signed_hex) }
+
+add   op=0        funct=0b100000 rd:greg[15:11] rs:greg[25:21] rt:greg[20:16] | "add {rd}, {rs}, {rt}"
+addiu op=0b001001 rt:greg[20:16] rs:greg[25:21] imm:simm16[15:0]              | "addiu {rt}, {rs}, {imm}"
+lw    op=0b100011 rt:greg[20:16] rs:greg[25:21] off:simm16[15:0]              | "lw {rt}, {off}({rs})"
 ```
 
-A `*.bindings.chipi` file picks which decoder/dispatch to generate:
+Selectors name the bits used to identify an instruction. Operands name the bits
+to extract and how to display them. Each instruction fixes its selector values,
+binds its operands and gives its assembly text after `|`.
 
-```text
-include "gekko.chipi"
+From this, chipi produces classification and decoding functions, operand accessors,
+a disassembler and dispatch handlers. It also exposes opcode names and ids. Dotted
+instruction names such as `lda.imm` add separate mnemonic and form metadata.
 
-target rust {
-    decoder Gekko {
-        output "$OUT_DIR/gekko.rs"
+The specs in [`examples/`](examples) demonstrate guards, computed operands,
+mode-dependent fetches, prefix scanning, indexed instruction families, display
+templates and subdecoders.
 
-        type gpr = crate::cpu::Gpr
-        type simm16 = i32
-    }
+## Use it from Rust
 
-    dispatch Gekko {
-        output "$OUT_DIR/gekko_dispatch.rs"
+Add `chipi-macros` to your project and put the spec beside your source. The `isa!`
+macro generates a module at compile time, without a build script:
 
-        context crate::Cpu
-        handlers crate::cpu::interpreter
-        strategy fn_ptr_lut
+```rust
+chipi_macros::isa!("isa/mips.chipi");
 
-        invalid_handler crate::cpu::interpreter::invalid
-
-        instruction_type crate::cpu::Instruction {
-            output "$OUT_DIR/gekko_instr.rs"
-        }
-
-        handler alu {
-            addi
-            ori
-        }
-    }
-}
+let (inst, _len) = Mips::decode(0x0085_1020);
+assert_eq!(inst.opcode_name(), "add");
+assert_eq!(inst.rd(), 2);
 ```
 
-Generate everything:
+The path is relative to your crate's `Cargo.toml`; the module name comes from the
+spec's `decoder` declaration. Changes to the spec trigger recompilation. Generated
+Rust disassembly is behind the consuming crate's `disasm` feature, so declare and
+enable that feature if you need it.
 
-```bash
-chipi generate specs/gekko.bindings.chipi
-```
+The default representation is a small instruction value with lazy operand
+accessors. For a simple ISA, `isa!("isa/cpu.chipi", style = enum)` generates an enum
+with eagerly decoded operand fields instead. See the limitations below before
+choosing it.
 
 ## CLI
 
-```bash
-# Run all targets in the file.
-chipi generate <bindings>
-chipi generate <bindings> --target rust
-chipi generate <bindings> --target rust --decoder Gekko
+```sh
+# Assemble one instruction into a word and bytes.
+chipi asm examples/mips.chipi -- 'add $r2, $r4, $r5'
 
-# Validate without writing.
-chipi check <bindings>
+# Check encoder round trips and report assembler coverage per instruction.
+chipi check --roundtrip examples/mips.chipi
 
-# Decode an opcode and print the match.
-chipi explain <bindings> --decoder Gekko 0x38600001
+# Decode with a host mode, or inspect a prefixed byte stream.
+chipi explain examples/fetch_expr.chipi --mode m=0 -- 0xA9
+chipi explain examples/x86_prefix.chipi --stream -- 0x66,0x48,0x90
 
-# Print the lowered configuration.
-chipi preview <bindings>
-chipi preview <bindings> --target rust
+# Generate editable handler skeletons or inspect the compiler's output.
+chipi stubs examples/mips.chipi -o handlers.rs
+chipi dump-ir examples/mips.chipi
+chipi dump-tree examples/mips.chipi
 ```
 
-A bindings file may contain multiple targets. If `--target` is omitted in
-that case, chipi reports an error. The same applies to `--decoder` when
-more than one decoder or dispatch is reachable.
+`--mode` takes numeric values as `name=value`, with commas between assignments.
+It applies to word decoding; stream decoding starts from the spec's defaults and
+applies its prefixes. Run `chipi --help` for command syntax or `chipi --version`
+to check the installed version.
 
-## `build.rs`
+## Editor support
 
-Drive codegen from `build.rs` via `chipi-build`:
+The [VS Code extension](editors/vscode) provides autocomplete, errors and warnings
+as you type, hover information, go-to-definition, code references, outline symbols,
+folding and document formatting. It also includes syntax highlighting and snippets.
 
-```rust
-// build.rs
-fn main() {
-    chipi_build::generate_bindings("specs/gekko.bindings.chipi")
-        .expect("chipi codegen failed");
+After installing `chipi-lsp`, build and install the extension with Node.js 22 or newer:
+
+```sh
+cd editors/vscode
+npm ci
+npm run package
+code --install-extension chipi-1.0.0.vsix
+```
+
+Open a `.chipi` file to start the server. If VS Code cannot find it on `PATH`, set
+`chipi.serverPath` to the full path of the `chipi-lsp` executable. The command
+**chipi: Restart Language Server** restarts it after configuration changes or an update.
+
+Formatting adjusts spacing and indentation while keeping comments, string contents
+and line breaks. To format on save:
+
+```json
+"[chipi]": {
+  "editor.defaultFormatter": "ioncodes.chipi",
+  "editor.formatOnSave": true
 }
 ```
 
-To select a single target or decoder:
+Other editors can launch `chipi-lsp --stdio` for `.chipi` files. See the
+[editor guide](editors/vscode/README.md) for configuration and current LSP scope.
 
-```rust
-chipi_build::generate_bindings_target("specs/gekko.bindings.chipi", "rust")?;
-chipi_build::generate_bindings_decoder("specs/dsp.bindings.chipi", "rust", "GcDsp")?;
+## Supported features and limits
+
+| Feature                                      | Rust (default) | C++ | Python |
+| -------------------------------------------- | -------------- | --- | ------ |
+| Decode, operand accessors and guards         | Yes            | Yes | Yes    |
+| Disassembly and grouped dispatch             | Yes            | Yes | Yes    |
+| Modes, prefixes and context                  | Yes            | Yes | Yes    |
+| Fetched operands and contextual disassembly  | Yes            | Yes | Yes    |
+| Tags, mnemonic/form metadata and subdecoders | Yes            | Yes | Yes    |
+| Function-pointer handler table               | Yes            | No  | No     |
+| Generated encoder or assembler               | No             | No  | No     |
+
+The compiler and generated code have a few boundaries to keep in mind:
+
+- Host modes have a maximum of 256 value combinations. Combinations selecting the
+  same instructions share a decode table. Word-level calls use the declared defaults;
+  use the generated mode-aware or contextual entry points to supply runtime state.
+- `fetch(expr)` can depend on host modes and must yield a width from 1 to 64 bits
+  in every combination. Prefix-assigned context cannot set a fetch width.
+- Generated backends reject `length` arms that read decode variables. Display
+  conditions reading those variables require the contextual disassembler path.
+- The Rust enum backend supports fixed windows and fixed-size fetched operands.
+  It rejects `length`, prefixes, subdecoders and expression-width fetches.
+- The reference assembler handles reversible display forms. Numeric fallbacks for
+  symbol and relative operands work; symbol names need context and subdecoder
+  output text is not generally reversible. Use `check --roundtrip` to see coverage
+  for your spec. Function inversion may fall back to a bounded search.
+
+## Examples and tests
+
+Start with [`mips.chipi`](examples/mips.chipi) for a conventional fixed-width ISA,
+[`rv32i.chipi`](examples/rv32i.chipi) for scattered immediates, or
+[`x86_prefix.chipi`](examples/x86_prefix.chipi) for prefixes and context.
+[`fetch_expr.chipi`](examples/fetch_expr.chipi),
+[`axes_demo.chipi`](examples/axes_demo.chipi) and
+[`for_demo.chipi`](examples/for_demo.chipi) each demonstrate one of the larger
+language features.
+
+The four production specs in [`corpus/`](corpus) cover the Ricoh 5A22, SPC700,
+Gekko and GameCube DSP. Tests compare generated Rust, C++ and Python code against
+the reference interpreter and check the corpus against saved decode transcripts.
+Everything needed is in this checkout.
+
+To work on chipi itself, run the tools from the repository with
+`cargo run -p chipi-cli -- --help` or `cargo run -p chipi-lsp -- --stdio`.
+To install your local changes, use `cargo install --path crates/chipi-cli --locked`
+and `cargo install --path crates/chipi-lsp --locked`.
+
+```sh
+cargo test --workspace --locked
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 ```
 
-`chipi-build` automatically emits `cargo:rerun-if-changed` for the bindings
-file. It also emits one for every transitively included bindings file and one
-for every included `.chipi` spec.
+Backend tests need `g++` with C++17 support and `python3` on `PATH`. The
+[editor guide](editors/vscode/README.md) covers building and testing the VS Code
+extension.
 
-## Bindings reference
+## License
 
-### Targets
-
-A bindings file contains one or more `target <kind> { ... }` blocks:
-
-- `target rust`: Supports `decoder` and `dispatch` blocks.
-- `target cpp`: Supports `decoder` blocks.
-- `target ida`: Supports `processor` blocks.
-- `target binja`: Supports `architecture` blocks.
-
-`include "*.chipi"` brings in an instruction spec. `include "*.bindings.chipi"`
-recursively merges another bindings file's targets.
-The latter is useful for combining multiple CPUs in one project.
-
-### Rust decoders
-
-```text
-target rust {
-    decoder Gekko {
-        output "$OUT_DIR/gekko.rs"
-
-        type gpr = crate::cpu::Gpr
-        type fpr = crate::cpu::Fpr
-        type simm16 = i32
-
-        subdecoder GekkoExt {
-            output "$OUT_DIR/gekko_ext.rs"
-        }
-    }
-}
-```
-
-Type aliases declared in the `.chipi` file map to the Rust paths listed in
-`type ... = ...`. Sub-decoder blocks share the same set of options.
-
-### Rust dispatches
-
-```text
-target rust {
-    dispatch Gekko {
-        output "$OUT_DIR/gekko_dispatch.rs"
-
-        context crate::Cpu
-        handlers crate::cpu::interpreter
-        strategy fn_ptr_lut
-
-        invalid_handler crate::cpu::interpreter::invalid
-
-        instruction_type crate::cpu::Instruction {
-            output "$OUT_DIR/gekko_instr.rs"
-        }
-
-        handler alu {
-            addi
-            ori
-        }
-    }
-}
-```
-
-If no `handler` blocks are present, every instruction maps to a same-named
-function under the `handlers` module path:
-
-- `addi` -> `crate::cpu::interpreter::addi`
-- `ori`  -> `crate::cpu::interpreter::ori`
-
-Each `handler <name> { ... }` block groups the listed instructions under
-one const-generic handler taking `<const OP: u32>`:
-
-- `addi` -> `crate::cpu::interpreter::alu::<{ OP_ADDI }>`
-- `ori`  -> `crate::cpu::interpreter::alu::<{ OP_ORI }>`
-
-The `OP_*` constants are emitted into the generated dispatch file. The user
-writes:
-
-```rust
-pub fn alu<const OP: u32>(ctx: &mut Cpu, instr: Instruction) {
-    match OP {
-        OP_ADDI => { /* ... */ }
-        OP_ORI  => { /* ... */ }
-        _ => unreachable!(),
-    }
-}
-```
-
-### Extra const-generic handler arguments
-
-`handler_const <expr>` appends one or more extra const-generic arguments to
-every handler reference in the generated LUT. Use it when handlers take
-more const generics than just `OP` and the value is constant for the whole
-binding (e.g. a `SystemId` selecting which CPU configuration this LUT is
-for):
-
-```text
-target rust {
-    dispatch Gekko {
-        output "$OUT_DIR/gekko_lut_gc.rs"
-        context crate::gamecube::GameCube
-        handlers crate::gekko::interpreter
-        handler_const crate::system::GC
-
-        handler alu { addi, ori }
-    }
-
-    dispatch Gekko {
-        output "$OUT_DIR/gekko_lut_wii.rs"
-        context crate::wii::Wii
-        handlers crate::gekko::interpreter
-        handler_const crate::system::WII
-
-        handler alu { addi, ori }
-    }
-}
-```
-
-Generates `alu::<{ OP_ADDI }, { crate::system::GC }>` for the first dispatch
-and `alu::<{ OP_ADDI }, { crate::system::WII }>` for the second. Two LUTs,
-one shared generic handler module. The directive is repeatable for handlers
-with three or more const generics; each entry becomes its own `{ ... }`-wrapped
-arg in declaration order.
-
-For ungrouped instructions the same arguments apply: `sc` becomes
-`sc::<{ crate::system::GC }>`.
-
-### Dispatch strategies
-
-- `fn_ptr_lut`. Static `[Handler; N]` arrays per decision-tree branch.
-- `jump_table`. One `#[inline(always)]` function with nested matches.
-- `flat_lut`. Full-width function-pointer table indexed by raw decoder value.
-- `flat_match`. Full-width match with adjacent equal handlers compressed
-  into ranges.
-
-`flat_lut` and `flat_match` enumerate the entire `2^width` key space. They
-are best suited to small decoders or sub-decoders. chipi does not cap the
-width for you. It will happily generate gigantic outputs if asked, so
-make sure you don't run this against something huge.
-
-### Subdecoder / subdispatch
-
-```text
-target rust {
-    decoder GcDsp {
-        output "$OUT_DIR/dsp.rs"
-
-        type reg5 = crate::dsp::Register
-
-        subdecoder GcDspExt {
-            output "$OUT_DIR/dsp_ext.rs"
-        }
-    }
-
-    dispatch GcDsp {
-        output "$OUT_DIR/dsp_dispatch.rs"
-
-        context crate::dsp::Dsp
-        handlers crate::dsp::interpreter
-        strategy fn_ptr_lut
-        invalid_handler crate::dsp::interpreter::invalid
-
-        subdispatch GcDspExt {
-            handlers crate::dsp::interpreter::ext
-            strategy flat_lut
-            invalid_handler crate::dsp::interpreter::invalid_ext
-        }
-    }
-}
-```
-
-A `subdispatch` inherits `context`, `strategy`, and `invalid_handler` from
-its parent unless overridden. `handlers` and `instruction_type` may also
-be overridden.
-
-### IDA processor
-
-```text
-target ida {
-    processor GcDsp {
-        output "plugins/ida/dsp_proc.py"
-
-        name "gcdsp"
-        long_name "GameCube DSP"
-        id 0x8002
-
-        address_size 16
-        bytes_per_unit 2
-
-        registers {
-            ar0
-            ar1
-            ar2
-            ar3
-            CS
-            DS
-        }
-
-        segment_registers {
-            CS
-            DS
-        }
-
-        flow {
-            calls {
-                callcc
-            }
-            returns {
-                retcc
-            }
-            stops {
-                halt
-            }
-        }
-    }
-}
-```
-
-`segment_registers` must be a subset of `registers`. Instruction names in
-`flow` must exist in the decoder.
-
-### Binary Ninja architecture
-
-```text
-target binja {
-    architecture GcDsp {
-        output "plugins/binja/dsp_arch.py"
-
-        name "gcdsp"
-
-        address_size 2
-        default_int_size 2
-        endianness big
-
-        registers {
-            ar0
-            ar1
-            ar2
-            ar3
-        }
-    }
-}
-```
-
-`endianness` must be `big` or `little`.
-
-## Diagnostics
-
-chipi reports validation errors with a span and an optional `did you mean`
-suggestion. For example:
-
-```
-error: unknown instruction 'halttt' in handler group
- --> test_grouped.bindings.chipi:14
- = help: did you mean "halt"?
-```
-
-`flat_lut` / `flat_match` ambiguity reports each conflicting instruction.
-This happens when one raw value matches two distinct handlers:
-
-```
-error: flat dispatch cannot resolve raw opcode 0x0000007c
-   matched instructions:
-     add  -> crate::cpu::interpreter::add
-     addx -> crate::cpu::interpreter::addx
-   flat dispatch requires each raw value to resolve to exactly one handler.
-```
-
-## Examples
-
-| Project                                                        | Description                                    |
-| -------------------------------------------------------------- | ---------------------------------------------- |
-| [chipi-gekko](https://github.com/ioncodes/chipi-gekko)         | GameCube CPU & DSP disassembler (Rust)         |
-| [chipi-gekko-cpp](https://github.com/ioncodes/chipi-gekko-cpp) | GameCube CPU disassembler (C++)                |
-| [gc-dsp-ida](https://github.com/ioncodes/gc-dsp-ida)           | GameCube DSP processor plugin for IDA Pro 9.x  |
-| [gc-dsp-binja](https://github.com/ioncodes/gc-dsp-binja)       | GameCube DSP processor plugin for Binary Ninja |
-| [chipi-spec](https://github.com/ioncodes/chipi-spec)           | Reusable `.chipi` specs                        |
-| [chipi-vscode](https://github.com/ioncodes/chipi-vscode)       | VS Code syntax highlighting for `.chipi` files |
+MIT or Apache-2.0, your choice. See [LICENSE-MIT](LICENSE-MIT) and
+[LICENSE-APACHE](LICENSE-APACHE).

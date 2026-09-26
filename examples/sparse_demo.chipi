@@ -1,0 +1,19 @@
+# Demonstrates the sparse (verify-chain) residual matcher.
+#
+# Under op = 0, two leaves are discriminated by NON-contiguous fixed bits (bit 0 and bit 8), which
+# the keyed fast path cannot represent. `a` is more specific (fixes bits 0 and 8) and shadows the
+# more general `b` (bit 0 only); the matcher orders most-specific-first and falls through to
+# decode_invalid when neither matches. `dump-tree` shows `lowering=sparse-match`.
+
+decoder Sparse {
+    width = 16
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [15:12]
+
+operand reg = u4 { display("r{}") }
+
+a op=0 [0:0]=1 [8:8]=1 r:reg[7:4] | "a {r}"
+b op=0 [0:0]=0         r:reg[7:4] | "b {r}"

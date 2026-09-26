@@ -1,0 +1,98 @@
+# RV32I: the full RISC-V base integer instruction set (37 instructions).
+#
+# This covers the whole base set, not a subset. It exercises the dense primary table (opcode[6:0]),
+# keyed residual tables (funct3, funct7), every RISC-V immediate shape via `assemble` scatter/gather
+# (I/S/B/U/J), affine transforms (sign_extend, shift_left) and, through the encoder, a round-trip
+# check that encode is the exact inverse of decode.
+
+decoder Rv32i {
+    width = 32
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [6:0]
+selector f3 [14:12]
+selector f7 [31:25]
+
+operand greg   = u5  { display("x{}") }
+operand shamt  = u5  { display("{}") }
+type    immi   = i32 { sign_extend(12), display(signed_hex) }   # I-type 12bit signed immediate
+type    immu   = u32 { zero_extend(20), display(signed_hex) }   # U-type 20bit immediate (objdump form)
+
+# The scattered immediates, each declared once as a reusable operand. A no-range binding
+# (`off:bimm`) turns it into a computed operand, so the `assemble` scatter/gather map and its free
+# encoder inverse are shared across the whole format instead of being repeated per instruction.
+operand bimm = i13 assemble 13 {      # B-type branch immediate
+    [12]   = word[31]
+    [10:5] = word[30:25]
+    [4:1]  = word[11:8]
+    [11]   = word[7]
+    [0]    = 0
+} sign_extend
+
+operand stimm = i12 assemble 12 {     # S-type store immediate
+    [11:5] = word[31:25]
+    [4:0]  = word[11:7]
+} sign_extend
+
+operand jimm = i21 assemble 21 {      # J-type jump immediate
+    [20]    = word[31]
+    [10:1]  = word[30:21]
+    [11]    = word[20]
+    [19:12] = word[19:12]
+    [0]     = 0
+} sign_extend
+
+# U-type: LUI, AUIPC
+lui   op=0b0110111 rd:greg[7:11] uimm:immu[12:31] | "lui {rd}, {uimm}"
+auipc op=0b0010111 rd:greg[7:11] uimm:immu[12:31] | "auipc {rd}, {uimm}"
+
+# J-type: JAL
+jal op=0b1101111 rd:greg[7:11] joff:jimm | "jal {rd}, {joff}"
+
+# I-type: JALR
+jalr op=0b1100111 f3=0b000 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "jalr {rd}, {imm}({rs1})"
+
+# B-type: branches
+beq  op=0b1100011 f3=0b000 rs1:greg[15:19] rs2:greg[20:24] off:bimm | "beq {rs1}, {rs2}, {off}"
+bne  op=0b1100011 f3=0b001 rs1:greg[15:19] rs2:greg[20:24] off:bimm | "bne {rs1}, {rs2}, {off}"
+blt  op=0b1100011 f3=0b100 rs1:greg[15:19] rs2:greg[20:24] off:bimm | "blt {rs1}, {rs2}, {off}"
+bge  op=0b1100011 f3=0b101 rs1:greg[15:19] rs2:greg[20:24] off:bimm | "bge {rs1}, {rs2}, {off}"
+bltu op=0b1100011 f3=0b110 rs1:greg[15:19] rs2:greg[20:24] off:bimm | "bltu {rs1}, {rs2}, {off}"
+bgeu op=0b1100011 f3=0b111 rs1:greg[15:19] rs2:greg[20:24] off:bimm | "bgeu {rs1}, {rs2}, {off}"
+
+# I-type: loads
+lb  op=0b0000011 f3=0b000 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "lb {rd}, {imm}({rs1})"
+lh  op=0b0000011 f3=0b001 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "lh {rd}, {imm}({rs1})"
+lw  op=0b0000011 f3=0b010 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "lw {rd}, {imm}({rs1})"
+lbu op=0b0000011 f3=0b100 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "lbu {rd}, {imm}({rs1})"
+lhu op=0b0000011 f3=0b101 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "lhu {rd}, {imm}({rs1})"
+
+# S-type: stores
+sb op=0b0100011 f3=0b000 rs1:greg[15:19] rs2:greg[20:24] simm:stimm | "sb {rs2}, {simm}({rs1})"
+sh op=0b0100011 f3=0b001 rs1:greg[15:19] rs2:greg[20:24] simm:stimm | "sh {rs2}, {simm}({rs1})"
+sw op=0b0100011 f3=0b010 rs1:greg[15:19] rs2:greg[20:24] simm:stimm | "sw {rs2}, {simm}({rs1})"
+
+# I-type: register-immediate ALU
+addi  op=0b0010011 f3=0b000 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "addi {rd}, {rs1}, {imm}"
+slti  op=0b0010011 f3=0b010 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "slti {rd}, {rs1}, {imm}"
+sltiu op=0b0010011 f3=0b011 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "sltiu {rd}, {rs1}, {imm}"
+xori  op=0b0010011 f3=0b100 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "xori {rd}, {rs1}, {imm}"
+ori   op=0b0010011 f3=0b110 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "ori {rd}, {rs1}, {imm}"
+andi  op=0b0010011 f3=0b111 rd:greg[7:11] rs1:greg[15:19] imm:immi[20:31] | "andi {rd}, {rs1}, {imm}"
+slli  op=0b0010011 f3=0b001 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] sh:shamt[20:24] | "slli {rd}, {rs1}, {sh}"
+srli  op=0b0010011 f3=0b101 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] sh:shamt[20:24] | "srli {rd}, {rs1}, {sh}"
+srai  op=0b0010011 f3=0b101 f7=0b0100000 rd:greg[7:11] rs1:greg[15:19] sh:shamt[20:24] | "srai {rd}, {rs1}, {sh}"
+
+# R-type: register-register ALU
+add  op=0b0110011 f3=0b000 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "add {rd}, {rs1}, {rs2}"
+sub  op=0b0110011 f3=0b000 f7=0b0100000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "sub {rd}, {rs1}, {rs2}"
+sll  op=0b0110011 f3=0b001 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "sll {rd}, {rs1}, {rs2}"
+slt  op=0b0110011 f3=0b010 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "slt {rd}, {rs1}, {rs2}"
+sltu op=0b0110011 f3=0b011 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "sltu {rd}, {rs1}, {rs2}"
+xor  op=0b0110011 f3=0b100 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "xor {rd}, {rs1}, {rs2}"
+srl  op=0b0110011 f3=0b101 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "srl {rd}, {rs1}, {rs2}"
+sra  op=0b0110011 f3=0b101 f7=0b0100000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "sra {rd}, {rs1}, {rs2}"
+or   op=0b0110011 f3=0b110 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "or {rd}, {rs1}, {rs2}"
+and  op=0b0110011 f3=0b111 f7=0b0000000 rd:greg[7:11] rs1:greg[15:19] rs2:greg[20:24] | "and {rd}, {rs1}, {rs2}"

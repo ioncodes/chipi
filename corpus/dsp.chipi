@@ -1,0 +1,675 @@
+# Nintendo GameCube DSP (Macronix "GC-DSP").
+# 16-bit instruction words, MSB0 bit ordering, big endian. A handful of opcodes carry a second
+# 16-bit immediate/address word.
+
+decoder GcDsp {
+    width = 32
+    bit_order = msb0
+    endian = big
+}
+
+# Two-word opcodes select a 32-bit window; everything else is a single 16-bit word. Conditions read
+# the opcode word, which lives in the high half of the 32-bit window (msb0: source [0:n] -> [31:31-n]).
+length =
+  | word[31:21] == 0b00000000011 : 32                   # BLOOP
+  | word[31:21] == 0b00000000100 : 32                   # LRI
+  | word[31:21] == 0b00000000110 : 32                   # LR
+  | word[31:21] == 0b00000000111 : 32                   # SR
+  | word[31:20] == 0b000000101001 : 32                  # Jcc
+  | word[31:20] == 0b000000101011 : 32                  # CALLcc
+  | word[31:24] == 0b00010110 : 32                      # SI
+  | word[31:24] == 0b00010001 : 32                      # BLOOPI
+  | word[31:25] == 0b0000001 && word[20:16] == 0 : 32   # immediate ALU (ADDI/XORI/.../ANDCF)
+  | else : 16
+
+selector op6 [0:5]
+
+# -------------------------------------------------------------------
+# Register name tables
+# -------------------------------------------------------------------
+
+operand reg5 = u5 {
+    display(names {
+        0 => "ar0", 1 => "ar1", 2 => "ar2", 3 => "ar3",
+        4 => "ix0", 5 => "ix1", 6 => "ix2", 7 => "ix3",
+        8 => "wr0", 9 => "wr1", 10 => "wr2", 11 => "wr3",
+        12 => "st0", 13 => "st1", 14 => "st2", 15 => "st3",
+        16 => "ac0.h", 17 => "ac1.h", 18 => "cr", 19 => "sr",
+        20 => "prod.l", 21 => "prod.m1", 22 => "prod.h", 23 => "prod.m2",
+        24 => "ax0.l", 25 => "ax1.l", 26 => "ax0.h", 27 => "ax1.h",
+        28 => "ac0.l", 29 => "ac1.l", 30 => "ac0.m", 31 => "ac1.m",
+        _ => "???"
+    })
+}
+
+# 3-bit $(0x18 + r): also the ext 'L/'LN destination table
+operand acreg3 = u3 {
+    display(names {
+        0 => "ax0.l", 1 => "ax1.l", 2 => "ax0.h", 3 => "ax1.h",
+        4 => "ac0.l", 5 => "ac1.l", 6 => "ac0.m", 7 => "ac1.m",
+        _ => "???"
+    })
+}
+
+# 2-bit $(0x1c + r): also the ext 'MV/'S/'SN source table
+operand acreg2 = u2 {
+    display(names { 0 => "ac0.l", 1 => "ac1.l", 2 => "ac0.m", 3 => "ac1.m", _ => "???" })
+}
+
+# 2-bit ax half: also the ext 'LS/'SL/'MV destination table
+operand ax2 = u2 {
+    display(names { 0 => "ax0.l", 1 => "ax1.l", 2 => "ax0.h", 3 => "ax1.h", _ => "???" })
+}
+
+operand reg3 = u3 {
+    display(names {
+        0 => "ar0", 1 => "ar1", 2 => "ar2", 3 => "ar3",
+        4 => "ix0", 5 => "ix1", 6 => "ix2", 7 => "ix3",
+        _ => "???"
+    })
+}
+
+operand cc = u4 {
+    display(names {
+        0 => "GE", 1 => "L", 2 => "G", 3 => "LE", 4 => "NZ", 5 => "Z", 6 => "NC", 7 => "C",
+        8 => "x8", 9 => "x9", 10 => "xA", 11 => "xB", 12 => "LNZ", 13 => "LZ", 14 => "O", 15 => "",
+        _ => "?"
+    })
+}
+
+# ext 'LD family: the ax0 / ax1 halves selected by a single bit
+operand ext_ax0 = u1 { display(names { 0 => "ax0.l", 1 => "ax0.h", _ => "???" }) }
+operand ext_ax1 = u1 { display(names { 0 => "ax1.l", 1 => "ax1.h", _ => "???" }) }
+
+# -------------------------------------------------------------------
+# Numeric operands (named by bit position; all unsigned decimal unless noted)
+# -------------------------------------------------------------------
+
+operand b3 = u1 { display(dec) }   # selector at bit 3
+operand b4 = u1 { display(dec) }   # selector at bit 4
+operand b6 = u1 { display(dec) }   # selector at bit 6
+operand b7 = u1 { display(dec) }   # selector at bit 7
+operand ar2 = u2 { display(dec) }  # [9:10] @$ar selector
+operand ix2 = u2 { display(dec) }  # [12:13] $ix selector (ADDARN)
+operand arn = u2 { display(dec) }  # [14:15] $ar selector
+operand bit3 = u3 { display(dec) } # [13:15] bit index (SBCLR/SBSET)
+operand shift = u6 { display(dec) }  # [10:15] shift amount (LSL/LSR/ASL/ASR)
+operand imm8 = u8 { display(dec) }   # [8:15] unsigned 8-bit immediate (LOOPI/BLOOPI/SI)
+operand mem = u8 { display(hex) }    # [8:15] 8-bit memory offset (LRS/SRSH/SRS)
+
+type simm = i16 { sign_extend(8) }   # [8:15] signed 8-bit immediate (ADDIS/CMPIS/LRIS)
+
+# ===================================================================
+#  REGULAR INSTRUCTIONS (upper byte 0x00 - 0x2F)
+# ===================================================================
+
+# 0000 0000 0000 0000 - NOP
+nop         [0:15]=0
+            | "NOP"
+
+# 0000 0000 0000 01dd - DAR $arD
+dar         [0:13]=0b00000000000001 arn:arn[14:15]
+            | "DAR $ar{arn}"
+
+# 0000 0000 0000 10dd - IAR $arD
+iar         [0:13]=0b00000000000010 arn:arn[14:15]
+            | "IAR $ar{arn}"
+
+# 0000 0000 0000 11dd - SUBARN $arD
+subarn      [0:13]=0b00000000000011 arn:arn[14:15]
+            | "SUBARN $ar{arn}"
+
+# 0000 0000 0001 ssdd - ADDARN $arD, $ixS
+addarn      [0:11]=0b000000000001 ix2:ix2[12:13] arn:arn[14:15]
+            | "ADDARN $ar{arn}, $ix{ix2}"
+
+# 0000 0000 0010 0001 - HALT
+halt        [0:15]=0b0000000000100001
+            | "HALT"
+
+# 0000 0000 010r rrrr - LOOP $reg
+loop_reg    [0:10]=0b00000000010 r5:reg5[11:15]
+            | "LOOP ${r5}"
+
+# 0000 0000 011r rrrr aaaa aaaa aaaa aaaa - BLOOP $reg, addr
+bloop       [0:10]=0b00000000011 r5:reg5[11:15] imm16:u16[16:31]
+            | "BLOOP ${r5}, {imm16:#06x}"
+
+# 0000 0000 100d dddd iiii iiii iiii iiii - LRI $reg, #imm16
+lri         [0:10]=0b00000000100 r5:reg5[11:15] imm16:u16[16:31]
+            | "LRI ${r5}, #{imm16:#06x}"
+
+# 0000 0000 110d dddd mmmm mmmm mmmm mmmm - LR $reg, @addr
+lr          [0:10]=0b00000000110 r5:reg5[11:15] imm16:u16[16:31]
+            | "LR ${r5}, @{imm16:#06x}"
+
+# 0000 0000 111s ssss mmmm mmmm mmmm mmmm - SR @addr, $reg
+sr          [0:10]=0b00000000111 r5:reg5[11:15] imm16:u16[16:31]
+            | "SR @{imm16:#06x}, ${r5}"
+
+# 0000 0010 0111 cccc - IFcc
+ifcc        [0:11]=0b000000100111 cond:cc[12:15]
+            | "IF{cond}"
+
+# 0000 0010 1001 cccc aaaa aaaa aaaa aaaa - Jcc / JMP
+jcc         [0:11]=0b000000101001 cond:cc[12:15] imm16:u16[16:31]
+            | cond == 15 : "JMP {imm16:#06x}"
+            | "J{cond} {imm16:#06x}"
+
+# 0000 0010 1011 cccc aaaa aaaa aaaa aaaa - CALLcc / CALL
+callcc      [0:11]=0b000000101011 cond:cc[12:15] imm16:u16[16:31]
+            | "CALL{cond} {imm16:#06x}"
+
+# 0000 0010 1101 cccc - RETcc / RET
+retcc       [0:11]=0b000000101101 cond:cc[12:15]
+            | "RET{cond}"
+
+# 0000 0010 1111 cccc - RTIcc / RTI
+rticc       [0:11]=0b000000101111 cond:cc[12:15]
+            | "RTI{cond}"
+
+# -------------------------------------------------------------------
+# 16-bit ALU with 16-bit immediate (0000 001d XXXX 0000 imm16)
+# -------------------------------------------------------------------
+
+addi        [0:6]=0b0000001 b7:b7[7] [8:15]=0b00000000 imm16:u16[16:31]
+            | "ADDI $ac{b7}.m, #{imm16:#06x}"
+
+xori        [0:6]=0b0000001 b7:b7[7] [8:15]=0b00100000 imm16:u16[16:31]
+            | "XORI $ac{b7}.m, #{imm16:#06x}"
+
+andi        [0:6]=0b0000001 b7:b7[7] [8:15]=0b01000000 imm16:u16[16:31]
+            | "ANDI $ac{b7}.m, #{imm16:#06x}"
+
+ori         [0:6]=0b0000001 b7:b7[7] [8:15]=0b01100000 imm16:u16[16:31]
+            | "ORI $ac{b7}.m, #{imm16:#06x}"
+
+cmpi        [0:6]=0b0000001 b7:b7[7] [8:15]=0b10000000 imm16:u16[16:31]
+            | "CMPI $ac{b7}, #{imm16:#06x}"
+
+andf        [0:6]=0b0000001 b7:b7[7] [8:15]=0b10100000 imm16:u16[16:31]
+            | "ANDF $ac{b7}.m, #{imm16:#06x}"
+
+andcf       [0:6]=0b0000001 b7:b7[7] [8:15]=0b11000000 imm16:u16[16:31]
+            | "ANDCF $ac{b7}.m, #{imm16:#06x}"
+
+# -------------------------------------------------------------------
+# Instruction-space indirect loads (0000 001d 0001 XXss)
+# -------------------------------------------------------------------
+
+ilrr        [0:6]=0b0000001 b7:b7[7] [8:13]=0b000100 arn:arn[14:15]
+            | "ILRR $ac{b7}.m, @$ar{arn}"
+
+ilrrd       [0:6]=0b0000001 b7:b7[7] [8:13]=0b000101 arn:arn[14:15]
+            | "ILRRD $ac{b7}.m, @$ar{arn}"
+
+ilrri       [0:6]=0b0000001 b7:b7[7] [8:13]=0b000110 arn:arn[14:15]
+            | "ILRRI $ac{b7}.m, @$ar{arn}"
+
+ilrrn       [0:6]=0b0000001 b7:b7[7] [8:13]=0b000111 arn:arn[14:15]
+            | "ILRRN $ac{b7}.m, @$ar{arn}"
+
+# -------------------------------------------------------------------
+# Special shift instructions
+# -------------------------------------------------------------------
+
+lsrn        [0:15]=0b0000001011001010
+            | "LSRN"
+
+asrn        [0:15]=0b0000001011001011
+            | "ASRN"
+
+# -------------------------------------------------------------------
+# Short-immediate instructions
+# -------------------------------------------------------------------
+
+addis       [0:6]=0b0000010 b7:b7[7] simm:simm[8:15]
+            | "ADDIS $ac{b7}, #{simm}"
+
+cmpis       [0:6]=0b0000011 b7:b7[7] simm:simm[8:15]
+            | "CMPIS $ac{b7}, #{simm}"
+
+lris        [0:4]=0b00001 acsel3:acreg3[5:7] simm:simm[8:15]
+            | "LRIS ${acsel3}, #{simm}"
+
+# -------------------------------------------------------------------
+# Loop instructions
+# -------------------------------------------------------------------
+
+loopi       [0:7]=0b00010000 imm8:imm8[8:15]
+            | "LOOPI #{imm8}"
+
+bloopi      [0:7]=0b00010001 imm8:imm8[8:15] imm16:u16[16:31]
+            | "BLOOPI #{imm8}, {imm16:#06x}"
+
+# -------------------------------------------------------------------
+# Status register bit manipulation
+# -------------------------------------------------------------------
+
+sbclr       [0:12]=0b0001001000000 bit3:bit3[13:15]
+            | "SBCLR #{bit3}"
+
+sbset       [0:12]=0b0001001100000 bit3:bit3[13:15]
+            | "SBSET #{bit3}"
+
+# -------------------------------------------------------------------
+# Accumulator shift instructions
+# -------------------------------------------------------------------
+
+lsl         [0:6]=0b0001010 b7:b7[7] [8:9]=0b00 shift:shift[10:15]
+            | "LSL $ac{b7}, #{shift}"
+
+lsr         [0:6]=0b0001010 b7:b7[7] [8:9]=0b01 shift:shift[10:15]
+            | "LSR $ac{b7}, #{shift}"
+
+asl         [0:6]=0b0001010 b7:b7[7] [8:9]=0b10 shift:shift[10:15]
+            | "ASL $ac{b7}, #{shift}"
+
+asr         [0:6]=0b0001010 b7:b7[7] [8:9]=0b11 shift:shift[10:15]
+            | "ASR $ac{b7}, #{shift}"
+
+# -------------------------------------------------------------------
+# SI @mem, #imm16 - 0001 0110 mmmm mmmm iiii iiii iiii iiii
+# -------------------------------------------------------------------
+si          [0:7]=0b00010110 imm8:imm8[8:15] imm16:u16[16:31]
+            addr:u16 = 0xff00 + imm8
+            | "SI @{addr:#06x}, #{imm16:#06x}"
+
+# -------------------------------------------------------------------
+# Register indirect jumps/calls
+# -------------------------------------------------------------------
+
+jrcc        [0:7]=0b00010111 reg3:reg3[8:10] [11]=0 cond:cc[12:15]
+            | cond == 15 : "JMPR ${reg3}"
+            | "JR{cond} ${reg3}"
+
+callrcc     [0:7]=0b00010111 reg3:reg3[8:10] [11]=1 cond:cc[12:15]
+            | "CALLR{cond} ${reg3}"
+
+# -------------------------------------------------------------------
+# Register indirect load/store
+# -------------------------------------------------------------------
+
+lrr         [0:6]=0b0001100 [7:8]=0b00 ar2:ar2[9:10] r5:reg5[11:15]
+            | "LRR ${r5}, @$ar{ar2}"
+
+lrrd        [0:6]=0b0001100 [7:8]=0b01 ar2:ar2[9:10] r5:reg5[11:15]
+            | "LRRD ${r5}, @$ar{ar2}"
+
+lrri        [0:6]=0b0001100 [7:8]=0b10 ar2:ar2[9:10] r5:reg5[11:15]
+            | "LRRI ${r5}, @$ar{ar2}"
+
+lrrn        [0:6]=0b0001100 [7:8]=0b11 ar2:ar2[9:10] r5:reg5[11:15]
+            | "LRRN ${r5}, @$ar{ar2}"
+
+srr         [0:6]=0b0001101 [7:8]=0b00 ar2:ar2[9:10] r5:reg5[11:15]
+            | "SRR @$ar{ar2}, ${r5}"
+
+srrd        [0:6]=0b0001101 [7:8]=0b01 ar2:ar2[9:10] r5:reg5[11:15]
+            | "SRRD @$ar{ar2}, ${r5}"
+
+srri        [0:6]=0b0001101 [7:8]=0b10 ar2:ar2[9:10] r5:reg5[11:15]
+            | "SRRI @$ar{ar2}, ${r5}"
+
+srrn        [0:6]=0b0001101 [7:8]=0b11 ar2:ar2[9:10] r5:reg5[11:15]
+            | "SRRN @$ar{ar2}, ${r5}"
+
+# 0001 11dd ddds ssss - MRR $dst, $src
+mrr         [0:5]=0b000111 rdst:reg5[6:10] r5:reg5[11:15]
+            | "MRR ${rdst}, ${r5}"
+
+# -------------------------------------------------------------------
+# Short address load/store via CR
+# -------------------------------------------------------------------
+
+lrs         [0:4]=0b00100 acsel3:acreg3[5:7] mem:mem[8:15]
+            | "LRS ${acsel3}, @0x{mem:02x}"
+
+srsh        [0:6]=0b0010100 b7:b7[7] mem:mem[8:15]
+            | "SRSH @0x{mem:02x}, $ac{b7}.h"
+
+srs         [0:5]=0b001011 acsel2:acreg2[6:7] mem:mem[8:15]
+            | "SRS @0x{mem:02x}, ${acsel2}"
+
+# ===================================================================
+#  GcDspExt: parallel-move extension subdecoder (low byte of arithmetic opcodes)
+#
+#  Extension opcodes pack into the lower 8 bits (or lower 7 bits for group 0x3) of arithmetic
+#  instructions. A 7-bit extension is the 8-bit one with its top bit 0, so the same arms apply.
+# ===================================================================
+
+subdecoder GcDspExt {
+    width = 8
+    bit_order = msb0
+    outputs { mnemonic, operands }
+
+    # bit[0]=0 extensions (available in both 7-bit and 8-bit forms)
+    ext_nop  [0:5]=0b000000             | mnemonic = ""     | operands = ""
+    ext_dr   [0:5]=0b000001 r:n2[6:7]   | mnemonic = "'DR"  | operands = " : $ar{r}"
+    ext_ir   [0:5]=0b000010 r:n2[6:7]   | mnemonic = "'IR"  | operands = " : $ar{r}"
+    ext_nr   [0:5]=0b000011 r:n2[6:7]   | mnemonic = "'NR"  | operands = " : $ar{r}"
+    ext_mv   [0:3]=0b0001 d:ax2[4:5] s:acreg2[6:7]
+             | mnemonic = "'MV" | operands = " : ${d}, ${s}"
+    ext_s    [0:2]=0b001 s:acreg2[3:4] [5]=0 d:n2[6:7]
+             | mnemonic = "'S"  | operands = " : @$ar{d}, ${s}"
+    ext_sn   [0:2]=0b001 s:acreg2[3:4] [5]=1 d:n2[6:7]
+             | mnemonic = "'SN" | operands = " : @$ar{d}, ${s}"
+    ext_l    [0:1]=0b01 d:acreg3[2:4] [5]=0 s:n2[6:7]
+             | mnemonic = "'L"  | operands = " : ${d}, @$ar{s}"
+    ext_ln   [0:1]=0b01 d:acreg3[2:4] [5]=1 s:n2[6:7]
+             | mnemonic = "'LN" | operands = " : ${d}, @$ar{s}"
+
+    # bit[0]=1 extensions (8-bit forms only, groups 0x4-0xF)
+    ext_ls   [0:1]=0b10 d:ax2[2:3] [4:6]=0b000 s:n1[7]
+             | mnemonic = "'LS"   | operands = " : ${d}, $ac{s}.m"
+    ext_sl   [0:1]=0b10 d:ax2[2:3] [4:6]=0b001 s:n1[7]
+             | mnemonic = "'SL"   | operands = " : $ac{s}.m, ${d}"
+    ext_lsn  [0:1]=0b10 d:ax2[2:3] [4:6]=0b010 s:n1[7]
+             | mnemonic = "'LSN"  | operands = " : ${d}, $ac{s}.m"
+    ext_sln  [0:1]=0b10 d:ax2[2:3] [4:6]=0b011 s:n1[7]
+             | mnemonic = "'SLN"  | operands = " : $ac{s}.m, ${d}"
+    ext_lsm  [0:1]=0b10 d:ax2[2:3] [4:6]=0b100 s:n1[7]
+             | mnemonic = "'LSM"  | operands = " : ${d}, $ac{s}.m"
+    ext_slm  [0:1]=0b10 d:ax2[2:3] [4:6]=0b101 s:n1[7]
+             | mnemonic = "'SLM"  | operands = " : $ac{s}.m, ${d}"
+    ext_lsnm [0:1]=0b10 d:ax2[2:3] [4:6]=0b110 s:n1[7]
+             | mnemonic = "'LSNM" | operands = " : ${d}, $ac{s}.m"
+    ext_slnm [0:1]=0b10 d:ax2[2:3] [4:6]=0b111 s:n1[7]
+             | mnemonic = "'SLNM" | operands = " : $ac{s}.m, ${d}"
+
+    # 'LD family: 11dr XXss where ss != 3
+    ext_ld   [0:1]=0b11 d:ext_ax0[2] r:ext_ax1[3] [4:5]=0b00 s:n2[6:7]
+             | mnemonic = "'LD"   | operands = " : ${d}, ${r}, @$ar{s}"
+    ext_ldn  [0:1]=0b11 d:ext_ax0[2] r:ext_ax1[3] [4:5]=0b01 s:n2[6:7]
+             | mnemonic = "'LDN"  | operands = " : ${d}, ${r}, @$ar{s}"
+    ext_ldm  [0:1]=0b11 d:ext_ax0[2] r:ext_ax1[3] [4:5]=0b10 s:n2[6:7]
+             | mnemonic = "'LDM"  | operands = " : ${d}, ${r}, @$ar{s}"
+    ext_ldnm [0:1]=0b11 d:ext_ax0[2] r:ext_ax1[3] [4:5]=0b11 s:n2[6:7]
+             | mnemonic = "'LDNM" | operands = " : ${d}, ${r}, @$ar{s}"
+
+    # 'LDAX family: 11sr XX11 (the ss = 3 case)
+    ext_ldax   [0:1]=0b11 s:n1[2] r:n1[3] [4:5]=0b00 [6:7]=0b11
+               | mnemonic = "'LDAX"   | operands = " : $ax{r}, @$ar{s}"
+    ext_ldaxn  [0:1]=0b11 s:n1[2] r:n1[3] [4:5]=0b01 [6:7]=0b11
+               | mnemonic = "'LDAXN"  | operands = " : $ax{r}, @$ar{s}"
+    ext_ldaxm  [0:1]=0b11 s:n1[2] r:n1[3] [4:5]=0b10 [6:7]=0b11
+               | mnemonic = "'LDAXM"  | operands = " : $ax{r}, @$ar{s}"
+    ext_ldaxnm [0:1]=0b11 s:n1[2] r:n1[3] [4:5]=0b11 [6:7]=0b11
+               | mnemonic = "'LDAXNM" | operands = " : $ax{r}, @$ar{s}"
+}
+
+# The subdecoder uses these decimal helpers in its operand templates.
+operand n1 = u1 { display(dec) }
+operand n2 = u2 { display(dec) }
+
+# ===================================================================
+#  ARITHMETIC INSTRUCTIONS (upper nibble >= 0x3)
+#
+#  Group 0x3 packs a 9-bit op [0:8] and a 7-bit ext [9:15]; groups 0x4-0xF pack an 8-bit op [0:7]
+#  and an 8-bit ext [8:15]. The base mnemonic and operands wrap the extension's.
+# ===================================================================
+
+# -------------------------------------------------------------------
+# Group 0x3 - Logical operations (7-bit ext at [9:15])
+# -------------------------------------------------------------------
+
+xorr        [0:3]=0b0011 [4:5]=0b00 b6:b6[6] b7:b7[7] [8]=0 ext7:GcDspExt[9:15]
+            | "XORR{ext7.mnemonic} $ac{b7}.m, $ax{b6}.h{ext7.operands}"
+
+andr        [0:3]=0b0011 [4:5]=0b01 b6:b6[6] b7:b7[7] [8]=0 ext7:GcDspExt[9:15]
+            | "ANDR{ext7.mnemonic} $ac{b7}.m, $ax{b6}.h{ext7.operands}"
+
+orr         [0:3]=0b0011 [4:5]=0b10 b6:b6[6] b7:b7[7] [8]=0 ext7:GcDspExt[9:15]
+            | "ORR{ext7.mnemonic} $ac{b7}.m, $ax{b6}.h{ext7.operands}"
+
+andc        [0:3]=0b0011 [4:6]=0b110 b7:b7[7] [8]=0 ext7:GcDspExt[9:15]
+            nd:b7 = 1 - b7
+            | "ANDC{ext7.mnemonic} $ac{b7}.m, $ac{nd}.m{ext7.operands}"
+
+orc         [0:3]=0b0011 [4:6]=0b111 b7:b7[7] [8]=0 ext7:GcDspExt[9:15]
+            nd:b7 = 1 - b7
+            | "ORC{ext7.mnemonic} $ac{b7}.m, $ac{nd}.m{ext7.operands}"
+
+xorc        [0:3]=0b0011 [4:6]=0b000 b7:b7[7] [8]=1 ext7:GcDspExt[9:15]
+            nd:b7 = 1 - b7
+            | "XORC{ext7.mnemonic} $ac{b7}.m, $ac{nd}.m{ext7.operands}"
+
+not_ac      [0:3]=0b0011 [4:6]=0b001 b7:b7[7] [8]=1 ext7:GcDspExt[9:15]
+            | "NOT{ext7.mnemonic} $ac{b7}.m{ext7.operands}"
+
+lsrnrx      [0:3]=0b0011 [4:5]=0b01 b6:b6[6] b7:b7[7] [8]=1 ext7:GcDspExt[9:15]
+            | "LSRNRX{ext7.mnemonic} $ac{b7}, $ax{b6}.h{ext7.operands}"
+
+asrnrx      [0:3]=0b0011 [4:5]=0b10 b6:b6[6] b7:b7[7] [8]=1 ext7:GcDspExt[9:15]
+            | "ASRNRX{ext7.mnemonic} $ac{b7}, $ax{b6}.h{ext7.operands}"
+
+lsrnr       [0:3]=0b0011 [4:6]=0b110 b7:b7[7] [8]=1 ext7:GcDspExt[9:15]
+            nd:b7 = 1 - b7
+            | "LSRNR{ext7.mnemonic} $ac{b7}, $ac{nd}.m{ext7.operands}"
+
+asrnr       [0:3]=0b0011 [4:6]=0b111 b7:b7[7] [8]=1 ext7:GcDspExt[9:15]
+            nd:b7 = 1 - b7
+            | "ASRNR{ext7.mnemonic} $ac{b7}, $ac{nd}.m{ext7.operands}"
+
+# -------------------------------------------------------------------
+# Group 0x4 - Add
+# -------------------------------------------------------------------
+
+addr_       [0:3]=0b0100 [4]=0 ss:ax2[5:6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "ADDR{ext8.mnemonic} $ac{b7}, ${ss}{ext8.operands}"
+
+addax       [0:3]=0b0100 [4:5]=0b10 b6:b6[6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "ADDAX{ext8.mnemonic} $ac{b7}, $ax{b6}{ext8.operands}"
+
+add         [0:3]=0b0100 [4:6]=0b110 b7:b7[7] ext8:GcDspExt[8:15]
+            nd:b7 = 1 - b7
+            | "ADD{ext8.mnemonic} $ac{b7}, $ac{nd}{ext8.operands}"
+
+addp        [0:3]=0b0100 [4:6]=0b111 b7:b7[7] ext8:GcDspExt[8:15]
+            | "ADDP{ext8.mnemonic} $ac{b7}, $prod{ext8.operands}"
+
+# -------------------------------------------------------------------
+# Group 0x5 - Subtract
+# -------------------------------------------------------------------
+
+subr        [0:3]=0b0101 [4]=0 ss:ax2[5:6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "SUBR{ext8.mnemonic} $ac{b7}, ${ss}{ext8.operands}"
+
+subax       [0:3]=0b0101 [4:5]=0b10 b6:b6[6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "SUBAX{ext8.mnemonic} $ac{b7}, $ax{b6}{ext8.operands}"
+
+sub         [0:3]=0b0101 [4:6]=0b110 b7:b7[7] ext8:GcDspExt[8:15]
+            nd:b7 = 1 - b7
+            | "SUB{ext8.mnemonic} $ac{b7}, $ac{nd}{ext8.operands}"
+
+subp        [0:3]=0b0101 [4:6]=0b111 b7:b7[7] ext8:GcDspExt[8:15]
+            | "SUBP{ext8.mnemonic} $ac{b7}, $prod{ext8.operands}"
+
+# -------------------------------------------------------------------
+# Group 0x6 - Move
+# -------------------------------------------------------------------
+
+movr        [0:3]=0b0110 [4]=0 ss:ax2[5:6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "MOVR{ext8.mnemonic} $ac{b7}, ${ss}{ext8.operands}"
+
+movax       [0:3]=0b0110 [4:5]=0b10 b6:b6[6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "MOVAX{ext8.mnemonic} $ac{b7}, $ax{b6}{ext8.operands}"
+
+mov         [0:3]=0b0110 [4:6]=0b110 b7:b7[7] ext8:GcDspExt[8:15]
+            nd:b7 = 1 - b7
+            | "MOV{ext8.mnemonic} $ac{b7}, $ac{nd}{ext8.operands}"
+
+movp        [0:3]=0b0110 [4:6]=0b111 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MOVP{ext8.mnemonic} $ac{b7}, $prod{ext8.operands}"
+
+# -------------------------------------------------------------------
+# Group 0x7 - Misc arithmetic
+# -------------------------------------------------------------------
+
+addaxl      [0:3]=0b0111 [4:5]=0b00 b6:b6[6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "ADDAXL{ext8.mnemonic} $ac{b7}, $ax{b6}.l{ext8.operands}"
+
+incm        [0:3]=0b0111 [4:6]=0b010 b7:b7[7] ext8:GcDspExt[8:15]
+            | "INCM{ext8.mnemonic} $ac{b7}{ext8.operands}"
+
+inc         [0:3]=0b0111 [4:6]=0b011 b7:b7[7] ext8:GcDspExt[8:15]
+            | "INC{ext8.mnemonic} $ac{b7}{ext8.operands}"
+
+decm        [0:3]=0b0111 [4:6]=0b100 b7:b7[7] ext8:GcDspExt[8:15]
+            | "DECM{ext8.mnemonic} $ac{b7}{ext8.operands}"
+
+dec         [0:3]=0b0111 [4:6]=0b101 b7:b7[7] ext8:GcDspExt[8:15]
+            | "DEC{ext8.mnemonic} $ac{b7}{ext8.operands}"
+
+neg         [0:3]=0b0111 [4:6]=0b110 b7:b7[7] ext8:GcDspExt[8:15]
+            | "NEG{ext8.mnemonic} $ac{b7}{ext8.operands}"
+
+movnp       [0:3]=0b0111 [4:6]=0b111 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MOVNP{ext8.mnemonic} $ac{b7}{ext8.operands}"
+
+# -------------------------------------------------------------------
+# Group 0x8 - NX, CLR, CMP, status flags
+# -------------------------------------------------------------------
+
+nx_0        [0:3]=0b1000 [4]=0 [5:7]=0b000 ext8:GcDspExt[8:15]
+            | "NX{ext8.mnemonic}{ext8.operands}"
+
+nx_1        [0:3]=0b1000 [4]=1 [5:7]=0b000 ext8:GcDspExt[8:15]
+            | "NX{ext8.mnemonic}{ext8.operands}"
+
+clr         [0:3]=0b1000 b4:b4[4] [5:7]=0b001 ext8:GcDspExt[8:15]
+            | "CLR{ext8.mnemonic} $ac{b4}{ext8.operands}"
+
+cmp         [0:7]=0b10000010 ext8:GcDspExt[8:15]
+            | "CMP{ext8.mnemonic}{ext8.operands}"
+
+mulaxh      [0:7]=0b10000011 ext8:GcDspExt[8:15]
+            | "MULAXH{ext8.mnemonic}{ext8.operands}"
+
+clrp        [0:7]=0b10000100 ext8:GcDspExt[8:15]
+            | "CLRP{ext8.mnemonic}{ext8.operands}"
+
+tstprod     [0:7]=0b10000101 ext8:GcDspExt[8:15]
+            | "TSTPROD{ext8.mnemonic}{ext8.operands}"
+
+tstaxh      [0:3]=0b1000 [4:6]=0b011 b7:b7[7] ext8:GcDspExt[8:15]
+            | "TSTAXH{ext8.mnemonic} $ax{b7}.h{ext8.operands}"
+
+m2          [0:7]=0b10001010 ext8:GcDspExt[8:15]
+            | "M2{ext8.mnemonic}{ext8.operands}"
+
+m0          [0:7]=0b10001011 ext8:GcDspExt[8:15]
+            | "M0{ext8.mnemonic}{ext8.operands}"
+
+clr15       [0:7]=0b10001100 ext8:GcDspExt[8:15]
+            | "CLR15{ext8.mnemonic}{ext8.operands}"
+
+set15       [0:7]=0b10001101 ext8:GcDspExt[8:15]
+            | "SET15{ext8.mnemonic}{ext8.operands}"
+
+set16       [0:7]=0b10001110 ext8:GcDspExt[8:15]
+            | "SET16{ext8.mnemonic}{ext8.operands}"
+
+set40       [0:7]=0b10001111 ext8:GcDspExt[8:15]
+            | "SET40{ext8.mnemonic}{ext8.operands}"
+
+# -------------------------------------------------------------------
+# Group 0x9 - MUL, ASR16, MULMVZ, MULAC, MULMV
+# -------------------------------------------------------------------
+
+mul         [0:3]=0b1001 b4:b4[4] [5:7]=0b000 ext8:GcDspExt[8:15]
+            | "MUL{ext8.mnemonic} $ax{b4}.l, $ax{b4}.h{ext8.operands}"
+
+asr16       [0:3]=0b1001 b4:b4[4] [5:7]=0b001 ext8:GcDspExt[8:15]
+            | "ASR16{ext8.mnemonic} $ac{b4}{ext8.operands}"
+
+mulmvz      [0:3]=0b1001 b4:b4[4] [5:6]=0b01 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MULMVZ{ext8.mnemonic} $ax{b4}.l, $ax{b4}.h, $ac{b7}{ext8.operands}"
+
+mulac       [0:3]=0b1001 b4:b4[4] [5:6]=0b10 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MULAC{ext8.mnemonic} $ax{b4}.l, $ax{b4}.h, $ac{b7}{ext8.operands}"
+
+mulmv       [0:3]=0b1001 b4:b4[4] [5:6]=0b11 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MULMV{ext8.mnemonic} $ax{b4}.l, $ax{b4}.h, $ac{b7}{ext8.operands}"
+
+# -------------------------------------------------------------------
+# Groups 0xA-0xB - MULX, ABS, TST, MULXMVZ, MULXAC, MULXMV
+# -------------------------------------------------------------------
+
+mulx        [0:2]=0b101 b3:b3[3] b4:b4[4] [5:7]=0b000 ext8:GcDspExt[8:15]
+            | "MULX{ext8.mnemonic} $ax0.{b4?h:l}, $ax1.{b3?h:l}{ext8.operands}"
+
+abs_ac      [0:3]=0b1010 b4:b4[4] [5:7]=0b001 ext8:GcDspExt[8:15]
+            | "ABS{ext8.mnemonic} $ac{b4}{ext8.operands}"
+
+tst         [0:3]=0b1011 b4:b4[4] [5:7]=0b001 ext8:GcDspExt[8:15]
+            | "TST{ext8.mnemonic} $ac{b4}{ext8.operands}"
+
+mulxmvz     [0:2]=0b101 b3:b3[3] b4:b4[4] [5:6]=0b01 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MULXMVZ{ext8.mnemonic} $ax0.{b4?h:l}, $ax1.{b3?h:l}, $ac{b7}{ext8.operands}"
+
+mulxac      [0:2]=0b101 b3:b3[3] b4:b4[4] [5:6]=0b10 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MULXAC{ext8.mnemonic} $ax0.{b4?h:l}, $ax1.{b3?h:l}, $ac{b7}{ext8.operands}"
+
+mulxmv      [0:2]=0b101 b3:b3[3] b4:b4[4] [5:6]=0b11 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MULXMV{ext8.mnemonic} $ax0.{b4?h:l}, $ax1.{b3?h:l}, $ac{b7}{ext8.operands}"
+
+# -------------------------------------------------------------------
+# Group 0xC - MULC, CMPAXH, MULCMVZ, MULCAC, MULCMV
+# -------------------------------------------------------------------
+
+mulc        [0:2]=0b110 b3:b3[3] b4:b4[4] [5:7]=0b000 ext8:GcDspExt[8:15]
+            | "MULC{ext8.mnemonic} $ac{b3}.m, $ax{b4}.h{ext8.operands}"
+
+cmpaxh      [0:2]=0b110 b3:b3[3] b4:b4[4] [5:7]=0b001 ext8:GcDspExt[8:15]
+            | "CMPAXH{ext8.mnemonic} $ac{b3}, $ax{b4}.h{ext8.operands}"
+
+mulcmvz     [0:2]=0b110 b3:b3[3] b4:b4[4] [5:6]=0b01 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MULCMVZ{ext8.mnemonic} $ac{b3}.m, $ax{b4}.h, $ac{b7}{ext8.operands}"
+
+mulcac      [0:2]=0b110 b3:b3[3] b4:b4[4] [5:6]=0b10 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MULCAC{ext8.mnemonic} $ac{b3}.m, $ax{b4}.h, $ac{b7}{ext8.operands}"
+
+mulcmv      [0:2]=0b110 b3:b3[3] b4:b4[4] [5:6]=0b11 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MULCMV{ext8.mnemonic} $ac{b3}.m, $ax{b4}.h, $ac{b7}{ext8.operands}"
+
+# -------------------------------------------------------------------
+# Group 0xE - MADDX, MSUBX, MADDC, MSUBC
+# -------------------------------------------------------------------
+
+maddx       [0:3]=0b1110 [4:5]=0b00 b6:b6[6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "MADDX{ext8.mnemonic} $ax0.{b6?h:l}, $ax1.{b7?h:l}{ext8.operands}"
+
+msubx       [0:3]=0b1110 [4:5]=0b01 b6:b6[6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "MSUBX{ext8.mnemonic} $ax0.{b6?h:l}, $ax1.{b7?h:l}{ext8.operands}"
+
+maddc       [0:3]=0b1110 [4:5]=0b10 b6:b6[6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "MADDC{ext8.mnemonic} $ac{b6}.m, $ax{b7}.h{ext8.operands}"
+
+msubc       [0:3]=0b1110 [4:5]=0b11 b6:b6[6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "MSUBC{ext8.mnemonic} $ac{b6}.m, $ax{b7}.h{ext8.operands}"
+
+# -------------------------------------------------------------------
+# Group 0xF - LSL16, LSR16, MADD, MSUB, ADDPAXZ, CLRL, MOVPZ
+# -------------------------------------------------------------------
+
+lsl16       [0:3]=0b1111 [4:6]=0b000 b7:b7[7] ext8:GcDspExt[8:15]
+            | "LSL16{ext8.mnemonic} $ac{b7}{ext8.operands}"
+
+madd        [0:3]=0b1111 [4:6]=0b001 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MADD{ext8.mnemonic} $ax{b7}.l, $ax{b7}.h{ext8.operands}"
+
+lsr16       [0:3]=0b1111 [4:6]=0b010 b7:b7[7] ext8:GcDspExt[8:15]
+            | "LSR16{ext8.mnemonic} $ac{b7}{ext8.operands}"
+
+msub        [0:3]=0b1111 [4:6]=0b011 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MSUB{ext8.mnemonic} $ax{b7}.l, $ax{b7}.h{ext8.operands}"
+
+addpaxz     [0:3]=0b1111 [4:5]=0b10 b6:b6[6] b7:b7[7] ext8:GcDspExt[8:15]
+            | "ADDPAXZ{ext8.mnemonic} $ac{b7}, $ax{b6}{ext8.operands}"
+
+clrl        [0:3]=0b1111 [4:6]=0b110 b7:b7[7] ext8:GcDspExt[8:15]
+            | "CLRL{ext8.mnemonic} $ac{b7}.l{ext8.operands}"
+
+movpz       [0:3]=0b1111 [4:6]=0b111 b7:b7[7] ext8:GcDspExt[8:15]
+            | "MOVPZ{ext8.mnemonic} $ac{b7}{ext8.operands}"

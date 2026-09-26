@@ -1,0 +1,19 @@
+# `let` width inference inside `fn` bodies. A local bound to a `concat` result keeps
+# its inferred width (6 bits here), so using it as a later `concat` argument shifts
+# by that inferred width. The oracle and all three backends agree on this width; see
+# chipi-core/src/compute.rs eval_fn.
+
+decoder LetWidth {
+    width = 16
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [12:15]
+
+fn pack(a: u1, b: u5) -> u8 {
+    let ab = concat(b, a)
+    return concat(a, ab)
+}
+
+m op=4 a:u1[0] b:u5[5:1] v:u8 = pack(a, b) | "v {v:#x}"

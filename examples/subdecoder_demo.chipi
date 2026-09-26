@@ -1,0 +1,33 @@
+# Subdecoders: a bound sub-field decoded into named strings, spliced into the display.
+#
+# A `subdecoder` matches a sub-field most-specific-first and exposes one or more named string
+# `outputs`, referenced from a display template as `{field.output}`. The bound field still decodes
+# and encodes as plain bits; only its rendering runs the subdecoder. This mirrors the GameCube DSP,
+# whose arithmetic opcodes pack a parallel-move "extension" into their low byte.
+#
+# The Rust backend emits a sub-render function per output; the C++/Python backends do not emit
+# subdecoders yet (the reference oracle decodes them fully).
+
+decoder Main {
+    width = 16
+    bit_order = msb0
+    endian = big
+}
+
+selector op [0:7]
+
+operand ar = u2 { display(dec) }
+
+subdecoder Ext {
+    width = 8
+    bit_order = msb0
+    outputs { mnemonic, operands }
+
+    e_nop [0:5]=0b000000           | mnemonic = ""    | operands = ""
+    e_dr  [0:5]=0b000001 r:ar[6:7] | mnemonic = "'DR" | operands = " : $ar{r}"
+    e_ir  [0:5]=0b000010 r:ar[6:7] | mnemonic = "'IR" | operands = " : $ar{r}"
+    e_nr  [0:5]=0b000011 r:ar[6:7] | mnemonic = "'NR" | operands = " : $ar{r}"
+}
+
+add [0:7]=0b01000000 ext:Ext[8:15] | "add{ext.mnemonic} $ac0{ext.operands}"
+sub [0:7]=0b01010000 ext:Ext[8:15] | "sub{ext.mnemonic} $ac0{ext.operands}"

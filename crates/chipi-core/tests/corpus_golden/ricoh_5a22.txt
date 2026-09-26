@@ -1,0 +1,1024 @@
+0 0x0 brk_imm|brk #$00
+0 0x1 ora.idx|ora ($00,x)
+0 0x2 cop_imm|cop #$00
+0 0x3 ora.sr|ora $00,s
+0 0x4 tsb.dp|tsb $00
+0 0x5 ora.dp|ora $00
+0 0x6 asl.dp|asl $00
+0 0x7 ora.idl|ora [$00]
+0 0x8 php|php
+0 0x9 ora.imm|ora #$0000
+0 0xa asl.a|asl a
+0 0xb phd|phd
+0 0xc tsb.abs|tsb $0000
+0 0xd ora.abs|ora $0000
+0 0xe asl.abs|asl $0000
+0 0xf ora.abl|ora $000000
+0 0x10 bpl.rel|bpl $0
+0 0x11 ora.idy|ora ($00),y
+0 0x12 ora.idp|ora ($00)
+0 0x13 ora.isy|ora ($00,s),y
+0 0x14 trb.dp|trb $00
+0 0x15 ora.dpx|ora $00,x
+0 0x16 asl.dpx|asl $00,x
+0 0x17 ora.idly|ora [$00],y
+0 0x18 clc|clc
+0 0x19 ora.aby|ora $0000,y
+0 0x1a inc.a|inc a
+0 0x1b tcs|tcs
+0 0x1c trb.abs|trb $0000
+0 0x1d ora.abx|ora $0000,x
+0 0x1e asl.abx|asl $0000,x
+0 0x1f ora.alx|ora $000000,x
+0 0x20 jsr.abs|jsr $0000
+0 0x21 and.idx|and ($00,x)
+0 0x22 jsl.abl|jsl $000000
+0 0x23 and.sr|and $00,s
+0 0x24 bit.dp|bit $00
+0 0x25 and.dp|and $00
+0 0x26 rol.dp|rol $00
+0 0x27 and.idl|and [$00]
+0 0x28 plp|plp
+0 0x29 and.imm|and #$0000
+0 0x2a rol.a|rol a
+0 0x2b pld|pld
+0 0x2c bit.abs|bit $0000
+0 0x2d and.abs|and $0000
+0 0x2e rol.abs|rol $0000
+0 0x2f and.abl|and $000000
+0 0x30 bmi.rel|bmi $0
+0 0x31 and.idy|and ($00),y
+0 0x32 and.idp|and ($00)
+0 0x33 and.isy|and ($00,s),y
+0 0x34 bit.dpx|bit $00,x
+0 0x35 and.dpx|and $00,x
+0 0x36 rol.dpx|rol $00,x
+0 0x37 and.idly|and [$00],y
+0 0x38 sec|sec
+0 0x39 and.aby|and $0000,y
+0 0x3a dec.a|dec a
+0 0x3b tsc|tsc
+0 0x3c bit.abx|bit $0000,x
+0 0x3d and.abx|and $0000,x
+0 0x3e rol.abx|rol $0000,x
+0 0x3f and.alx|and $000000,x
+0 0x40 rti|rti
+0 0x41 eor.idx|eor ($00,x)
+0 0x42 wdm_imm|wdm #$00
+0 0x43 eor.sr|eor $00,s
+0 0x44 mvp.bm|mvp $00,$00
+0 0x45 eor.dp|eor $00
+0 0x46 lsr.dp|lsr $00
+0 0x47 eor.idl|eor [$00]
+0 0x48 pha|pha
+0 0x49 eor.imm|eor #$0000
+0 0x4a lsr.a|lsr a
+0 0x4b phk|phk
+0 0x4c jmp.abs|jmp $0000
+0 0x4d eor.abs|eor $0000
+0 0x4e lsr.abs|lsr $0000
+0 0x4f eor.abl|eor $000000
+0 0x50 bvc.rel|bvc $0
+0 0x51 eor.idy|eor ($00),y
+0 0x52 eor.idp|eor ($00)
+0 0x53 eor.isy|eor ($00,s),y
+0 0x54 mvn.bm|mvn $00,$00
+0 0x55 eor.dpx|eor $00,x
+0 0x56 lsr.dpx|lsr $00,x
+0 0x57 eor.idly|eor [$00],y
+0 0x58 cli|cli
+0 0x59 eor.aby|eor $0000,y
+0 0x5a phy|phy
+0 0x5b tcd|tcd
+0 0x5c jmp.abl|jmp $000000
+0 0x5d eor.abx|eor $0000,x
+0 0x5e lsr.abx|lsr $0000,x
+0 0x5f eor.alx|eor $000000,x
+0 0x60 rts|rts
+0 0x61 adc.idx|adc ($00,x)
+0 0x62 per.rell|per $0
+0 0x63 adc.sr|adc $00,s
+0 0x64 stz.dp|stz $00
+0 0x65 adc.dp|adc $00
+0 0x66 ror.dp|ror $00
+0 0x67 adc.idl|adc [$00]
+0 0x68 pla|pla
+0 0x69 adc.imm|adc #$0000
+0 0x6a ror.a|ror a
+0 0x6b rtl|rtl
+0 0x6c jmp.ind|jmp ($0000)
+0 0x6d adc.abs|adc $0000
+0 0x6e ror.abs|ror $0000
+0 0x6f adc.abl|adc $000000
+0 0x70 bvs.rel|bvs $0
+0 0x71 adc.idy|adc ($00),y
+0 0x72 adc.idp|adc ($00)
+0 0x73 adc.isy|adc ($00,s),y
+0 0x74 stz.dpx|stz $00,x
+0 0x75 adc.dpx|adc $00,x
+0 0x76 ror.dpx|ror $00,x
+0 0x77 adc.idly|adc [$00],y
+0 0x78 sei|sei
+0 0x79 adc.aby|adc $0000,y
+0 0x7a ply|ply
+0 0x7b tdc|tdc
+0 0x7c jmp.iax|jmp ($0000,x)
+0 0x7d adc.abx|adc $0000,x
+0 0x7e ror.abx|ror $0000,x
+0 0x7f adc.alx|adc $000000,x
+0 0x80 bra.rel|bra $0
+0 0x81 sta.idx|sta ($00,x)
+0 0x82 brl.rell|brl $0
+0 0x83 sta.sr|sta $00,s
+0 0x84 sty.dp|sty $00
+0 0x85 sta.dp|sta $00
+0 0x86 stx.dp|stx $00
+0 0x87 sta.idl|sta [$00]
+0 0x88 dey|dey
+0 0x89 bit.imm|bit #$0000
+0 0x8a txa|txa
+0 0x8b phb|phb
+0 0x8c sty.abs|sty $0000
+0 0x8d sta.abs|sta $0000
+0 0x8e stx.abs|stx $0000
+0 0x8f sta.abl|sta $000000
+0 0x90 bcc.rel|bcc $0
+0 0x91 sta.idy|sta ($00),y
+0 0x92 sta.idp|sta ($00)
+0 0x93 sta.isy|sta ($00,s),y
+0 0x94 sty.dpx|sty $00,x
+0 0x95 sta.dpx|sta $00,x
+0 0x96 stx.dpy|stx $00,y
+0 0x97 sta.idly|sta [$00],y
+0 0x98 tya|tya
+0 0x99 sta.aby|sta $0000,y
+0 0x9a txs|txs
+0 0x9b txy|txy
+0 0x9c stz.abs|stz $0000
+0 0x9d sta.abx|sta $0000,x
+0 0x9e stz.abx|stz $0000,x
+0 0x9f sta.alx|sta $000000,x
+0 0xa0 ldy.immx|ldy #$0000
+0 0xa1 lda.idx|lda ($00,x)
+0 0xa2 ldx.immx|ldx #$0000
+0 0xa3 lda.sr|lda $00,s
+0 0xa4 ldy.dp|ldy $00
+0 0xa5 lda.dp|lda $00
+0 0xa6 ldx.dp|ldx $00
+0 0xa7 lda.idl|lda [$00]
+0 0xa8 tay|tay
+0 0xa9 lda.imm|lda #$0000
+0 0xaa tax|tax
+0 0xab plb|plb
+0 0xac ldy.abs|ldy $0000
+0 0xad lda.abs|lda $0000
+0 0xae ldx.abs|ldx $0000
+0 0xaf lda.abl|lda $000000
+0 0xb0 bcs.rel|bcs $0
+0 0xb1 lda.idy|lda ($00),y
+0 0xb2 lda.idp|lda ($00)
+0 0xb3 lda.isy|lda ($00,s),y
+0 0xb4 ldy.dpx|ldy $00,x
+0 0xb5 lda.dpx|lda $00,x
+0 0xb6 ldx.dpy|ldx $00,y
+0 0xb7 lda.idly|lda [$00],y
+0 0xb8 clv|clv
+0 0xb9 lda.aby|lda $0000,y
+0 0xba tsx|tsx
+0 0xbb tyx|tyx
+0 0xbc ldy.abx|ldy $0000,x
+0 0xbd lda.abx|lda $0000,x
+0 0xbe ldx.aby|ldx $0000,y
+0 0xbf lda.alx|lda $000000,x
+0 0xc0 cpy.immx|cpy #$0000
+0 0xc1 cmp.idx|cmp ($00,x)
+0 0xc2 rep_imm|rep #$00
+0 0xc3 cmp.sr|cmp $00,s
+0 0xc4 cpy.dp|cpy $00
+0 0xc5 cmp.dp|cmp $00
+0 0xc6 dec.dp|dec $00
+0 0xc7 cmp.idl|cmp [$00]
+0 0xc8 iny|iny
+0 0xc9 cmp.imm|cmp #$0000
+0 0xca dex|dex
+0 0xcb wai|wai
+0 0xcc cpy.abs|cpy $0000
+0 0xcd cmp.abs|cmp $0000
+0 0xce dec.abs|dec $0000
+0 0xcf cmp.abl|cmp $000000
+0 0xd0 bne.rel|bne $0
+0 0xd1 cmp.idy|cmp ($00),y
+0 0xd2 cmp.idp|cmp ($00)
+0 0xd3 cmp.isy|cmp ($00,s),y
+0 0xd4 pei.idp|pei ($00)
+0 0xd5 cmp.dpx|cmp $00,x
+0 0xd6 dec.dpx|dec $00,x
+0 0xd7 cmp.idly|cmp [$00],y
+0 0xd8 cld|cld
+0 0xd9 cmp.aby|cmp $0000,y
+0 0xda phx|phx
+0 0xdb stp|stp
+0 0xdc jml.ial|jml [$0000]
+0 0xdd cmp.abx|cmp $0000,x
+0 0xde dec.abx|dec $0000,x
+0 0xdf cmp.alx|cmp $000000,x
+0 0xe0 cpx.immx|cpx #$0000
+0 0xe1 sbc.idx|sbc ($00,x)
+0 0xe2 sep_imm|sep #$00
+0 0xe3 sbc.sr|sbc $00,s
+0 0xe4 cpx.dp|cpx $00
+0 0xe5 sbc.dp|sbc $00
+0 0xe6 inc.dp|inc $00
+0 0xe7 sbc.idl|sbc [$00]
+0 0xe8 inx|inx
+0 0xe9 sbc.imm|sbc #$0000
+0 0xea nop|nop
+0 0xeb xba|xba
+0 0xec cpx.abs|cpx $0000
+0 0xed sbc.abs|sbc $0000
+0 0xee inc.abs|inc $0000
+0 0xef sbc.abl|sbc $000000
+0 0xf0 beq.rel|beq $0
+0 0xf1 sbc.idy|sbc ($00),y
+0 0xf2 sbc.idp|sbc ($00)
+0 0xf3 sbc.isy|sbc ($00,s),y
+0 0xf4 pea.abs|pea $0000
+0 0xf5 sbc.dpx|sbc $00,x
+0 0xf6 inc.dpx|inc $00,x
+0 0xf7 sbc.idly|sbc [$00],y
+0 0xf8 sed|sed
+0 0xf9 sbc.aby|sbc $0000,y
+0 0xfa plx|plx
+0 0xfb xce|xce
+0 0xfc jsr.iax|jsr ($0000,x)
+0 0xfd sbc.abx|sbc $0000,x
+0 0xfe inc.abx|inc $0000,x
+0 0xff sbc.alx|sbc $000000,x
+1 0x0 brk_imm|brk #$00
+1 0x1 ora.idx|ora ($00,x)
+1 0x2 cop_imm|cop #$00
+1 0x3 ora.sr|ora $00,s
+1 0x4 tsb.dp|tsb $00
+1 0x5 ora.dp|ora $00
+1 0x6 asl.dp|asl $00
+1 0x7 ora.idl|ora [$00]
+1 0x8 php|php
+1 0x9 ora.imm|ora #$00
+1 0xa asl.a|asl a
+1 0xb phd|phd
+1 0xc tsb.abs|tsb $0000
+1 0xd ora.abs|ora $0000
+1 0xe asl.abs|asl $0000
+1 0xf ora.abl|ora $000000
+1 0x10 bpl.rel|bpl $0
+1 0x11 ora.idy|ora ($00),y
+1 0x12 ora.idp|ora ($00)
+1 0x13 ora.isy|ora ($00,s),y
+1 0x14 trb.dp|trb $00
+1 0x15 ora.dpx|ora $00,x
+1 0x16 asl.dpx|asl $00,x
+1 0x17 ora.idly|ora [$00],y
+1 0x18 clc|clc
+1 0x19 ora.aby|ora $0000,y
+1 0x1a inc.a|inc a
+1 0x1b tcs|tcs
+1 0x1c trb.abs|trb $0000
+1 0x1d ora.abx|ora $0000,x
+1 0x1e asl.abx|asl $0000,x
+1 0x1f ora.alx|ora $000000,x
+1 0x20 jsr.abs|jsr $0000
+1 0x21 and.idx|and ($00,x)
+1 0x22 jsl.abl|jsl $000000
+1 0x23 and.sr|and $00,s
+1 0x24 bit.dp|bit $00
+1 0x25 and.dp|and $00
+1 0x26 rol.dp|rol $00
+1 0x27 and.idl|and [$00]
+1 0x28 plp|plp
+1 0x29 and.imm|and #$00
+1 0x2a rol.a|rol a
+1 0x2b pld|pld
+1 0x2c bit.abs|bit $0000
+1 0x2d and.abs|and $0000
+1 0x2e rol.abs|rol $0000
+1 0x2f and.abl|and $000000
+1 0x30 bmi.rel|bmi $0
+1 0x31 and.idy|and ($00),y
+1 0x32 and.idp|and ($00)
+1 0x33 and.isy|and ($00,s),y
+1 0x34 bit.dpx|bit $00,x
+1 0x35 and.dpx|and $00,x
+1 0x36 rol.dpx|rol $00,x
+1 0x37 and.idly|and [$00],y
+1 0x38 sec|sec
+1 0x39 and.aby|and $0000,y
+1 0x3a dec.a|dec a
+1 0x3b tsc|tsc
+1 0x3c bit.abx|bit $0000,x
+1 0x3d and.abx|and $0000,x
+1 0x3e rol.abx|rol $0000,x
+1 0x3f and.alx|and $000000,x
+1 0x40 rti|rti
+1 0x41 eor.idx|eor ($00,x)
+1 0x42 wdm_imm|wdm #$00
+1 0x43 eor.sr|eor $00,s
+1 0x44 mvp.bm|mvp $00,$00
+1 0x45 eor.dp|eor $00
+1 0x46 lsr.dp|lsr $00
+1 0x47 eor.idl|eor [$00]
+1 0x48 pha|pha
+1 0x49 eor.imm|eor #$00
+1 0x4a lsr.a|lsr a
+1 0x4b phk|phk
+1 0x4c jmp.abs|jmp $0000
+1 0x4d eor.abs|eor $0000
+1 0x4e lsr.abs|lsr $0000
+1 0x4f eor.abl|eor $000000
+1 0x50 bvc.rel|bvc $0
+1 0x51 eor.idy|eor ($00),y
+1 0x52 eor.idp|eor ($00)
+1 0x53 eor.isy|eor ($00,s),y
+1 0x54 mvn.bm|mvn $00,$00
+1 0x55 eor.dpx|eor $00,x
+1 0x56 lsr.dpx|lsr $00,x
+1 0x57 eor.idly|eor [$00],y
+1 0x58 cli|cli
+1 0x59 eor.aby|eor $0000,y
+1 0x5a phy|phy
+1 0x5b tcd|tcd
+1 0x5c jmp.abl|jmp $000000
+1 0x5d eor.abx|eor $0000,x
+1 0x5e lsr.abx|lsr $0000,x
+1 0x5f eor.alx|eor $000000,x
+1 0x60 rts|rts
+1 0x61 adc.idx|adc ($00,x)
+1 0x62 per.rell|per $0
+1 0x63 adc.sr|adc $00,s
+1 0x64 stz.dp|stz $00
+1 0x65 adc.dp|adc $00
+1 0x66 ror.dp|ror $00
+1 0x67 adc.idl|adc [$00]
+1 0x68 pla|pla
+1 0x69 adc.imm|adc #$00
+1 0x6a ror.a|ror a
+1 0x6b rtl|rtl
+1 0x6c jmp.ind|jmp ($0000)
+1 0x6d adc.abs|adc $0000
+1 0x6e ror.abs|ror $0000
+1 0x6f adc.abl|adc $000000
+1 0x70 bvs.rel|bvs $0
+1 0x71 adc.idy|adc ($00),y
+1 0x72 adc.idp|adc ($00)
+1 0x73 adc.isy|adc ($00,s),y
+1 0x74 stz.dpx|stz $00,x
+1 0x75 adc.dpx|adc $00,x
+1 0x76 ror.dpx|ror $00,x
+1 0x77 adc.idly|adc [$00],y
+1 0x78 sei|sei
+1 0x79 adc.aby|adc $0000,y
+1 0x7a ply|ply
+1 0x7b tdc|tdc
+1 0x7c jmp.iax|jmp ($0000,x)
+1 0x7d adc.abx|adc $0000,x
+1 0x7e ror.abx|ror $0000,x
+1 0x7f adc.alx|adc $000000,x
+1 0x80 bra.rel|bra $0
+1 0x81 sta.idx|sta ($00,x)
+1 0x82 brl.rell|brl $0
+1 0x83 sta.sr|sta $00,s
+1 0x84 sty.dp|sty $00
+1 0x85 sta.dp|sta $00
+1 0x86 stx.dp|stx $00
+1 0x87 sta.idl|sta [$00]
+1 0x88 dey|dey
+1 0x89 bit.imm|bit #$00
+1 0x8a txa|txa
+1 0x8b phb|phb
+1 0x8c sty.abs|sty $0000
+1 0x8d sta.abs|sta $0000
+1 0x8e stx.abs|stx $0000
+1 0x8f sta.abl|sta $000000
+1 0x90 bcc.rel|bcc $0
+1 0x91 sta.idy|sta ($00),y
+1 0x92 sta.idp|sta ($00)
+1 0x93 sta.isy|sta ($00,s),y
+1 0x94 sty.dpx|sty $00,x
+1 0x95 sta.dpx|sta $00,x
+1 0x96 stx.dpy|stx $00,y
+1 0x97 sta.idly|sta [$00],y
+1 0x98 tya|tya
+1 0x99 sta.aby|sta $0000,y
+1 0x9a txs|txs
+1 0x9b txy|txy
+1 0x9c stz.abs|stz $0000
+1 0x9d sta.abx|sta $0000,x
+1 0x9e stz.abx|stz $0000,x
+1 0x9f sta.alx|sta $000000,x
+1 0xa0 ldy.immx|ldy #$0000
+1 0xa1 lda.idx|lda ($00,x)
+1 0xa2 ldx.immx|ldx #$0000
+1 0xa3 lda.sr|lda $00,s
+1 0xa4 ldy.dp|ldy $00
+1 0xa5 lda.dp|lda $00
+1 0xa6 ldx.dp|ldx $00
+1 0xa7 lda.idl|lda [$00]
+1 0xa8 tay|tay
+1 0xa9 lda.imm|lda #$00
+1 0xaa tax|tax
+1 0xab plb|plb
+1 0xac ldy.abs|ldy $0000
+1 0xad lda.abs|lda $0000
+1 0xae ldx.abs|ldx $0000
+1 0xaf lda.abl|lda $000000
+1 0xb0 bcs.rel|bcs $0
+1 0xb1 lda.idy|lda ($00),y
+1 0xb2 lda.idp|lda ($00)
+1 0xb3 lda.isy|lda ($00,s),y
+1 0xb4 ldy.dpx|ldy $00,x
+1 0xb5 lda.dpx|lda $00,x
+1 0xb6 ldx.dpy|ldx $00,y
+1 0xb7 lda.idly|lda [$00],y
+1 0xb8 clv|clv
+1 0xb9 lda.aby|lda $0000,y
+1 0xba tsx|tsx
+1 0xbb tyx|tyx
+1 0xbc ldy.abx|ldy $0000,x
+1 0xbd lda.abx|lda $0000,x
+1 0xbe ldx.aby|ldx $0000,y
+1 0xbf lda.alx|lda $000000,x
+1 0xc0 cpy.immx|cpy #$0000
+1 0xc1 cmp.idx|cmp ($00,x)
+1 0xc2 rep_imm|rep #$00
+1 0xc3 cmp.sr|cmp $00,s
+1 0xc4 cpy.dp|cpy $00
+1 0xc5 cmp.dp|cmp $00
+1 0xc6 dec.dp|dec $00
+1 0xc7 cmp.idl|cmp [$00]
+1 0xc8 iny|iny
+1 0xc9 cmp.imm|cmp #$00
+1 0xca dex|dex
+1 0xcb wai|wai
+1 0xcc cpy.abs|cpy $0000
+1 0xcd cmp.abs|cmp $0000
+1 0xce dec.abs|dec $0000
+1 0xcf cmp.abl|cmp $000000
+1 0xd0 bne.rel|bne $0
+1 0xd1 cmp.idy|cmp ($00),y
+1 0xd2 cmp.idp|cmp ($00)
+1 0xd3 cmp.isy|cmp ($00,s),y
+1 0xd4 pei.idp|pei ($00)
+1 0xd5 cmp.dpx|cmp $00,x
+1 0xd6 dec.dpx|dec $00,x
+1 0xd7 cmp.idly|cmp [$00],y
+1 0xd8 cld|cld
+1 0xd9 cmp.aby|cmp $0000,y
+1 0xda phx|phx
+1 0xdb stp|stp
+1 0xdc jml.ial|jml [$0000]
+1 0xdd cmp.abx|cmp $0000,x
+1 0xde dec.abx|dec $0000,x
+1 0xdf cmp.alx|cmp $000000,x
+1 0xe0 cpx.immx|cpx #$0000
+1 0xe1 sbc.idx|sbc ($00,x)
+1 0xe2 sep_imm|sep #$00
+1 0xe3 sbc.sr|sbc $00,s
+1 0xe4 cpx.dp|cpx $00
+1 0xe5 sbc.dp|sbc $00
+1 0xe6 inc.dp|inc $00
+1 0xe7 sbc.idl|sbc [$00]
+1 0xe8 inx|inx
+1 0xe9 sbc.imm|sbc #$00
+1 0xea nop|nop
+1 0xeb xba|xba
+1 0xec cpx.abs|cpx $0000
+1 0xed sbc.abs|sbc $0000
+1 0xee inc.abs|inc $0000
+1 0xef sbc.abl|sbc $000000
+1 0xf0 beq.rel|beq $0
+1 0xf1 sbc.idy|sbc ($00),y
+1 0xf2 sbc.idp|sbc ($00)
+1 0xf3 sbc.isy|sbc ($00,s),y
+1 0xf4 pea.abs|pea $0000
+1 0xf5 sbc.dpx|sbc $00,x
+1 0xf6 inc.dpx|inc $00,x
+1 0xf7 sbc.idly|sbc [$00],y
+1 0xf8 sed|sed
+1 0xf9 sbc.aby|sbc $0000,y
+1 0xfa plx|plx
+1 0xfb xce|xce
+1 0xfc jsr.iax|jsr ($0000,x)
+1 0xfd sbc.abx|sbc $0000,x
+1 0xfe inc.abx|inc $0000,x
+1 0xff sbc.alx|sbc $000000,x
+2 0x0 brk_imm|brk #$00
+2 0x1 ora.idx|ora ($00,x)
+2 0x2 cop_imm|cop #$00
+2 0x3 ora.sr|ora $00,s
+2 0x4 tsb.dp|tsb $00
+2 0x5 ora.dp|ora $00
+2 0x6 asl.dp|asl $00
+2 0x7 ora.idl|ora [$00]
+2 0x8 php|php
+2 0x9 ora.imm|ora #$0000
+2 0xa asl.a|asl a
+2 0xb phd|phd
+2 0xc tsb.abs|tsb $0000
+2 0xd ora.abs|ora $0000
+2 0xe asl.abs|asl $0000
+2 0xf ora.abl|ora $000000
+2 0x10 bpl.rel|bpl $0
+2 0x11 ora.idy|ora ($00),y
+2 0x12 ora.idp|ora ($00)
+2 0x13 ora.isy|ora ($00,s),y
+2 0x14 trb.dp|trb $00
+2 0x15 ora.dpx|ora $00,x
+2 0x16 asl.dpx|asl $00,x
+2 0x17 ora.idly|ora [$00],y
+2 0x18 clc|clc
+2 0x19 ora.aby|ora $0000,y
+2 0x1a inc.a|inc a
+2 0x1b tcs|tcs
+2 0x1c trb.abs|trb $0000
+2 0x1d ora.abx|ora $0000,x
+2 0x1e asl.abx|asl $0000,x
+2 0x1f ora.alx|ora $000000,x
+2 0x20 jsr.abs|jsr $0000
+2 0x21 and.idx|and ($00,x)
+2 0x22 jsl.abl|jsl $000000
+2 0x23 and.sr|and $00,s
+2 0x24 bit.dp|bit $00
+2 0x25 and.dp|and $00
+2 0x26 rol.dp|rol $00
+2 0x27 and.idl|and [$00]
+2 0x28 plp|plp
+2 0x29 and.imm|and #$0000
+2 0x2a rol.a|rol a
+2 0x2b pld|pld
+2 0x2c bit.abs|bit $0000
+2 0x2d and.abs|and $0000
+2 0x2e rol.abs|rol $0000
+2 0x2f and.abl|and $000000
+2 0x30 bmi.rel|bmi $0
+2 0x31 and.idy|and ($00),y
+2 0x32 and.idp|and ($00)
+2 0x33 and.isy|and ($00,s),y
+2 0x34 bit.dpx|bit $00,x
+2 0x35 and.dpx|and $00,x
+2 0x36 rol.dpx|rol $00,x
+2 0x37 and.idly|and [$00],y
+2 0x38 sec|sec
+2 0x39 and.aby|and $0000,y
+2 0x3a dec.a|dec a
+2 0x3b tsc|tsc
+2 0x3c bit.abx|bit $0000,x
+2 0x3d and.abx|and $0000,x
+2 0x3e rol.abx|rol $0000,x
+2 0x3f and.alx|and $000000,x
+2 0x40 rti|rti
+2 0x41 eor.idx|eor ($00,x)
+2 0x42 wdm_imm|wdm #$00
+2 0x43 eor.sr|eor $00,s
+2 0x44 mvp.bm|mvp $00,$00
+2 0x45 eor.dp|eor $00
+2 0x46 lsr.dp|lsr $00
+2 0x47 eor.idl|eor [$00]
+2 0x48 pha|pha
+2 0x49 eor.imm|eor #$0000
+2 0x4a lsr.a|lsr a
+2 0x4b phk|phk
+2 0x4c jmp.abs|jmp $0000
+2 0x4d eor.abs|eor $0000
+2 0x4e lsr.abs|lsr $0000
+2 0x4f eor.abl|eor $000000
+2 0x50 bvc.rel|bvc $0
+2 0x51 eor.idy|eor ($00),y
+2 0x52 eor.idp|eor ($00)
+2 0x53 eor.isy|eor ($00,s),y
+2 0x54 mvn.bm|mvn $00,$00
+2 0x55 eor.dpx|eor $00,x
+2 0x56 lsr.dpx|lsr $00,x
+2 0x57 eor.idly|eor [$00],y
+2 0x58 cli|cli
+2 0x59 eor.aby|eor $0000,y
+2 0x5a phy|phy
+2 0x5b tcd|tcd
+2 0x5c jmp.abl|jmp $000000
+2 0x5d eor.abx|eor $0000,x
+2 0x5e lsr.abx|lsr $0000,x
+2 0x5f eor.alx|eor $000000,x
+2 0x60 rts|rts
+2 0x61 adc.idx|adc ($00,x)
+2 0x62 per.rell|per $0
+2 0x63 adc.sr|adc $00,s
+2 0x64 stz.dp|stz $00
+2 0x65 adc.dp|adc $00
+2 0x66 ror.dp|ror $00
+2 0x67 adc.idl|adc [$00]
+2 0x68 pla|pla
+2 0x69 adc.imm|adc #$0000
+2 0x6a ror.a|ror a
+2 0x6b rtl|rtl
+2 0x6c jmp.ind|jmp ($0000)
+2 0x6d adc.abs|adc $0000
+2 0x6e ror.abs|ror $0000
+2 0x6f adc.abl|adc $000000
+2 0x70 bvs.rel|bvs $0
+2 0x71 adc.idy|adc ($00),y
+2 0x72 adc.idp|adc ($00)
+2 0x73 adc.isy|adc ($00,s),y
+2 0x74 stz.dpx|stz $00,x
+2 0x75 adc.dpx|adc $00,x
+2 0x76 ror.dpx|ror $00,x
+2 0x77 adc.idly|adc [$00],y
+2 0x78 sei|sei
+2 0x79 adc.aby|adc $0000,y
+2 0x7a ply|ply
+2 0x7b tdc|tdc
+2 0x7c jmp.iax|jmp ($0000,x)
+2 0x7d adc.abx|adc $0000,x
+2 0x7e ror.abx|ror $0000,x
+2 0x7f adc.alx|adc $000000,x
+2 0x80 bra.rel|bra $0
+2 0x81 sta.idx|sta ($00,x)
+2 0x82 brl.rell|brl $0
+2 0x83 sta.sr|sta $00,s
+2 0x84 sty.dp|sty $00
+2 0x85 sta.dp|sta $00
+2 0x86 stx.dp|stx $00
+2 0x87 sta.idl|sta [$00]
+2 0x88 dey|dey
+2 0x89 bit.imm|bit #$0000
+2 0x8a txa|txa
+2 0x8b phb|phb
+2 0x8c sty.abs|sty $0000
+2 0x8d sta.abs|sta $0000
+2 0x8e stx.abs|stx $0000
+2 0x8f sta.abl|sta $000000
+2 0x90 bcc.rel|bcc $0
+2 0x91 sta.idy|sta ($00),y
+2 0x92 sta.idp|sta ($00)
+2 0x93 sta.isy|sta ($00,s),y
+2 0x94 sty.dpx|sty $00,x
+2 0x95 sta.dpx|sta $00,x
+2 0x96 stx.dpy|stx $00,y
+2 0x97 sta.idly|sta [$00],y
+2 0x98 tya|tya
+2 0x99 sta.aby|sta $0000,y
+2 0x9a txs|txs
+2 0x9b txy|txy
+2 0x9c stz.abs|stz $0000
+2 0x9d sta.abx|sta $0000,x
+2 0x9e stz.abx|stz $0000,x
+2 0x9f sta.alx|sta $000000,x
+2 0xa0 ldy.immx|ldy #$00
+2 0xa1 lda.idx|lda ($00,x)
+2 0xa2 ldx.immx|ldx #$00
+2 0xa3 lda.sr|lda $00,s
+2 0xa4 ldy.dp|ldy $00
+2 0xa5 lda.dp|lda $00
+2 0xa6 ldx.dp|ldx $00
+2 0xa7 lda.idl|lda [$00]
+2 0xa8 tay|tay
+2 0xa9 lda.imm|lda #$0000
+2 0xaa tax|tax
+2 0xab plb|plb
+2 0xac ldy.abs|ldy $0000
+2 0xad lda.abs|lda $0000
+2 0xae ldx.abs|ldx $0000
+2 0xaf lda.abl|lda $000000
+2 0xb0 bcs.rel|bcs $0
+2 0xb1 lda.idy|lda ($00),y
+2 0xb2 lda.idp|lda ($00)
+2 0xb3 lda.isy|lda ($00,s),y
+2 0xb4 ldy.dpx|ldy $00,x
+2 0xb5 lda.dpx|lda $00,x
+2 0xb6 ldx.dpy|ldx $00,y
+2 0xb7 lda.idly|lda [$00],y
+2 0xb8 clv|clv
+2 0xb9 lda.aby|lda $0000,y
+2 0xba tsx|tsx
+2 0xbb tyx|tyx
+2 0xbc ldy.abx|ldy $0000,x
+2 0xbd lda.abx|lda $0000,x
+2 0xbe ldx.aby|ldx $0000,y
+2 0xbf lda.alx|lda $000000,x
+2 0xc0 cpy.immx|cpy #$00
+2 0xc1 cmp.idx|cmp ($00,x)
+2 0xc2 rep_imm|rep #$00
+2 0xc3 cmp.sr|cmp $00,s
+2 0xc4 cpy.dp|cpy $00
+2 0xc5 cmp.dp|cmp $00
+2 0xc6 dec.dp|dec $00
+2 0xc7 cmp.idl|cmp [$00]
+2 0xc8 iny|iny
+2 0xc9 cmp.imm|cmp #$0000
+2 0xca dex|dex
+2 0xcb wai|wai
+2 0xcc cpy.abs|cpy $0000
+2 0xcd cmp.abs|cmp $0000
+2 0xce dec.abs|dec $0000
+2 0xcf cmp.abl|cmp $000000
+2 0xd0 bne.rel|bne $0
+2 0xd1 cmp.idy|cmp ($00),y
+2 0xd2 cmp.idp|cmp ($00)
+2 0xd3 cmp.isy|cmp ($00,s),y
+2 0xd4 pei.idp|pei ($00)
+2 0xd5 cmp.dpx|cmp $00,x
+2 0xd6 dec.dpx|dec $00,x
+2 0xd7 cmp.idly|cmp [$00],y
+2 0xd8 cld|cld
+2 0xd9 cmp.aby|cmp $0000,y
+2 0xda phx|phx
+2 0xdb stp|stp
+2 0xdc jml.ial|jml [$0000]
+2 0xdd cmp.abx|cmp $0000,x
+2 0xde dec.abx|dec $0000,x
+2 0xdf cmp.alx|cmp $000000,x
+2 0xe0 cpx.immx|cpx #$00
+2 0xe1 sbc.idx|sbc ($00,x)
+2 0xe2 sep_imm|sep #$00
+2 0xe3 sbc.sr|sbc $00,s
+2 0xe4 cpx.dp|cpx $00
+2 0xe5 sbc.dp|sbc $00
+2 0xe6 inc.dp|inc $00
+2 0xe7 sbc.idl|sbc [$00]
+2 0xe8 inx|inx
+2 0xe9 sbc.imm|sbc #$0000
+2 0xea nop|nop
+2 0xeb xba|xba
+2 0xec cpx.abs|cpx $0000
+2 0xed sbc.abs|sbc $0000
+2 0xee inc.abs|inc $0000
+2 0xef sbc.abl|sbc $000000
+2 0xf0 beq.rel|beq $0
+2 0xf1 sbc.idy|sbc ($00),y
+2 0xf2 sbc.idp|sbc ($00)
+2 0xf3 sbc.isy|sbc ($00,s),y
+2 0xf4 pea.abs|pea $0000
+2 0xf5 sbc.dpx|sbc $00,x
+2 0xf6 inc.dpx|inc $00,x
+2 0xf7 sbc.idly|sbc [$00],y
+2 0xf8 sed|sed
+2 0xf9 sbc.aby|sbc $0000,y
+2 0xfa plx|plx
+2 0xfb xce|xce
+2 0xfc jsr.iax|jsr ($0000,x)
+2 0xfd sbc.abx|sbc $0000,x
+2 0xfe inc.abx|inc $0000,x
+2 0xff sbc.alx|sbc $000000,x
+3 0x0 brk_imm|brk #$00
+3 0x1 ora.idx|ora ($00,x)
+3 0x2 cop_imm|cop #$00
+3 0x3 ora.sr|ora $00,s
+3 0x4 tsb.dp|tsb $00
+3 0x5 ora.dp|ora $00
+3 0x6 asl.dp|asl $00
+3 0x7 ora.idl|ora [$00]
+3 0x8 php|php
+3 0x9 ora.imm|ora #$00
+3 0xa asl.a|asl a
+3 0xb phd|phd
+3 0xc tsb.abs|tsb $0000
+3 0xd ora.abs|ora $0000
+3 0xe asl.abs|asl $0000
+3 0xf ora.abl|ora $000000
+3 0x10 bpl.rel|bpl $0
+3 0x11 ora.idy|ora ($00),y
+3 0x12 ora.idp|ora ($00)
+3 0x13 ora.isy|ora ($00,s),y
+3 0x14 trb.dp|trb $00
+3 0x15 ora.dpx|ora $00,x
+3 0x16 asl.dpx|asl $00,x
+3 0x17 ora.idly|ora [$00],y
+3 0x18 clc|clc
+3 0x19 ora.aby|ora $0000,y
+3 0x1a inc.a|inc a
+3 0x1b tcs|tcs
+3 0x1c trb.abs|trb $0000
+3 0x1d ora.abx|ora $0000,x
+3 0x1e asl.abx|asl $0000,x
+3 0x1f ora.alx|ora $000000,x
+3 0x20 jsr.abs|jsr $0000
+3 0x21 and.idx|and ($00,x)
+3 0x22 jsl.abl|jsl $000000
+3 0x23 and.sr|and $00,s
+3 0x24 bit.dp|bit $00
+3 0x25 and.dp|and $00
+3 0x26 rol.dp|rol $00
+3 0x27 and.idl|and [$00]
+3 0x28 plp|plp
+3 0x29 and.imm|and #$00
+3 0x2a rol.a|rol a
+3 0x2b pld|pld
+3 0x2c bit.abs|bit $0000
+3 0x2d and.abs|and $0000
+3 0x2e rol.abs|rol $0000
+3 0x2f and.abl|and $000000
+3 0x30 bmi.rel|bmi $0
+3 0x31 and.idy|and ($00),y
+3 0x32 and.idp|and ($00)
+3 0x33 and.isy|and ($00,s),y
+3 0x34 bit.dpx|bit $00,x
+3 0x35 and.dpx|and $00,x
+3 0x36 rol.dpx|rol $00,x
+3 0x37 and.idly|and [$00],y
+3 0x38 sec|sec
+3 0x39 and.aby|and $0000,y
+3 0x3a dec.a|dec a
+3 0x3b tsc|tsc
+3 0x3c bit.abx|bit $0000,x
+3 0x3d and.abx|and $0000,x
+3 0x3e rol.abx|rol $0000,x
+3 0x3f and.alx|and $000000,x
+3 0x40 rti|rti
+3 0x41 eor.idx|eor ($00,x)
+3 0x42 wdm_imm|wdm #$00
+3 0x43 eor.sr|eor $00,s
+3 0x44 mvp.bm|mvp $00,$00
+3 0x45 eor.dp|eor $00
+3 0x46 lsr.dp|lsr $00
+3 0x47 eor.idl|eor [$00]
+3 0x48 pha|pha
+3 0x49 eor.imm|eor #$00
+3 0x4a lsr.a|lsr a
+3 0x4b phk|phk
+3 0x4c jmp.abs|jmp $0000
+3 0x4d eor.abs|eor $0000
+3 0x4e lsr.abs|lsr $0000
+3 0x4f eor.abl|eor $000000
+3 0x50 bvc.rel|bvc $0
+3 0x51 eor.idy|eor ($00),y
+3 0x52 eor.idp|eor ($00)
+3 0x53 eor.isy|eor ($00,s),y
+3 0x54 mvn.bm|mvn $00,$00
+3 0x55 eor.dpx|eor $00,x
+3 0x56 lsr.dpx|lsr $00,x
+3 0x57 eor.idly|eor [$00],y
+3 0x58 cli|cli
+3 0x59 eor.aby|eor $0000,y
+3 0x5a phy|phy
+3 0x5b tcd|tcd
+3 0x5c jmp.abl|jmp $000000
+3 0x5d eor.abx|eor $0000,x
+3 0x5e lsr.abx|lsr $0000,x
+3 0x5f eor.alx|eor $000000,x
+3 0x60 rts|rts
+3 0x61 adc.idx|adc ($00,x)
+3 0x62 per.rell|per $0
+3 0x63 adc.sr|adc $00,s
+3 0x64 stz.dp|stz $00
+3 0x65 adc.dp|adc $00
+3 0x66 ror.dp|ror $00
+3 0x67 adc.idl|adc [$00]
+3 0x68 pla|pla
+3 0x69 adc.imm|adc #$00
+3 0x6a ror.a|ror a
+3 0x6b rtl|rtl
+3 0x6c jmp.ind|jmp ($0000)
+3 0x6d adc.abs|adc $0000
+3 0x6e ror.abs|ror $0000
+3 0x6f adc.abl|adc $000000
+3 0x70 bvs.rel|bvs $0
+3 0x71 adc.idy|adc ($00),y
+3 0x72 adc.idp|adc ($00)
+3 0x73 adc.isy|adc ($00,s),y
+3 0x74 stz.dpx|stz $00,x
+3 0x75 adc.dpx|adc $00,x
+3 0x76 ror.dpx|ror $00,x
+3 0x77 adc.idly|adc [$00],y
+3 0x78 sei|sei
+3 0x79 adc.aby|adc $0000,y
+3 0x7a ply|ply
+3 0x7b tdc|tdc
+3 0x7c jmp.iax|jmp ($0000,x)
+3 0x7d adc.abx|adc $0000,x
+3 0x7e ror.abx|ror $0000,x
+3 0x7f adc.alx|adc $000000,x
+3 0x80 bra.rel|bra $0
+3 0x81 sta.idx|sta ($00,x)
+3 0x82 brl.rell|brl $0
+3 0x83 sta.sr|sta $00,s
+3 0x84 sty.dp|sty $00
+3 0x85 sta.dp|sta $00
+3 0x86 stx.dp|stx $00
+3 0x87 sta.idl|sta [$00]
+3 0x88 dey|dey
+3 0x89 bit.imm|bit #$00
+3 0x8a txa|txa
+3 0x8b phb|phb
+3 0x8c sty.abs|sty $0000
+3 0x8d sta.abs|sta $0000
+3 0x8e stx.abs|stx $0000
+3 0x8f sta.abl|sta $000000
+3 0x90 bcc.rel|bcc $0
+3 0x91 sta.idy|sta ($00),y
+3 0x92 sta.idp|sta ($00)
+3 0x93 sta.isy|sta ($00,s),y
+3 0x94 sty.dpx|sty $00,x
+3 0x95 sta.dpx|sta $00,x
+3 0x96 stx.dpy|stx $00,y
+3 0x97 sta.idly|sta [$00],y
+3 0x98 tya|tya
+3 0x99 sta.aby|sta $0000,y
+3 0x9a txs|txs
+3 0x9b txy|txy
+3 0x9c stz.abs|stz $0000
+3 0x9d sta.abx|sta $0000,x
+3 0x9e stz.abx|stz $0000,x
+3 0x9f sta.alx|sta $000000,x
+3 0xa0 ldy.immx|ldy #$00
+3 0xa1 lda.idx|lda ($00,x)
+3 0xa2 ldx.immx|ldx #$00
+3 0xa3 lda.sr|lda $00,s
+3 0xa4 ldy.dp|ldy $00
+3 0xa5 lda.dp|lda $00
+3 0xa6 ldx.dp|ldx $00
+3 0xa7 lda.idl|lda [$00]
+3 0xa8 tay|tay
+3 0xa9 lda.imm|lda #$00
+3 0xaa tax|tax
+3 0xab plb|plb
+3 0xac ldy.abs|ldy $0000
+3 0xad lda.abs|lda $0000
+3 0xae ldx.abs|ldx $0000
+3 0xaf lda.abl|lda $000000
+3 0xb0 bcs.rel|bcs $0
+3 0xb1 lda.idy|lda ($00),y
+3 0xb2 lda.idp|lda ($00)
+3 0xb3 lda.isy|lda ($00,s),y
+3 0xb4 ldy.dpx|ldy $00,x
+3 0xb5 lda.dpx|lda $00,x
+3 0xb6 ldx.dpy|ldx $00,y
+3 0xb7 lda.idly|lda [$00],y
+3 0xb8 clv|clv
+3 0xb9 lda.aby|lda $0000,y
+3 0xba tsx|tsx
+3 0xbb tyx|tyx
+3 0xbc ldy.abx|ldy $0000,x
+3 0xbd lda.abx|lda $0000,x
+3 0xbe ldx.aby|ldx $0000,y
+3 0xbf lda.alx|lda $000000,x
+3 0xc0 cpy.immx|cpy #$00
+3 0xc1 cmp.idx|cmp ($00,x)
+3 0xc2 rep_imm|rep #$00
+3 0xc3 cmp.sr|cmp $00,s
+3 0xc4 cpy.dp|cpy $00
+3 0xc5 cmp.dp|cmp $00
+3 0xc6 dec.dp|dec $00
+3 0xc7 cmp.idl|cmp [$00]
+3 0xc8 iny|iny
+3 0xc9 cmp.imm|cmp #$00
+3 0xca dex|dex
+3 0xcb wai|wai
+3 0xcc cpy.abs|cpy $0000
+3 0xcd cmp.abs|cmp $0000
+3 0xce dec.abs|dec $0000
+3 0xcf cmp.abl|cmp $000000
+3 0xd0 bne.rel|bne $0
+3 0xd1 cmp.idy|cmp ($00),y
+3 0xd2 cmp.idp|cmp ($00)
+3 0xd3 cmp.isy|cmp ($00,s),y
+3 0xd4 pei.idp|pei ($00)
+3 0xd5 cmp.dpx|cmp $00,x
+3 0xd6 dec.dpx|dec $00,x
+3 0xd7 cmp.idly|cmp [$00],y
+3 0xd8 cld|cld
+3 0xd9 cmp.aby|cmp $0000,y
+3 0xda phx|phx
+3 0xdb stp|stp
+3 0xdc jml.ial|jml [$0000]
+3 0xdd cmp.abx|cmp $0000,x
+3 0xde dec.abx|dec $0000,x
+3 0xdf cmp.alx|cmp $000000,x
+3 0xe0 cpx.immx|cpx #$00
+3 0xe1 sbc.idx|sbc ($00,x)
+3 0xe2 sep_imm|sep #$00
+3 0xe3 sbc.sr|sbc $00,s
+3 0xe4 cpx.dp|cpx $00
+3 0xe5 sbc.dp|sbc $00
+3 0xe6 inc.dp|inc $00
+3 0xe7 sbc.idl|sbc [$00]
+3 0xe8 inx|inx
+3 0xe9 sbc.imm|sbc #$00
+3 0xea nop|nop
+3 0xeb xba|xba
+3 0xec cpx.abs|cpx $0000
+3 0xed sbc.abs|sbc $0000
+3 0xee inc.abs|inc $0000
+3 0xef sbc.abl|sbc $000000
+3 0xf0 beq.rel|beq $0
+3 0xf1 sbc.idy|sbc ($00),y
+3 0xf2 sbc.idp|sbc ($00)
+3 0xf3 sbc.isy|sbc ($00,s),y
+3 0xf4 pea.abs|pea $0000
+3 0xf5 sbc.dpx|sbc $00,x
+3 0xf6 inc.dpx|inc $00,x
+3 0xf7 sbc.idly|sbc [$00],y
+3 0xf8 sed|sed
+3 0xf9 sbc.aby|sbc $0000,y
+3 0xfa plx|plx
+3 0xfb xce|xce
+3 0xfc jsr.iax|jsr ($0000,x)
+3 0xfd sbc.abx|sbc $0000,x
+3 0xfe inc.abx|inc $0000,x
+3 0xff sbc.alx|sbc $000000,x

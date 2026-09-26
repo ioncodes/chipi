@@ -1,0 +1,19 @@
+# Contextual disassembly: operands fetched from memory after the opcode (`fetch(N)`) and
+# address operands resolved to symbols (`{x:sym}`) via a host-provided `DisasmCtx`. A 65816-style
+# slice: the immediate / absolute address live in the byte stream, not the 8bit opcode handle.
+
+decoder SnesD {
+    width = 8
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [0:7]
+
+# A 16bit operand fetched from the two bytes after the opcode, declared once and reused. A no-range
+# binding (`imm:fetch16`) makes each use a computed operand sharing this recipe.
+operand fetch16 = u16 fetch(16)
+
+nop     op=0xEA | "nop"
+lda_imm op=0xA9 imm:fetch16    | "lda #${imm:04x}"
+jmp_abs op=0x4C target:fetch16 | "jmp {target:sym}"

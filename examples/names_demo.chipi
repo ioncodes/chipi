@@ -1,0 +1,29 @@
+# Value-to-string display tables: the `names { value => "str", ..., _ => default }` feature.
+#
+# A `names` table renders an operand (a bound field or a computed operand) symbolically, falling
+# back to a literal string or a numeric hint when no entry matches. `reg` names the low registers
+# and falls back to a decimal id; `cc` names a 2bit condition with a literal `gt` default. `nxt`
+# is a computed operand that inherits the `reg` table, showing that a computed value can carry a
+# `names` display too.
+
+decoder Names {
+    width = 16
+    bit_order = lsb0
+    endian = little
+}
+
+selector op [13:15]
+
+operand reg = u5 { display(names { 0 => "zero", 1 => "ra", 2 => "sp", _ => dec }) }
+operand cc  = u2 { display(names { 0 => "eq", 1 => "ne", 2 => "lt", _ => "gt" }) }
+
+mov  op=0b000 rd:reg[8:12] rs:reg[3:7] [0:2]=0
+     | "mov {rd}, {rs}"
+
+# a computed operand that inherits the `reg` names table
+inc  op=0b001 rd:reg[8:12] [3:7]=0 [0:2]=0
+     nxt:reg = rd + 1
+     | "inc {rd}  ; -> {nxt}"
+
+br   op=0b010 c:cc[11:12] [3:10]=0 [0:2]=0
+     | "b{c}"
