@@ -111,3 +111,53 @@ fn negative_fixture_errors() {
         "expected FieldOverlap:\n{err}"
     );
 }
+
+#[test]
+fn version_matches_package() {
+    let (out, _, ok) = chipi(&["--version"]);
+    assert!(ok);
+    assert_eq!(out.trim(), concat!("chipi ", env!("CARGO_PKG_VERSION")));
+}
+
+#[test]
+fn malformed_modes_and_stream_bytes_are_rejected() {
+    for value in ["missing=1", "m=nope", "m=2", "m", "m=0,m=1"] {
+        let (_, err, ok) = chipi(&[
+            "explain",
+            "../../examples/fetch_expr.chipi",
+            "--mode",
+            value,
+            "--",
+            "0xa9",
+        ]);
+        assert!(!ok, "accepted mode {value}: {err}");
+    }
+    let (_, err, ok) = chipi(&[
+        "explain",
+        "--stream",
+        "../../examples/x86_prefix.chipi",
+        "--",
+        "0x190",
+    ]);
+    assert!(!ok);
+    assert!(err.contains("outside 0..=255"), "{err}");
+    let (_, err, ok) = chipi(&["check", MIPS, "unexpected.chipi"]);
+    assert!(!ok);
+    assert!(err.contains("expected one"), "{err}");
+    let (_, err, ok) = chipi(&[
+        "explain",
+        "../../examples/fetch_expr.chipi",
+        "--mode",
+        "m=0",
+        "--mode",
+        "m=1",
+        "--",
+        "0xa9",
+    ]);
+    assert!(!ok);
+    assert!(err.contains("more than once"), "{err}");
+    let (_, _, ok) = chipi(&["explain", "--stream", MIPS, "--"]);
+    assert!(!ok);
+    let (_, _, ok) = chipi(&["explain", MIPS, "--", "0", "1"]);
+    assert!(!ok);
+}

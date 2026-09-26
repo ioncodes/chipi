@@ -250,11 +250,12 @@ impl Lexer<'_> {
             (b'/', _) => (TokenKind::Slash, 1),
             (b'%', _) => (TokenKind::Percent, 1),
             _ => {
+                let ch = self.src[start..].chars().next().unwrap();
                 return Err(Diag::error(
                     "LexUnexpectedChar",
-                    format!("unexpected character `{}`", c as char),
-                    Span::new(start as u32, (start + 1) as u32),
-                ))
+                    format!("unexpected character `{ch}`"),
+                    Span::new(start as u32, (start + ch.len_utf8()) as u32),
+                ));
             }
         };
 

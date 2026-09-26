@@ -1,5 +1,9 @@
-.gitignore
-.vscodeignore
+.vscode/**
+.github/**
 test/**
+package-lock.json
+*.vsix
+.gitignore
 node_modules/**
-**/*.vsix
+extension.js
+.vscode-test/**

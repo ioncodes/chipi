@@ -486,7 +486,7 @@ fn build_sparse(cands: &[&Leaf], p_mask: u64) -> Result<Residual, Vec<Diag>> {
             }
             let a_super = (am & bm) == bm;
             let b_super = (am & bm) == am;
-            let strict = (a_super && am != bm) || (b_super && am != bm);
+            let strict = (a_super || b_super) && am != bm;
             if strict {
                 continue;
             }

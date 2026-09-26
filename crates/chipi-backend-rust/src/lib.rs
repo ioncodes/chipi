@@ -191,7 +191,7 @@ fn len_expr(isa: &Isa) -> &'static str {
 /// static `Display` path has no variable source (the contextual disassembler resolves them
 /// through `ctx.mode(..)`).
 fn unsupported_var_reads(isa: &Isa, m: &Model) -> Option<&'static str> {
-    if isa.display_reads_vars() && !(m.needs_disasm_ctx && !m.emit_display) {
+    if isa.display_reads_vars() && (!m.needs_disasm_ctx || m.emit_display) {
         return Some(
             "display conditions reading decode variables outside the contextual \
              disassembler path are not supported yet",
@@ -2348,11 +2348,10 @@ fn ctx_value(val: &str, fmt: &FmtSpec, ty: Option<&FieldTy>) -> String {
         Some(Disp::Hint(DispHint::Hex)) => format!("format!(\"0x{{:x}}\", {val})"),
         Some(Disp::Hint(DispHint::Dec)) => format!("format!(\"{{}}\", {val})"),
         Some(Disp::Names(t)) => {
-            let arms: String = t
-                .entries
-                .iter()
-                .map(|(k, s)| format!("{k}u64 => {s:?}.to_string(), "))
-                .collect();
+            let mut arms = String::new();
+            for (k, s) in &t.entries {
+                let _ = write!(arms, "{k}u64 => {s:?}.to_string(), ");
+            }
             let default = match &t.default {
                 NameDefault::Str(s) => format!("{s:?}.to_string()"),
                 NameDefault::Hint(DispHint::Dec) => format!("format!(\"{{}}\", {val})"),

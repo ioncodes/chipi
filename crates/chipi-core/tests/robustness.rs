@@ -174,3 +174,17 @@ fn never_panics_on_arbitrary_text() {
         let _ = compile(g); // must return Result, never panic
     }
 }
+
+#[test]
+fn unicode_lex_errors_render_without_panicking() {
+    for ch in ['\u{e9}', '\u{1f600}'] {
+        let text = format!("decoder D {{ width = 8 }}\n{ch}");
+        let errors = compile(&text).unwrap_err();
+        let rendered = chipi_core::render_diagnostics(
+            &errors,
+            &chipi_core::Source::new("unicode.chipi", text),
+        );
+        assert!(rendered.contains(&format!("unexpected character `{ch}`")));
+        assert!(rendered.contains("unicode.chipi:2:1"));
+    }
+}

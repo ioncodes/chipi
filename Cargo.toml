@@ -8,6 +8,7 @@ members = [
     "crates/chipi-backend-python",
     "crates/chipi-macros",
     "crates/chipi-cli",
+    "crates/chipi-lsp",
 ]
 
 [workspace.package]

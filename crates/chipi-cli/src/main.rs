@@ -27,6 +27,10 @@ fn main() -> ExitCode {
         "check" => cmd_check(rest),
         "dump-ir" => cmd_dump_ir(rest),
         "dump-tree" => cmd_dump_tree(rest),
+        "-V" | "--version" => {
+            println!("chipi {}", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
         "-h" | "--help" | "help" => {
             usage();
             Ok(())
@@ -45,7 +49,7 @@ fn main() -> ExitCode {
 
 fn usage() {
     eprintln!(
-        "chipi: instruction-set decoder, dispatcher, disassembler and encoder generator\n\n\
+        "chipi: decoder generator and reference assembler\n\n\
          USAGE:\n\
          \x20 chipi explain   <spec.chipi> [--mode m=v] -- <word>      explain one fetched word\n\
          \x20 chipi explain   <spec.chipi> --stream -- <b0,b1,...>       decode a prefixed byte stream\n\
@@ -89,7 +93,15 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             "-o" | "--output" => a.out = Some(it.next().ok_or("`-o` needs a path")?.clone()),
             "--target" => a.target = Some(it.next().ok_or("`--target` needs a value")?.clone()),
             "--style" => a.style = Some(it.next().ok_or("`--style` needs `newtype|enum`")?.clone()),
-            "--mode" => a.mode = Some(it.next().ok_or("`--mode` needs `m=v,...`")?.clone()),
+            "--mode" => {
+                let value = it.next().ok_or("`--mode` needs `m=v,...`")?;
+                if let Some(modes) = &mut a.mode {
+                    modes.push(',');
+                    modes.push_str(value);
+                } else {
+                    a.mode = Some(value.clone());
+                }
+            }
             "--roundtrip" => a.roundtrip = true,
             "--stream" => a.stream = true,
             other if other.starts_with('-') => return Err(format!("unknown flag `{other}`")),
@@ -106,6 +118,9 @@ struct Loaded {
 }
 
 fn load(a: &Args) -> Result<Loaded, String> {
+    if a.positionals.len() > 1 {
+        return Err("expected one <spec.chipi> path; put instruction data after `--`".into());
+    }
     let path = a.positionals.first().ok_or("missing <spec.chipi> path")?;
     let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read `{path}`: {e}"))?;
     let src = Source::new(path.clone(), text.clone());
@@ -126,20 +141,34 @@ fn print_warnings(l: &Loaded) {
     }
 }
 
-fn mode_combo(isa: &Isa, spec: Option<&str>) -> usize {
+fn mode_combo(isa: &Isa, spec: Option<&str>) -> Result<usize, String> {
     let mut vals: Vec<u64> = isa.modes.iter().map(|m| m.default).collect();
+    let mut seen = std::collections::HashSet::new();
 
     if let Some(spec) = spec {
         for kv in spec.split(',') {
-            if let Some((k, v)) = kv.split_once('=') {
-                if let Some(i) = isa.modes.iter().position(|m| m.name == k.trim()) {
-                    vals[i] = v.trim().parse().unwrap_or(0);
-                }
+            let (k, v) = kv.split_once('=').ok_or("`--mode` expects m=v,...")?;
+            let name = k.trim();
+            let i = isa
+                .modes
+                .iter()
+                .position(|m| m.name == name)
+                .ok_or_else(|| format!("unknown mode `{name}`"))?;
+            if !seen.insert(name) {
+                return Err(format!("mode `{name}` was supplied more than once"));
             }
+            let value = parse_word(v.trim())?;
+            if value >= isa.modes[i].cardinality {
+                return Err(format!(
+                    "mode `{name}` must be in 0..{}",
+                    isa.modes[i].cardinality
+                ));
+            }
+            vals[i] = value;
         }
     }
 
-    isa.pack_modes(&vals) as usize
+    Ok(isa.pack_modes(&vals) as usize)
 }
 
 fn parse_word(s: &str) -> Result<u64, String> {
@@ -173,7 +202,12 @@ fn cmd_explain(args: &[String]) -> Result<(), String> {
     let a = parse_args(args)?;
     let l = load(&a)?;
     let isa = &l.isa;
-    let combo = mode_combo(isa, a.mode.as_deref());
+    let combo = mode_combo(isa, a.mode.as_deref())?;
+    if a.stream && a.mode.is_some() {
+        return Err(
+            "`--mode` applies to word decoding; --stream uses the declared mode defaults".into(),
+        );
+    }
 
     let (word, d, stream_bytes) = if a.stream {
         let bytes: Vec<u8> = a
@@ -181,8 +215,17 @@ fn cmd_explain(args: &[String]) -> Result<(), String> {
             .iter()
             .flat_map(|t| t.split(','))
             .filter(|s| !s.trim().is_empty())
-            .map(|s| parse_word(s.trim()).map(|v| v as u8))
+            .map(|s| {
+                parse_word(s.trim()).and_then(|v| {
+                    u8::try_from(v).map_err(|_| format!("stream byte `{s}` is outside 0..=255"))
+                })
+            })
             .collect::<Result<_, _>>()?;
+        if bytes.is_empty() {
+            return Err(
+                "missing bytes; usage: chipi explain <spec> --stream -- <b0,b1,...>".into(),
+            );
+        }
 
         let d = interp::decode_stream(isa, &bytes);
 
@@ -201,6 +244,9 @@ fn cmd_explain(args: &[String]) -> Result<(), String> {
 
         (0u64, d, Some(bytes))
     } else {
+        if a.trailing.len() > 1 {
+            return Err("expected one word after `--`".into());
+        }
         let ws = a
             .trailing
             .first()

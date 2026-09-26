@@ -117,7 +117,7 @@ fn run_case(tag: &str, src: &str) {
     };
 
     let dir = scratch_dir(tag);
-    std::fs::write(dir.join("dec.py"), &module).unwrap();
+    std::fs::write(dir.join("dec.py"), module).unwrap();
     std::fs::write(dir.join("main.py"), harness(&isa, combos)).unwrap();
 
     let mut wf = std::fs::File::create(dir.join("words.txt")).unwrap();

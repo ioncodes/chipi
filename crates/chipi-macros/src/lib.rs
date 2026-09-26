@@ -3,7 +3,7 @@
 //!
 //! ```ignore
 //! chipi_macros::isa!("examples/mips.chipi");
-//! // expands to `pub mod mips { /* decode, classify, Ops, Display, ... */ }`
+//! // expands to `pub mod Mips { /* decode, classify, Ops, Display, ... */ }`
 //! ```
 //!
 //! The path is resolved relative to the invoking crate's `CARGO_MANIFEST_DIR`. Spec errors surface

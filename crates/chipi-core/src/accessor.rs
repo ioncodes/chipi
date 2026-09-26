@@ -48,23 +48,20 @@ pub fn computed_accessor_names(isa: &Isa) -> HashMap<(String, String), String> {
         let mut off_key: Option<String> = None;
         for c in &inst.computed {
             let body = match fetch_expr(&c.expr) {
-                Some(arg) => {
-                    let key = match (&off_key, arg) {
-                        (None, Expr::Int(i)) => {
-                            let k = format!("fetch@{off}");
-                            off += (i.value as usize).div_ceil(8);
-                            k
-                        }
-                        _ => {
-                            let base = off_key.clone().unwrap_or_else(|| off.to_string());
-                            let wk = expr_key(arg, inst);
-                            let k = format!("fetch@{base}|w={wk}");
-                            off_key = Some(format!("{base}+{wk}"));
-                            k
-                        }
-                    };
-                    key
-                }
+                Some(arg) => match (&off_key, arg) {
+                    (None, Expr::Int(i)) => {
+                        let k = format!("fetch@{off}");
+                        off += (i.value as usize).div_ceil(8);
+                        k
+                    }
+                    _ => {
+                        let base = off_key.clone().unwrap_or_else(|| off.to_string());
+                        let wk = expr_key(arg, inst);
+                        let k = format!("fetch@{base}|w={wk}");
+                        off_key = Some(format!("{base}+{wk}"));
+                        k
+                    }
+                },
                 None => expr_key(&c.expr, inst),
             };
             let identity = format!(

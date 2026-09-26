@@ -86,7 +86,7 @@ impl Model {
 /// A reason string if the spec uses a feature the Python backend cannot emit yet, else `None`.
 /// Mirrors the Rust backend's `unsupported_var_reads`.
 fn py_unsupported(isa: &Isa, m: &Model) -> Option<&'static str> {
-    if isa.display_reads_vars() && !(m.needs_disasm_ctx && !m.emit_display) {
+    if isa.display_reads_vars() && (!m.needs_disasm_ctx || m.emit_display) {
         return Some(
             "display conditions reading decode variables outside the contextual \
              disassembler path",
@@ -292,7 +292,7 @@ fn axis_consts(isa: &Isa) -> String {
             isa.instrs[op.instr]
                 .form
                 .as_deref()
-                .map(&f_index)
+                .map(f_index)
                 .unwrap_or(0)
         };
         let _ = write!(row, "{idx},");

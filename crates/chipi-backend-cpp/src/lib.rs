@@ -96,7 +96,7 @@ pub fn emit_cpp(isa: &Isa) -> String {
 /// A reason string if the spec uses a feature the C++ backend cannot emit yet, else `None`.
 /// Mirrors the Rust backend's `unsupported_var_reads`.
 fn cpp_unsupported(isa: &Isa, m: &Model) -> Option<&'static str> {
-    if isa.display_reads_vars() && !(m.needs_disasm_ctx && !m.emit_display) {
+    if isa.display_reads_vars() && (!m.needs_disasm_ctx || m.emit_display) {
         return Some(
             "display conditions reading decode variables outside the contextual \
              disassembler path",
@@ -406,7 +406,6 @@ fn user_fns(isa: &Isa) -> String {
     if isa.fns.is_empty() {
         return String::new();
     }
-    use std::collections::HashMap;
     let mut s = String::from("// ---- user fns (computation layer) ----\n");
 
     for f in &isa.fns {

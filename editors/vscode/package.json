@@ -1,7 +1,7 @@
 {
   "name": "chipi",
   "displayName": "chipi",
-  "description": "Syntax highlighting, snippets and a file icon for the chipi instruction-set DSL (.chipi).",
+  "description": "Language support for chipi: diagnostics, autocomplete, formatting, navigation, and syntax highlighting.",
   "version": "1.0.0",
   "publisher": "ioncodes",
   "license": "MIT OR Apache-2.0",
@@ -10,7 +10,7 @@
     "url": "https://github.com/ioncodes/chipi"
   },
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.82.0"
   },
   "categories": [
     "Programming Languages"
@@ -45,9 +45,54 @@
         "language": "chipi",
         "path": "./snippets/chipi.json"
       }
+    ],
+    "configuration": {
+      "title": "chipi",
+      "properties": {
+        "chipi.serverPath": {
+          "type": "string",
+          "default": "chipi-lsp",
+          "scope": "machine-overridable",
+          "description": "Path to the chipi-lsp executable. Install it with cargo install chipi-lsp --locked or select an existing binary."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "chipi.restartServer",
+        "title": "chipi: Restart Language Server"
+      }
     ]
   },
   "scripts": {
-    "test": "node test/tokenize.mjs"
+    "test": "node test/tokenize.mjs && node --test test/extension.cjs",
+    "package": "vsce package",
+    "build": "esbuild extension.js --bundle --minify --platform=node --target=node18 --external:vscode --outfile=dist/extension.js",
+    "vscode:prepublish": "npm run build",
+    "test:host": "npm run build && node test/run-host.cjs"
+  },
+  "main": "./dist/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onLanguage:chipi"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "restrictedConfigurations": [
+        "chipi.serverPath"
+      ]
+    },
+    "virtualWorkspaces": false
+  },
+  "dependencies": {
+    "vscode-languageclient": "9.0.1"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "4.0.0",
+    "esbuild": "0.28.2",
+    "@vscode/test-electron": "3.1.0"
   }
 }
