@@ -10,7 +10,7 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "chipi-backend-cpp"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chipi-core",
  "chipi-syntax",
@@ -18,7 +18,7 @@ dependencies = [
 
 [[package]]
 name = "chipi-backend-python"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chipi-core",
  "chipi-syntax",
@@ -26,7 +26,7 @@ dependencies = [
 
 [[package]]
 name = "chipi-backend-rust"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chipi-core",
  "chipi-syntax",
@@ -34,7 +34,7 @@ dependencies = [
 
 [[package]]
 name = "chipi-cli"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chipi-backend-cpp",
  "chipi-backend-python",
@@ -45,14 +45,14 @@ dependencies = [
 
 [[package]]
 name = "chipi-core"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chipi-syntax",
 ]
 
 [[package]]
 name = "chipi-lsp"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chipi-core",
  "chipi-syntax",
@@ -64,7 +64,7 @@ dependencies = [
 
 [[package]]
 name = "chipi-macros"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chipi-backend-rust",
  "chipi-core",
@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "chipi-syntax"
-version = "1.0.0"
+version = "1.0.1"
 
 [[package]]
 name = "crossbeam-channel"

@@ -12,7 +12,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 rust-version = "1.74"
 license = "MIT OR Apache-2.0"
@@ -20,11 +20,11 @@ repository = "https://github.com/ioncodes/chipi"
 description = "A declarative instruction-set decoder, dispatcher, disassembler and encoder generator."
 
 [workspace.dependencies]
-chipi-syntax = { path = "crates/chipi-syntax", version = "1.0.0" }
-chipi-core = { path = "crates/chipi-core", version = "1.0.0" }
-chipi-backend-rust = { path = "crates/chipi-backend-rust", version = "1.0.0" }
-chipi-backend-cpp = { path = "crates/chipi-backend-cpp", version = "1.0.0" }
-chipi-backend-python = { path = "crates/chipi-backend-python", version = "1.0.0" }
+chipi-syntax = { path = "crates/chipi-syntax", version = "1.0.1" }
+chipi-core = { path = "crates/chipi-core", version = "1.0.1" }
+chipi-backend-rust = { path = "crates/chipi-backend-rust", version = "1.0.1" }
+chipi-backend-cpp = { path = "crates/chipi-backend-cpp", version = "1.0.1" }
+chipi-backend-python = { path = "crates/chipi-backend-python", version = "1.0.1" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
